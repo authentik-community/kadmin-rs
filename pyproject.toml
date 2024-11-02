@@ -1,0 +1,81 @@
+[project]
+name = "python-kadmin-rs"
+version = "0.0.0"
+description = "Python interface to the Kerberos administration interface (kadm5)"
+requires-python = ">=3.8,<=3.13"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Marc 'risson' Schmitt", email = "marc.schmitt@risson.space" },
+  { name = "authentik community", email = "hello@goauthentik.io" },
+]
+keywords = ["krb5", "kadmin", "kadm5", "kerberos"]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python",
+  "Programming Language :: Rust",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Systems Administration :: Authentication/Directory",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/authentik-community/kadmin-rs"
+Documentation = "https://github.com/authentik-community/kadmin-rs"
+Repository = "https://github.com/authentik-community/kadmin-rs.git"
+
+[build-system]
+requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = { where = ["python-kadmin-rs/python"] }
+
+[[tool.setuptools-rust.ext-modules]]
+target = "kadmin._lib"
+path = "python-kadmin-rs/Cargo.toml"
+strip = "All"
+args = ["--no-default-features"]
+features = ["client"]
+
+[[tool.setuptools-rust.ext-modules]]
+target = "kadmin_local._lib"
+path = "python-kadmin-rs/Cargo.toml"
+strip = "All"
+args = ["--no-default-features"]
+features = ["local"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.poetry]
+package-mode = false
+name = "kadmin-rs"
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+build = "*"
+cibuildwheel = "*"
+mypy = "*"
+ruff = "*"
+
+[tool.poetry.group.test.dependencies]
+k5test = "*"

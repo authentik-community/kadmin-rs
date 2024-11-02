@@ -1,0 +1,214 @@
+---
+name: Python CI
+
+"on":
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+    branches:
+      - main
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  lint:
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - black
+          - mypy
+          - ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install poetry || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+          cache: "poetry"
+      - run: poetry install --only=dev
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - run: poetry run just ci-lint-${{ matrix.job }}
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: pipx install poetry || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "poetry"
+      - run: poetry install --only=dev
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - run: poetry run just ci-build-python
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ matrix.python-version }}-build
+          path: dist
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - mit
+          # Several issues in k5test preventing us from running kadmind with it currently
+          # - h5l
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    runs-on: ubuntu-latest
+    env:
+      KRB5_TRACE: /dev/stderr
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          pipx install poetry || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "poetry"
+      - run: poetry install --only=test
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-${{ matrix.python-version }}-build
+          path: dist
+      - run: |
+          PATH="/usr/lib/heimdal-servers:$PATḦ" poetry run just ci-test-python-${{ matrix.job }}
+  check:
+    if: always()
+    needs:
+      - lint
+      - build
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
+  build-sdist:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pipx install poetry || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: pyproject.toml
+          cache: "poetry"
+      - run: poetry install --only=dev
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - run: poetry run just ci-build-python-sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-cibw-sdist
+          path: dist/*.tar.gz
+  build-wheels-matrix:
+    # needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pipx install poetry || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: pyproject.toml
+          cache: "poetry"
+      - run: poetry install --only=dev
+      - id: set-matrix
+        name: compute matrix
+        run: |
+          MATRIX="$(
+            {
+              poetry run cibuildwheel --print-build-identifiers --platform linux --archs x86_64,aarch64,ppc64le,s390x \
+                | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-latest"}/' \
+              && poetry run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-13" }/' \
+              && poetry run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-14" }/'
+            } | jq --slurp --compact-output '{"include": .}'
+          )"
+          echo matrix="$MATRIX" >> "$GITHUB_OUTPUT"
+  build-wheels:
+    needs: build-wheels-matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.build-wheels-matrix.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-qemu-action@v3
+        if: runner.os == 'Linux'
+        with:
+          platforms: all
+      - uses: pypa/cibuildwheel@v2.21.3
+        env:
+          CIBW_BUILD: "${{ matrix.cibw-only }}"
+          CIBW_BEFORE_ALL_LINUX: "curl -sSf https://sh.rustup.rs | sh -s -- -y && yum install -y krb5-devel clang-devel"
+          CIBW_BEFORE_ALL_MACOS: "curl -sSf https://sh.rustup.rs | sh -s -- -y && brew install llvm krb5"
+          CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
+          CIBW_ENVIRONMENT_MACOS: "PKG_CONFIG_PATH=/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig MACOSX_DEPLOYMENT_TARGET=14.0"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: manylinux_2_28
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-cibw-wheels-${{ matrix.cibw-only }}-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+  release:
+    needs:
+      - check
+      - build-sdist
+      - build-wheels
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python-kadmin-rs/version/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: python-cibw-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
