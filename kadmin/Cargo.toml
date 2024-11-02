@@ -1,0 +1,32 @@
+[package]
+name = "kadmin"
+version = "0.0.0"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Rust bindings for the Kerberos administration interface (kadm5)"
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+keywords = ["kerberos", "krb5", "kadm5", "kadmin"]
+categories = ["api-bindings", "authentication"]
+
+[features]
+default = ["client"]
+client = ["kadmin-sys/client"]
+local = ["kadmin-sys/server"]
+
+[dependencies]
+kadmin-sys = { path = "../kadmin-sys", version = "0.0.0" }
+thiserror = "1"
+
+[dev-dependencies]
+anyhow = "1"
+pyo3 = { version = "0.22", features = ["auto-initialize"] }
+serial_test = { version = "3.1", default-features = false, features = [
+  "log",
+  "logging",
+] }
+
+[lints]
+workspace = true
