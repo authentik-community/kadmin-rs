@@ -1,0 +1,10 @@
+{
+   ignore_python_conditional_jump_errors
+   Memcheck:Cond
+   obj:*/libpython*
+}
+{
+   ignore_valgrind_memcheck
+   Memcheck:Leak
+   obj:*/vgpreload_memcheck-*.so
+}
