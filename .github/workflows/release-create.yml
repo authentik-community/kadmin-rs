@@ -1,0 +1,39 @@
+---
+name: Create release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  release-info:
+    if: github.event.pull_request.merged
+    outputs:
+      is-release: ${{ steps.meta.outputs.is-release }}
+      package: ${{ steps.meta.outputs.crates-name }}
+      version: ${{ steps.meta.outputs.version-actual }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: meta
+        uses: cargo-bins/release-meta@v1
+        with:
+          event-data: ${{ toJSON(github.event) }}
+
+  release-create:
+    needs:
+      - info
+    if: needs.info.outputs.is-release == 'true'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ needs.info.outputs.package }} ${{ needs.info.outputs.version }}"
+          tag_name: "${{ needs.info.outputs.package }}/version/${{ needs.info.outputs.version }}"
+          target_commitish: "${{ github.sha }}"
+          draft: true
+          make_latest: true
