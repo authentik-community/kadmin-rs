@@ -1,26 +1,9 @@
 use std::{env, path::PathBuf};
 
-use pkg_config::probe_library;
-
 fn main() {
-    let mut libraries = vec![
-        probe_library("krb5").expect("Unable to find library 'krb5'."),
-        probe_library("kdb").expect("Unable to find library 'kdb5'."),
-    ];
-    if cfg!(feature = "client") {
-        libraries.push(probe_library("kadm-client").expect("Unable to find library 'kadm5clnt'."));
-    }
-    if cfg!(feature = "server") {
-        libraries.push(probe_library("kadm-server").expect("Unable to find library 'kadm5srv'."));
-    }
+    let deps = system_deps::Config::new().probe().unwrap();
 
-    for lib in libraries {
-        for lib in lib.libs {
-            println!("cargo:rustc-lib-lib={}", lib);
-        }
-    }
-
-    let bindings = bindgen::builder()
+    let mut builder = bindgen::builder()
         .header("src/wrapper.h")
         .allowlist_type("(_|)kadm5.*")
         .allowlist_function("kadm5.*")
@@ -45,9 +28,13 @@ fn main() {
         .clang_arg("-fparse-all-comments")
         .derive_default(true)
         .generate_cstr(true)
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate()
-        .expect("Unable to generate bindings");
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
+
+    for include_path in deps.all_include_paths() {
+        builder = builder.clang_arg(format!("-I{}", include_path.display()));
+    }
+
+    let bindings = builder.generate().expect("Unable to generate bindings");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings

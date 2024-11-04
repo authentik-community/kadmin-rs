@@ -358,7 +358,7 @@ impl KAdminBuilder {
         unimplemented!();
     }
 
-    #[cfg(feature = "local")]
+    #[cfg(any(feature = "local", docsrs))]
     pub fn with_local(self) -> Result<KAdmin> {
         let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
 

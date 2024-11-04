@@ -165,7 +165,7 @@ impl KAdminBuilder {
         self.build(move |builder| builder.with_anonymous(&client_name))
     }
 
-    #[cfg(feature = "local")]
+    #[cfg(any(feature = "local", docsrs))]
     pub fn with_local(self) -> Result<KAdmin> {
         self.build(move |builder| builder.with_local())
     }

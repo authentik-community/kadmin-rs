@@ -8,6 +8,7 @@ description = "Rust bindings for the Kerberos administration interface (kadm5)"
 readme.workspace = true
 homepage.workspace = true
 repository.workspace = true
+license.workspace = true
 keywords = ["kerberos", "krb5", "kadm5", "kadmin"]
 categories = ["api-bindings", "authentication"]
 

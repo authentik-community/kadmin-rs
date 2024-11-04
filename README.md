@@ -4,6 +4,10 @@ This repository contains both a work-in-progress safe, idiomatic Rust bindings f
 
 It also contains a Python API to those bindings.
 
+### Kerberos implementations compatibility
+
+These libraries will only compile against MIT krb5. However, they will allow you to communicate with an MIT krb5 KDC as well as a Heimdal KDC. In fact, these libraries are tested against both!
+
 ## kadmin-sys
 
 ![Crates.io Version](https://img.shields.io/crates/v/kadmin-sys)

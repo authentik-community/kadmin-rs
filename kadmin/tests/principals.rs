@@ -16,11 +16,13 @@ fn list_principals() -> Result<()> {
     let kadmin = KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
     let principals = kadmin.list_principals("*")?;
     assert_eq!(
-        principals,
+        principals
+            .into_iter()
+            .filter(|princ| !princ.starts_with("host/"))
+            .collect::<Vec<String>>(),
         vec![
             "HTTP/testserver@KRBTEST.COM",
             "K/M@KRBTEST.COM",
-            "host/localhost@KRBTEST.COM",
             "kadmin/admin@KRBTEST.COM",
             "kadmin/changepw@KRBTEST.COM",
             "krbtgt/KRBTEST.COM@KRBTEST.COM",
@@ -53,11 +55,13 @@ mod sync {
         let kadmin = KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
         let principals = kadmin.list_principals("*")?;
         assert_eq!(
-            principals,
+            principals
+                .into_iter()
+                .filter(|princ| !princ.starts_with("host/"))
+                .collect::<Vec<String>>(),
             vec![
                 "HTTP/testserver@KRBTEST.COM",
                 "K/M@KRBTEST.COM",
-                "host/localhost@KRBTEST.COM",
                 "kadmin/admin@KRBTEST.COM",
                 "kadmin/changepw@KRBTEST.COM",
                 "krbtgt/KRBTEST.COM@KRBTEST.COM",

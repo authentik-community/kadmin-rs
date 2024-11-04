@@ -9,11 +9,14 @@ class TestInit(KerberosTestCase):
             self.realm.admin_princ, self.realm.password("admin")
         )
         self.assertEqual(
-            kadm.list_principals("*"),
+            [
+                princ
+                for princ in kadm.list_principals("*")
+                if not princ.startswith("host/")
+            ],
             [
                 "HTTP/testserver@KRBTEST.COM",
                 "K/M@KRBTEST.COM",
-                "host/localhost@KRBTEST.COM",
                 "kadmin/admin@KRBTEST.COM",
                 "kadmin/changepw@KRBTEST.COM",
                 "krbtgt/KRBTEST.COM@KRBTEST.COM",
