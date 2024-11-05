@@ -18,7 +18,7 @@ client = ["kadmin-sys/client"]
 local = ["kadmin-sys/server"]
 
 [dependencies]
-kadmin-sys = { path = "../kadmin-sys", version = "0.0.0", default-features = false }
+kadmin-sys = { path = "../kadmin-sys", version = "0.0.1", default-features = false }
 thiserror = "1"
 
 [dev-dependencies]
