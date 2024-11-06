@@ -13,6 +13,8 @@ name: Python CI
 
 env:
   DEBIAN_FRONTEND: noninteractive
+  CARGO_INCREMENTAL: "false"
+  SCCACHE_GHA_ENABLED: "on"
 
 jobs:
   lint:
@@ -32,9 +34,15 @@ jobs:
           python-version-file: "pyproject.toml"
           cache: "poetry"
       - run: poetry install --only=dev
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - uses: taiki-e/install-action@v2
         with:
-          tool: just
+          tool: just,sccache
       - run: poetry run just ci-lint-${{ matrix.job }}
   build:
     strategy:
@@ -50,16 +58,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: pipx install poetry || true
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
       - run: poetry install --only=dev
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - uses: taiki-e/install-action@v2
         with:
-          tool: just
+          tool: just,sccache
       - run: poetry run just ci-build-python
       - uses: actions/upload-artifact@v4
         with:
@@ -102,7 +115,7 @@ jobs:
           name: python-${{ matrix.python-version }}-build
           path: dist
       - run: |
-          PATH="/usr/lib/heimdal-servers:$PATḦ" poetry run just ci-test-python-${{ matrix.job }}
+          PATH="/usr/lib/heimdal-servers:$PATH" poetry run just ci-test-python-${{ matrix.job }}
   check-python:
     if: always()
     needs:
@@ -183,10 +196,11 @@ jobs:
         with:
           only: "${{ matrix.cibw-only }}"
         env:
-          CIBW_BEFORE_ALL_LINUX: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; yum install -y krb5-devel clang-devel || apk add krb5-dev clang-dev"
-          CIBW_BEFORE_ALL_MACOS: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; brew install llvm krb5"
+          CIBW_BEFORE_ALL_LINUX: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; cargo install sccache --locked; yum install -y krb5-devel clang-devel || apk add krb5-dev clang-dev"
+          CIBW_BEFORE_ALL_MACOS: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; cargo install sccache --locked; brew install llvm krb5"
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
-          CIBW_ENVIRONMENT_MACOS: "PKG_CONFIG_PATH=/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig MACOSX_DEPLOYMENT_TARGET=14.0"
+          CIBW_ENVIRONMENT_PASS_LINUX: "DEBIAN_FRONTEND CARGO_INCREMENTAL SCCACHE_GHA_ENABLED ACTIONS_CACHE_URL ACTIONS_RUNTIME_TOKEN"
+          CIBW_ENVIRONMENT_MACOS: "PKG_CONFIG_PATH=/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig MACOSX_DEPLOYMENT_TARGET=14.0 PATH=$HOME/.cargo/bin:$PATH"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28

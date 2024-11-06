@@ -35,6 +35,7 @@
         buildInputs = with pkgs; [
           (lib.hiPrio rust-bin.nightly.latest.rustfmt)
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+          sccache
 
           poetry
           python3Full
