@@ -4,9 +4,13 @@ use std::{
     thread::{JoinHandle, spawn},
 };
 
-use crate::{db_args::KAdminDbArgsBuilder, error::Result, params::KAdminParamsBuilder};
+use crate::{
+    db_args::KAdminDbArgsBuilder, error::Result, kadmin::KAdminImpl, params::KAdminParamsBuilder, principal::Principal,
+};
 
 enum KAdminOperation {
+    GetPrincipal(String, Sender<Result<Option<Principal>>>),
+    PrincipalChangePassword(String, String, Sender<Result<()>>),
     ListPrincipals(String, Sender<Result<Vec<String>>>),
     ListPolicies(String, Sender<Result<Vec<String>>>),
     Exit,
@@ -16,6 +20,12 @@ impl KAdminOperation {
     fn handle(&self, kadmin: &crate::kadmin::KAdmin) {
         match self {
             Self::Exit => (),
+            Self::GetPrincipal(name, sender) => {
+                let _ = sender.send(kadmin.get_principal(name));
+            }
+            Self::PrincipalChangePassword(name, password, sender) => {
+                let _ = sender.send(kadmin.principal_change_password(name, password));
+            }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query));
             }
@@ -35,15 +45,34 @@ impl KAdmin {
     pub fn builder() -> KAdminBuilder {
         KAdminBuilder::default()
     }
+}
 
-    pub fn list_principals(&self, query: &str) -> Result<Vec<String>> {
+impl KAdminImpl for KAdmin {
+    fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
+        let (sender, receiver) = channel();
+        self.op_sender
+            .send(KAdminOperation::GetPrincipal(name.to_owned(), sender))?;
+        receiver.recv()?
+    }
+
+    fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.op_sender.send(KAdminOperation::PrincipalChangePassword(
+            name.to_owned(),
+            password.to_owned(),
+            sender,
+        ))?;
+        receiver.recv()?
+    }
+
+    fn list_principals(&self, query: &str) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
         self.op_sender
             .send(KAdminOperation::ListPrincipals(query.to_owned(), sender))?;
         receiver.recv()?
     }
 
-    pub fn list_policies(&self, query: &str) -> Result<Vec<String>> {
+    fn list_policies(&self, query: &str) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
         self.op_sender
             .send(KAdminOperation::ListPolicies(query.to_owned(), sender))?;

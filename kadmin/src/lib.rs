@@ -14,7 +14,7 @@ pub mod error;
 pub use error::Error;
 
 pub mod kadmin;
-pub use kadmin::KAdmin;
+pub use kadmin::{KAdmin, KAdminImpl};
 
 pub mod params;
 pub use params::KAdminParams;

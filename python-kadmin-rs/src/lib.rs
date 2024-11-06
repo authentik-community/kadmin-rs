@@ -1,11 +1,15 @@
 use pyo3::prelude::*;
 
 #[pymodule(name = "_lib")]
-mod kadmin {
+mod pykadmin {
+    use std::{ops::Deref, sync::Arc};
+
     use kadmin::{
         db_args::KAdminDbArgsBuilder,
+        kadmin::KAdminImpl,
         params::KAdminParamsBuilder,
-        sync::{KAdmin as SyncKAdmin, KAdminBuilder},
+        principal::Principal as KPrincipal,
+        sync::{KAdmin as KKAdmin, KAdminBuilder},
     };
     use pyo3::{
         prelude::*,
@@ -98,7 +102,7 @@ mod kadmin {
     }
 
     #[pyclass]
-    struct KAdmin(SyncKAdmin);
+    struct KAdmin(Arc<KKAdmin>);
 
     impl KAdmin {
         fn get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
@@ -131,8 +135,15 @@ mod kadmin {
             unimplemented!();
         }
 
-        fn get_principal(&self) {
-            unimplemented!();
+        fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
+            Ok(self.0.get_principal(name)?.map(|p| Principal {
+                inner: p,
+                kadmin: Arc::clone(&self.0),
+            }))
+        }
+
+        fn principal_exists(&self, name: &str) -> Result<bool> {
+            Ok(self.0.principal_exists(name)?)
         }
 
         fn list_principals(&self, query: &str) -> Result<Vec<String>> {
@@ -172,9 +183,9 @@ mod kadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
+            Ok(Self(Arc::new(
                 Self::get_builder(params, db_args).with_password(client_name, password)?,
-            ))
+            )))
         }
 
         #[cfg(feature = "client")]
@@ -186,9 +197,9 @@ mod kadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
+            Ok(Self(Arc::new(
                 Self::get_builder(params, db_args).with_keytab(client_name, keytab)?,
-            ))
+            )))
         }
 
         #[cfg(feature = "client")]
@@ -200,23 +211,38 @@ mod kadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
+            Ok(Self(Arc::new(
                 Self::get_builder(params, db_args).with_ccache(client_name, ccache_name)?,
-            ))
+            )))
         }
 
         #[cfg(feature = "client")]
         #[staticmethod]
         #[pyo3(signature = (client_name, params=None, db_args=None))]
         fn with_anonymous(client_name: &str, params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-            Ok(Self(Self::get_builder(params, db_args).with_anonymous(client_name)?))
+            Ok(Self(Arc::new(
+                Self::get_builder(params, db_args).with_anonymous(client_name)?,
+            )))
         }
 
         #[cfg(feature = "local")]
         #[staticmethod]
         #[pyo3(signature = (params=None, db_args=None))]
         fn with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-            Ok(Self(Self::get_builder(params, db_args).with_local()?))
+            Ok(Self(Arc::new(Self::get_builder(params, db_args).with_local()?)))
+        }
+    }
+
+    #[pyclass]
+    struct Principal {
+        inner: KPrincipal,
+        kadmin: Arc<KKAdmin>,
+    }
+
+    #[pymethods]
+    impl Principal {
+        fn change_password(&self, password: &str) -> Result<()> {
+            Ok(self.inner.change_password(self.kadmin.deref(), password)?)
         }
     }
 
@@ -229,11 +255,15 @@ mod kadmin {
         fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
             m.add("PyKAdminException", m.py().get_type_bound::<PyKAdminException>())?;
             m.add("KAdminException", m.py().get_type_bound::<KAdminException>())?;
-            m.add("KerberosException", m.py().get_type_bound::<KAdminException>())?;
-            m.add("NullPointerDereference", m.py().get_type_bound::<KAdminException>())?;
-            m.add("CStringConversion", m.py().get_type_bound::<KAdminException>())?;
-            m.add("CStringImportFromVec", m.py().get_type_bound::<KAdminException>())?;
-            m.add("StringConversion", m.py().get_type_bound::<KAdminException>())?;
+            m.add("KerberosException", m.py().get_type_bound::<KerberosException>())?;
+            m.add(
+                "NullPointerDereference",
+                m.py().get_type_bound::<NullPointerDereference>(),
+            )?;
+            m.add("CStringConversion", m.py().get_type_bound::<CStringConversion>())?;
+            m.add("CStringImportFromVec", m.py().get_type_bound::<CStringImportFromVec>())?;
+            m.add("StringConversion", m.py().get_type_bound::<StringConversion>())?;
+            m.add("TimestampConversion", m.py().get_type_bound::<TimestampConversion>())?;
             Ok(())
         }
 
@@ -246,6 +276,7 @@ mod kadmin {
         create_exception!(exceptions, StringConversion, PyKAdminException);
         create_exception!(exceptions, ThreadSendError, PyKAdminException);
         create_exception!(exceptions, ThreadRecvError, PyKAdminException);
+        create_exception!(exceptions, TimestampConversion, PyKAdminException);
 
         pub(crate) struct PyKAdminError(Error);
 
@@ -273,6 +304,7 @@ mod kadmin {
                         Error::StringConversion(_) => (StringConversion::new_err(error.to_string()), None),
                         Error::ThreadSendError => (ThreadSendError::new_err(error.to_string()), None),
                         Error::ThreadRecvError(_) => (ThreadRecvError::new_err(error.to_string()), None),
+                        Error::TimestampConversion => (TimestampConversion::new_err(error.to_string()), None),
                         _ => (PyKAdminException::new_err("Unknown error: {}"), None),
                     };
 
