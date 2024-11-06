@@ -20,7 +20,7 @@ local = ["kadmin-sys/server"]
 [dependencies]
 chrono = "0.4"
 kadmin-sys = { path = "../kadmin-sys", version = "0.1.0", default-features = false }
-thiserror = "1"
+thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
