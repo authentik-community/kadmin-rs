@@ -4,10 +4,11 @@ version: 2
 build:
   os: ubuntu-lts-latest
   apt_packages:
-    - libkrb5-dev
     - krb5-multidev
     - libclang-dev
+    - libkrb5-dev
     - pkg-config
+    - sccache
   tools:
     python: "latest"
     rust: "latest"
