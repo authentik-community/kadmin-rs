@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "kadmin-sys"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "bindgen",
  "system-deps",
