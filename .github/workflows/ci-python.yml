@@ -89,7 +89,6 @@ jobs:
           # Several issues in k5test preventing us from running kadmind with it currently
           # - h5l
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
