@@ -24,6 +24,8 @@ pub enum Error {
     ThreadSendError,
     #[error("Failed to receive result from executor")]
     ThreadRecvError(#[from] std::sync::mpsc::RecvError),
+    #[error("Failed to convert krb5 timestamp to chrono DateTime")]
+    TimestampConversion,
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {

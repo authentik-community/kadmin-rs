@@ -24,3 +24,10 @@ class TestInit(KerberosTestCase):
                 "user@KRBTEST.COM",
             ],
         )
+
+    def test_principal_exists(self):
+        kadm = kadmin.KAdmin.with_password(
+            self.realm.admin_princ, self.realm.password("admin")
+        )
+        self.assertTrue(kadm.principal_exists(self.realm.user_princ))
+        self.assertFalse(kadm.principal_exists(f"nonexistent@{self.realm.realm}"))

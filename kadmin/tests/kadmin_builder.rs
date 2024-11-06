@@ -1,5 +1,7 @@
 use anyhow::Result;
 use kadmin::KAdmin;
+#[cfg(feature = "client")]
+use kadmin::KAdminImpl;
 #[cfg(feature = "local")]
 use kadmin::{KAdminDbArgs, KAdminParams};
 use serial_test::serial;
@@ -58,6 +60,8 @@ fn with_local() -> Result<()> {
 
 mod sync {
     use anyhow::Result;
+    #[cfg(feature = "client")]
+    use kadmin::KAdminImpl;
     use kadmin::sync::KAdmin;
     #[cfg(feature = "local")]
     use kadmin::{KAdminDbArgs, KAdminParams};

@@ -50,11 +50,29 @@ impl K5Test {
     }
 
     #[allow(dead_code)]
+    pub(crate) fn realm_name(&self) -> Result<String> {
+        Python::with_gil(|py| {
+            let realm = self.realm.bind(py);
+            let realm_name: String = realm.getattr("realm")?.extract()?;
+            Ok(realm_name)
+        })
+    }
+
+    #[allow(dead_code)]
     pub(crate) fn tmpdir(&self) -> Result<String> {
         Python::with_gil(|py| {
             let realm = self.realm.bind(py);
             let tmpdir: String = realm.getattr("tmpdir")?.extract()?;
             Ok(tmpdir)
+        })
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn user_princ(&self) -> Result<String> {
+        Python::with_gil(|py| {
+            let realm = self.realm.bind(py);
+            let user_princ: String = realm.getattr("user_princ")?.extract()?;
+            Ok(user_princ)
         })
     }
 
@@ -82,6 +100,15 @@ impl K5Test {
             let realm = self.realm.bind(py);
             let password: String = realm.call_method1("password", (name,))?.extract()?;
             Ok(password)
+        })
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn kinit(&self, name: &str, password: &str) -> Result<()> {
+        Python::with_gil(|py| {
+            let realm = self.realm.bind(py);
+            realm.call_method1("kinit", (name, password))?;
+            Ok(())
         })
     }
 
