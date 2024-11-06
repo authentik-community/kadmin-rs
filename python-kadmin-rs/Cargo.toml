@@ -18,5 +18,5 @@ workspace = true
 
 [package.metadata.release]
 pre-release-replacements = [
-  { file = "../pyproject.toml", search = "^version = \"[a-z0-9\\.-]+\"", replace = "version = \"{{ version }}\"", exactly = 1 },
+  { file = "../pyproject.toml", search = "^version = \"[a-z0-9\\.-]+\"", replace = "version = \"{{version}}\"", exactly = 1 },
 ]
