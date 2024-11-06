@@ -242,4 +242,5 @@ jobs:
         with:
           pattern: python-cibw-*
           path: dist
+          merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
