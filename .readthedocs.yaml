@@ -15,6 +15,7 @@ build:
 
 python:
   install:
+    - requirements: python-kadmin-rs/docs/requirements.txt
     - method: pip
       path: .
 
