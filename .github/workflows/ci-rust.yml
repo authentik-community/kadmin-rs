@@ -127,19 +127,24 @@ jobs:
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup rust
+      - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
+        name: Setup rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: actions/github-script@v7
+      - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
+        uses: actions/github-script@v7
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-      - uses: taiki-e/install-action@v2
+      - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
+        uses: taiki-e/install-action@v2
         with:
           tool: just,sccache
-      - run: just ci-build-deps
+      - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
+        run: just ci-build-deps
       - if: startsWith(github.ref, format('refs/tags/{0}/version/', matrix.crate))
         run: cargo publish --package ${{ matrix.crate }} ${{ matrix.extra_args }}

@@ -50,6 +50,7 @@
 
           cargo-msrv
           cargo-release
+          cargo-workspaces
           git
           just
           valgrind
