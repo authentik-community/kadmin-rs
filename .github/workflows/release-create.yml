@@ -13,7 +13,7 @@ jobs:
     if: github.event.pull_request.merged
     outputs:
       is-release: ${{ steps.meta.outputs.is-release }}
-      package: ${{ steps.meta.outputs.crates-name }}
+      package: ${{ steps.meta.outputs.crates-names }}
       version: ${{ steps.meta.outputs.version-actual }}
     runs-on: ubuntu-latest
     steps:
