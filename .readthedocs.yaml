@@ -1,0 +1,26 @@
+---
+version: 2
+
+build:
+  os: ubuntu-lts-latest
+  apt_packages:
+    - libkrb5-dev
+    - krb5-multidev
+    - libclang-dev
+    - pkg-config
+  tools:
+    python: "latest"
+    rust: "latest"
+
+python:
+  install:
+    - method: pip
+      path: .
+
+# Build documentation in the "docs/" directory with Sphinx
+sphinx:
+  builder: html
+  configuration: python-kadmin-rs/docs/conf.py
+  fail_on_warning: true
+
+formats: all
