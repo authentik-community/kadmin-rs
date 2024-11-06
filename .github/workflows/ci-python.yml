@@ -227,7 +227,7 @@ jobs:
         with:
           name: python-dist
           pattern: python-cibw-*
-          delete-merged: true
+          delete-merged: false
   release:
     needs:
       - check-python
@@ -240,6 +240,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: python-dist
+          pattern: python-cibw-*
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
