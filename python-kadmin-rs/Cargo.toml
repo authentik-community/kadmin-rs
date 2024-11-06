@@ -11,7 +11,7 @@ client = ["kadmin/client"]
 local = ["kadmin/local"]
 
 [dependencies]
-kadmin = { path = "../kadmin", version = "0.0.0", default-features = false }
+kadmin = { path = "../kadmin", version = "0.0.1", default-features = false }
 pyo3 = { version = "0.22", features = ["extension-module"] }
 
 [lints]
