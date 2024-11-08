@@ -1,29 +1,52 @@
+//! [`Error`] type for various errors this library can encounter
+
 use kadmin_sys::*;
 
 use crate::context::KAdminContext;
 
+/// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum Error {
+    /// Represent a Kerberos error.
+    ///
+    /// Provided are the origin error code plus an error message as
+    /// returned by [`krb5_get_error_message`]
     #[error("Kerberos error: {message} (code: {code})")]
-    Kerberos { code: krb5_error_code, message: String },
+    Kerberos {
+        code: krb5_error_code,
+        message: String,
+    },
 
+    /// Represent a kadm5 error.
+    ///
+    /// Provided are the origin error code plus an error message
+    /// from the MIT krb5 implementation (which are not exposed via a function)
     #[error("KAdmin error: {message} (code: {code})")]
     KAdmin { code: kadm5_ret_t, message: String },
 
+    /// When converting a `*c_char` to a [`String`], if the provided pointer was `NULL`, this error
+    /// is returned
     #[error("NULL pointer dereference error")]
     NullPointerDereference,
 
+    /// Couldn't convert a [`CString`][`std::ffi::CString`] to a [`String`]
     #[error(transparent)]
     CStringConversion(#[from] std::ffi::IntoStringError),
+    /// Couldn't import a `Vec<u8>` as a [`CString`][`std::ffi::CString`]
     #[error(transparent)]
     CStringImportFromVec(#[from] std::ffi::FromVecWithNulError),
+    /// Couldn't convert a [`CString`][`std::ffi::CString`] to a [`String`] because an interior nul
+    /// byte was found
     #[error(transparent)]
     StringConversion(#[from] std::ffi::NulError),
+    /// Failed to send an operation to the sync executor
     #[error("Failed to send operation to executor")]
     ThreadSendError,
+    /// Failed to receive the result from an operatior from the sync executor
     #[error("Failed to receive result from executor")]
     ThreadRecvError(#[from] std::sync::mpsc::RecvError),
+    /// Failed to convert a [`krb5_timestamp`] to a [`chrono::DateTime`]
     #[error("Failed to convert krb5 timestamp to chrono DateTime")]
     TimestampConversion,
 }
@@ -34,10 +57,15 @@ impl<T> From<std::sync::mpsc::SendError<T>> for Error {
     }
 }
 
+/// Helper type for errors sent from this library
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) fn krb5_error_code_escape_hatch(context: &KAdminContext, code: krb5_error_code) -> Result<()> {
-    if code == 0 {
+/// Helper function to "raise" an error from a [`krb5_error_code`]
+pub(crate) fn krb5_error_code_escape_hatch(
+    context: &KAdminContext,
+    code: krb5_error_code,
+) -> Result<()> {
+    if code == KRB5_OK {
         Ok(())
     } else {
         Err(Error::Kerberos {
@@ -47,6 +75,7 @@ pub(crate) fn krb5_error_code_escape_hatch(context: &KAdminContext, code: krb5_e
     }
 }
 
+/// Helper function to "raise" an error from a [`kadm5_ret_t`]
 pub(crate) fn kadm5_ret_t_escape_hatch(code: kadm5_ret_t) -> Result<()> {
     if code == KADM5_OK as kadm5_ret_t {
         return Ok(());
@@ -86,31 +115,34 @@ pub(crate) fn kadm5_ret_t_escape_hatch(code: kadm5_ret_t) -> Result<()> {
         KADM5_BAD_SERVER_HANDLE => "Programmer error! Bad Admin server handle",
         KADM5_BAD_STRUCT_VERSION => "Programmer error! Bad API structure version",
         KADM5_OLD_STRUCT_VERSION => {
-            "API structure version specified by application is no longer supported (to fix, recompile application \
-             against current Admin API header files and libraries)"
+            "API structure version specified by application is no longer supported (to fix, \
+             recompile application against current Admin API header files and libraries)"
         }
         KADM5_NEW_STRUCT_VERSION => {
-            "API structure version specified by application is unknown to libraries (to fix, obtain current Admin API \
-             header files and libraries and recompile application)"
+            "API structure version specified by application is unknown to libraries (to fix, \
+             obtain current Admin API header files and libraries and recompile application)"
         }
         KADM5_BAD_API_VERSION => "Programmer error! Bad API version",
         KADM5_OLD_LIB_API_VERSION => {
-            "API version specified by application is no longer supported by libraries (to fix, update application to \
-             adhere to current API version and recompile)"
+            "API version specified by application is no longer supported by libraries (to fix, \
+             update application to adhere to current API version and recompile)"
         }
         KADM5_OLD_SERVER_API_VERSION => {
-            "API version specified by application is no longer supported by server (to fix, update application to \
-             adhere to current API version and recompile)"
+            "API version specified by application is no longer supported by server (to fix, update \
+             application to adhere to current API version and recompile)"
         }
         KADM5_NEW_LIB_API_VERSION => {
-            "API version specified by application is unknown to libraries (to fix, obtain current Admin API header \
-             files and libraries and recompile application)"
+            "API version specified by application is unknown to libraries (to fix, obtain current \
+             Admin API header files and libraries and recompile application)"
         }
         KADM5_NEW_SERVER_API_VERSION => {
-            "API version specified by application is unknown to server (to fix, obtain and install newest Admin Server)"
+            "API version specified by application is unknown to server (to fix, obtain and install \
+             newest Admin Server)"
         }
         KADM5_SECURE_PRINC_MISSING => "Database error! Required principal missing",
-        KADM5_NO_RENAME_SALT => "The salt type of the specified principal does not support renaming",
+        KADM5_NO_RENAME_SALT => {
+            "The salt type of the specified principal does not support renaming"
+        }
         KADM5_BAD_CLIENT_PARAMS => "Illegal configuration parameter for remote KADM5 client",
         KADM5_BAD_SERVER_PARAMS => "Illegal configuration parameter for local KADM5 client.",
         KADM5_AUTH_LIST => "Operation requires ``list'' privilege",
@@ -123,7 +155,9 @@ pub(crate) fn kadm5_ret_t_escape_hatch(code: kadm5_ret_t) -> Result<()> {
         KADM5_SETKEY_DUP_ENCTYPES => "Multiple values for single or folded enctype",
         KADM5_SETV4KEY_INVAL_ENCTYPE => "Invalid enctype for setv4key",
         KADM5_SETKEY3_ETYPE_MISMATCH => "Mismatched enctypes for setkey3",
-        KADM5_MISSING_KRB5_CONF_PARAMS => "Missing parameters in krb5.conf required for kadmin client",
+        KADM5_MISSING_KRB5_CONF_PARAMS => {
+            "Missing parameters in krb5.conf required for kadmin client"
+        }
         KADM5_XDR_FAILURE => "XDR encoding error",
         KADM5_CANT_RESOLVE => "",
         KADM5_PASS_Q_GENERIC => "Database synchronization failed",

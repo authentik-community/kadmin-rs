@@ -1,38 +1,52 @@
+//! Define [`KAdminDbArgs`] to pass to kadm5
+
 use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 
 use crate::error::Result;
 
+/// Database specific arguments
+///
+/// See `man kadmin(1)` for a list of supported arguments
 #[derive(Debug)]
 pub struct KAdminDbArgs {
+    /// NULL-terminated list of strings of the form `arg[=value]`
+    ///
+    /// There are additional fields to store transient strings so the pointer stored in db_args
+    /// doesn't become invalid while this struct lives
     pub(crate) db_args: *mut *mut c_char,
 
-    // Additional fields to store transient strings so the pointer stored in db_args
-    // doesn't become invalid while this struct lives.
+    /// Store CStrings that are of the form `arg[=value]`
     _origin_args: Vec<CString>,
+    /// Store the Vec containing the pointers to the above CStrings
     _ptr_vec: Vec<*mut c_char>,
 }
 
 impl KAdminDbArgs {
+    /// Construct a new [`KAdminDbArgsBuilder`]
     pub fn builder() -> KAdminDbArgsBuilder {
         KAdminDbArgsBuilder::default()
     }
 }
 
 impl Default for KAdminDbArgs {
+    /// Construct an empty [`KAdminDbArgs`]
     fn default() -> Self {
         Self::builder().build().unwrap()
     }
 }
 
+/// [`KAdminDbArgs`] builder
 #[derive(Clone, Debug, Default)]
 pub struct KAdminDbArgsBuilder(Vec<(String, Option<String>)>);
 
 impl KAdminDbArgsBuilder {
+    /// Add an argument with an optional value
     pub fn arg(mut self, name: &str, value: Option<&str>) -> Self {
         self.0.push((name.to_owned(), value.map(|s| s.to_owned())));
         self
     }
 
+    /// Construct [`KAdminDbArgs`] from the provided arguments
     pub fn build(&self) -> Result<KAdminDbArgs> {
         let formatted_args = self.0.clone().into_iter().map(|(name, value)| {
             if let Some(value) = value {
@@ -78,7 +92,10 @@ mod tests {
 
     #[test]
     fn build_no_value() {
-        let db_args = KAdminDbArgs::builder().arg("lockiter", None).build().unwrap();
+        let db_args = KAdminDbArgs::builder()
+            .arg("lockiter", None)
+            .build()
+            .unwrap();
         assert_eq!(
             unsafe { CStr::from_ptr(*db_args.db_args).to_owned() },
             CString::new("lockiter").unwrap()
@@ -87,7 +104,10 @@ mod tests {
 
     #[test]
     fn build_with_value() {
-        let db_args = KAdminDbArgs::builder().arg("host", Some("ldap.test")).build().unwrap();
+        let db_args = KAdminDbArgs::builder()
+            .arg("host", Some("ldap.test"))
+            .build()
+            .unwrap();
         assert_eq!(
             unsafe { CStr::from_ptr(*db_args.db_args).to_owned() },
             CString::new("host=ldap.test").unwrap()

@@ -15,7 +15,7 @@ use crate::{
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::KAdminParams,
     principal::Principal,
-    strconv::c_string_to_string,
+    conv::c_string_to_string,
 };
 
 static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
@@ -99,7 +99,13 @@ impl KAdminImpl for KAdmin {
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
-        let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
+        let code = unsafe {
+            krb5_parse_name(
+                self.context.context,
+                name.as_ptr().cast_mut(),
+                &mut temp_princ,
+            )
+        };
         krb5_error_code_escape_hatch(&self.context, code)?;
         let mut principal_ent = _kadm5_principal_ent_t::default();
         let code = unsafe {
@@ -127,9 +133,17 @@ impl KAdminImpl for KAdmin {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
         let password = CString::new(password)?;
-        let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
+        let code = unsafe {
+            krb5_parse_name(
+                self.context.context,
+                name.as_ptr().cast_mut(),
+                &mut temp_princ,
+            )
+        };
         krb5_error_code_escape_hatch(&self.context, code)?;
-        let code = unsafe { kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut()) };
+        let code = unsafe {
+            kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut())
+        };
         unsafe {
             krb5_free_principal(self.context.context, temp_princ);
         }
@@ -141,8 +155,14 @@ impl KAdminImpl for KAdmin {
         let query = CString::new(query)?;
         let mut count = 0;
         let mut princs: *mut *mut c_char = null_mut();
-        let code =
-            unsafe { kadm5_get_principals(self.server_handle, query.as_ptr().cast_mut(), &mut princs, &mut count) };
+        let code = unsafe {
+            kadm5_get_principals(
+                self.server_handle,
+                query.as_ptr().cast_mut(),
+                &mut princs,
+                &mut count,
+            )
+        };
         kadm5_ret_t_escape_hatch(code)?;
         let mut result = Vec::with_capacity(count as usize);
         for raw in unsafe { std::slice::from_raw_parts(princs, count as usize) }.iter() {
@@ -158,8 +178,14 @@ impl KAdminImpl for KAdmin {
         let query = CString::new(query)?;
         let mut count = 0;
         let mut policies: *mut *mut c_char = null_mut();
-        let code =
-            unsafe { kadm5_get_policies(self.server_handle, query.as_ptr().cast_mut(), &mut policies, &mut count) };
+        let code = unsafe {
+            kadm5_get_policies(
+                self.server_handle,
+                query.as_ptr().cast_mut(),
+                &mut policies,
+                &mut count,
+            )
+        };
         kadm5_ret_t_escape_hatch(code)?;
         let mut result = Vec::with_capacity(count as usize);
         for raw in unsafe { std::slice::from_raw_parts(policies, count as usize) }.iter() {
@@ -220,7 +246,9 @@ impl KAdminBuilder {
 
     #[cfg(feature = "client")]
     pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -251,7 +279,9 @@ impl KAdminBuilder {
 
     #[cfg(feature = "client")]
     pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -271,7 +301,8 @@ impl KAdminBuilder {
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let princ = unsafe { princ_ptr.assume_init() };
             let mut raw_client_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             unsafe {
                 krb5_free_principal(kadmin.context.context, princ);
@@ -311,8 +342,14 @@ impl KAdminBuilder {
     }
 
     #[cfg(feature = "client")]
-    pub fn with_ccache(self, client_name: Option<&str>, ccache_name: Option<&str>) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+    pub fn with_ccache(
+        self,
+        client_name: Option<&str>,
+        ccache_name: Option<&str>,
+    ) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -338,11 +375,14 @@ impl KAdminBuilder {
             CString::new(client_name)?
         } else {
             let mut princ_ptr: MaybeUninit<krb5_principal> = MaybeUninit::zeroed();
-            let code = unsafe { krb5_cc_get_principal(kadmin.context.context, ccache, princ_ptr.as_mut_ptr()) };
+            let code = unsafe {
+                krb5_cc_get_principal(kadmin.context.context, ccache, princ_ptr.as_mut_ptr())
+            };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let princ = unsafe { princ_ptr.assume_init() };
             let mut raw_client_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             unsafe {
                 krb5_free_principal(kadmin.context.context, princ);
@@ -382,7 +422,9 @@ impl KAdminBuilder {
 
     #[cfg(feature = "client")]
     pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut _kadmin, _params, _db_args) = self.get_kadmin()?;
 
@@ -391,7 +433,9 @@ impl KAdminBuilder {
 
     #[cfg(any(feature = "local", docsrs))]
     pub fn with_local(self) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
