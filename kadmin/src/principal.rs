@@ -6,7 +6,7 @@ use kadmin_sys::*;
 use crate::{
     error::{Error, Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
-    strconv::c_string_to_string,
+    conv::c_string_to_string,
 };
 
 fn ts_to_dt(ts: krb5_timestamp) -> Result<DateTime<Utc>> {
@@ -42,7 +42,9 @@ impl Principal {
         // TODO: make a function out of this
         let name = {
             let mut raw_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, entry.principal, &mut raw_name) };
+            let code = unsafe {
+                krb5_unparse_name(kadmin.context.context, entry.principal, &mut raw_name)
+            };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let name = c_string_to_string(raw_name)?;
             unsafe {
@@ -52,7 +54,8 @@ impl Principal {
         };
         let modified_by = {
             let mut raw_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, entry.mod_name, &mut raw_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, entry.mod_name, &mut raw_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let name = c_string_to_string(raw_name)?;
             unsafe {

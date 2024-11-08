@@ -175,7 +175,10 @@ mod tests {
 
     #[test]
     fn build_realm() {
-        let params = KAdminParams::builder().realm("EXAMPLE.ORG").build().unwrap();
+        let params = KAdminParams::builder()
+            .realm("EXAMPLE.ORG")
+            .build()
+            .unwrap();
 
         assert_eq!(params.params.mask, 1);
         assert_eq!(

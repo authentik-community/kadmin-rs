@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    db_args::KAdminDbArgsBuilder, error::Result, kadmin::KAdminImpl, params::KAdminParamsBuilder, principal::Principal,
+    db_args::KAdminDbArgsBuilder, error::Result, kadmin::KAdminImpl, params::KAdminParamsBuilder,
+    principal::Principal,
 };
 
 enum KAdminOperation {
@@ -57,11 +58,12 @@ impl KAdminImpl for KAdmin {
 
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender.send(KAdminOperation::PrincipalChangePassword(
-            name.to_owned(),
-            password.to_owned(),
-            sender,
-        ))?;
+        self.op_sender
+            .send(KAdminOperation::PrincipalChangePassword(
+                name.to_owned(),
+                password.to_owned(),
+                sender,
+            ))?;
         receiver.recv()?
     }
 
@@ -121,7 +123,8 @@ impl KAdminBuilder {
     }
 
     fn build<F>(self, kadmin_build: F) -> Result<KAdmin>
-    where F: FnOnce(crate::kadmin::KAdminBuilder) -> Result<crate::kadmin::KAdmin> + Send + 'static {
+    where F: FnOnce(crate::kadmin::KAdminBuilder) -> Result<crate::kadmin::KAdmin> + Send + 'static
+    {
         let (op_sender, op_receiver) = channel();
         let (start_sender, start_receiver) = channel();
 
@@ -180,11 +183,17 @@ impl KAdminBuilder {
     }
 
     #[cfg(feature = "client")]
-    pub fn with_ccache(self, client_name: Option<&str>, ccache_name: Option<&str>) -> Result<KAdmin> {
+    pub fn with_ccache(
+        self,
+        client_name: Option<&str>,
+        ccache_name: Option<&str>,
+    ) -> Result<KAdmin> {
         let client_name = client_name.map(String::from);
         let ccache_name = ccache_name.map(String::from);
 
-        self.build(move |builder| builder.with_ccache(client_name.as_deref(), ccache_name.as_deref()))
+        self.build(move |builder| {
+            builder.with_ccache(client_name.as_deref(), ccache_name.as_deref())
+        })
     }
 
     #[cfg(feature = "client")]

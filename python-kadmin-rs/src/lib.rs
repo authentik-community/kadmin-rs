@@ -219,7 +219,11 @@ mod pykadmin {
         #[cfg(feature = "client")]
         #[staticmethod]
         #[pyo3(signature = (client_name, params=None, db_args=None))]
-        fn with_anonymous(client_name: &str, params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
+        fn with_anonymous(
+            client_name: &str,
+            params: Option<Params>,
+            db_args: Option<DbArgs>,
+        ) -> Result<Self> {
             Ok(Self(Arc::new(
                 Self::get_builder(params, db_args).with_anonymous(client_name)?,
             )))
@@ -229,7 +233,9 @@ mod pykadmin {
         #[staticmethod]
         #[pyo3(signature = (params=None, db_args=None))]
         fn with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-            Ok(Self(Arc::new(Self::get_builder(params, db_args).with_local()?)))
+            Ok(Self(Arc::new(
+                Self::get_builder(params, db_args).with_local()?,
+            )))
         }
     }
 
@@ -253,17 +259,38 @@ mod pykadmin {
 
         #[pymodule_init]
         fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
-            m.add("PyKAdminException", m.py().get_type_bound::<PyKAdminException>())?;
-            m.add("KAdminException", m.py().get_type_bound::<KAdminException>())?;
-            m.add("KerberosException", m.py().get_type_bound::<KerberosException>())?;
+            m.add(
+                "PyKAdminException",
+                m.py().get_type_bound::<PyKAdminException>(),
+            )?;
+            m.add(
+                "KAdminException",
+                m.py().get_type_bound::<KAdminException>(),
+            )?;
+            m.add(
+                "KerberosException",
+                m.py().get_type_bound::<KerberosException>(),
+            )?;
             m.add(
                 "NullPointerDereference",
                 m.py().get_type_bound::<NullPointerDereference>(),
             )?;
-            m.add("CStringConversion", m.py().get_type_bound::<CStringConversion>())?;
-            m.add("CStringImportFromVec", m.py().get_type_bound::<CStringImportFromVec>())?;
-            m.add("StringConversion", m.py().get_type_bound::<StringConversion>())?;
-            m.add("TimestampConversion", m.py().get_type_bound::<TimestampConversion>())?;
+            m.add(
+                "CStringConversion",
+                m.py().get_type_bound::<CStringConversion>(),
+            )?;
+            m.add(
+                "CStringImportFromVec",
+                m.py().get_type_bound::<CStringImportFromVec>(),
+            )?;
+            m.add(
+                "StringConversion",
+                m.py().get_type_bound::<StringConversion>(),
+            )?;
+            m.add(
+                "TimestampConversion",
+                m.py().get_type_bound::<TimestampConversion>(),
+            )?;
             Ok(())
         }
 
@@ -295,16 +322,31 @@ mod pykadmin {
                             KerberosException::new_err(error.to_string()),
                             Some((*code as i64, message)),
                         ),
-                        Error::KAdmin { code, message } => {
-                            (KAdminException::new_err(error.to_string()), Some((*code, message)))
+                        Error::KAdmin { code, message } => (
+                            KAdminException::new_err(error.to_string()),
+                            Some((*code, message)),
+                        ),
+                        Error::NullPointerDereference => {
+                            (NullPointerDereference::new_err(error.to_string()), None)
                         }
-                        Error::NullPointerDereference => (NullPointerDereference::new_err(error.to_string()), None),
-                        Error::CStringConversion(_) => (CStringConversion::new_err(error.to_string()), None),
-                        Error::CStringImportFromVec(_) => (CStringImportFromVec::new_err(error.to_string()), None),
-                        Error::StringConversion(_) => (StringConversion::new_err(error.to_string()), None),
-                        Error::ThreadSendError => (ThreadSendError::new_err(error.to_string()), None),
-                        Error::ThreadRecvError(_) => (ThreadRecvError::new_err(error.to_string()), None),
-                        Error::TimestampConversion => (TimestampConversion::new_err(error.to_string()), None),
+                        Error::CStringConversion(_) => {
+                            (CStringConversion::new_err(error.to_string()), None)
+                        }
+                        Error::CStringImportFromVec(_) => {
+                            (CStringImportFromVec::new_err(error.to_string()), None)
+                        }
+                        Error::StringConversion(_) => {
+                            (StringConversion::new_err(error.to_string()), None)
+                        }
+                        Error::ThreadSendError => {
+                            (ThreadSendError::new_err(error.to_string()), None)
+                        }
+                        Error::ThreadRecvError(_) => {
+                            (ThreadRecvError::new_err(error.to_string()), None)
+                        }
+                        Error::TimestampConversion => {
+                            (TimestampConversion::new_err(error.to_string()), None)
+                        }
                         _ => (PyKAdminException::new_err("Unknown error: {}"), None),
                     };
 
@@ -313,7 +355,8 @@ mod pykadmin {
                         if let Err(err) = bound_exc.setattr(intern!(py, "code"), code) {
                             return err;
                         }
-                        if let Err(err) = bound_exc.setattr(intern!(py, "origin_message"), message) {
+                        if let Err(err) = bound_exc.setattr(intern!(py, "origin_message"), message)
+                        {
                             return err;
                         }
                     }
