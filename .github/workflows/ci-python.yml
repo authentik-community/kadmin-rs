@@ -89,7 +89,6 @@ jobs:
           # Several issues in k5test preventing us from running kadmind with it currently
           # - h5l
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
@@ -202,7 +201,7 @@ jobs:
         with:
           only: "${{ matrix.cibw-only }}"
         env:
-          CIBW_BEFORE_ALL_LINUX: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; yum install -y krb5-devel clang-devel openssl-devel || apk add krb5-dev clang-dev sccache; which sccache || cargo install sccache --locked"
+          CIBW_BEFORE_ALL_LINUX: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; yum install -y krb5-devel clang-devel openssl-devel || apk add krb5-dev clang-dev sccache; which sccache && exit 0; curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.8.2/sccache-v0.8.2-$(uname -m)-unknown-linux-musl.tar.gz | tar xvz -C /tmp/; mv /tmp/sccache-v0.8.2-$(uname -m)-unknown-linux-musl/sccache /usr/bin/sccache"
           CIBW_BEFORE_ALL_MACOS: "set -e; curl -sSf https://sh.rustup.rs | sh -s -- -y; brew install llvm krb5 sccache"
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
           CIBW_ENVIRONMENT_PASS_LINUX: "DEBIAN_FRONTEND CARGO_INCREMENTAL SCCACHE_GHA_ENABLED ACTIONS_CACHE_URL ACTIONS_RUNTIME_TOKEN"
@@ -227,7 +226,7 @@ jobs:
         with:
           name: python-dist
           pattern: python-cibw-*
-          delete-merged: true
+          delete-merged: false
   release:
     needs:
       - check-python
@@ -240,6 +239,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: python-dist
+          pattern: python-cibw-*
           path: dist
+          merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1

@@ -22,50 +22,91 @@ static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug)]
 pub struct KAdmin {
-    context: KAdminContext,
+    pub(crate) context: KAdminContext,
     pub(crate) server_handle: *mut c_void,
+}
+
+pub trait KAdminImpl {
+    // ank, addprinc, add_principal
+    fn add_principal() {
+        unimplemented!();
+    }
+
+    // delprinc, delete_principal
+    fn delete_principal() {
+        unimplemented!();
+    }
+
+    // modify_principal, modprinc
+    fn modify_principal() {
+        unimplemented!();
+    }
+
+    // rename_principal, renprinc
+    fn rename_principal() {
+        unimplemented!();
+    }
+
+    // get_principal, getprinc
+    fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
+
+    fn principal_exists(&self, name: &str) -> Result<bool> {
+        Ok(self.get_principal(name)?.is_some())
+    }
+
+    // change_password, cpw
+    fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
+
+    // list_principals, listprincs, get_principals, getprincs
+    fn list_principals(&self, query: &str) -> Result<Vec<String>>;
+
+    // add_policy, addpol
+    fn add_policy() {
+        unimplemented!();
+    }
+
+    // modify_policy, modpol
+    fn modify_policy() {
+        unimplemented!();
+    }
+
+    // delete_policy, delpol
+    fn delete_policy() {
+        unimplemented!();
+    }
+
+    // get_policy, getpol
+    fn get_policy() {
+        unimplemented!();
+    }
+
+    // list_policies, listpols, get_policies, getpols
+    fn list_policies(&self, query: &str) -> Result<Vec<String>>;
+
+    // get_privs, getprivs
+    fn get_privs() {
+        unimplemented!();
+    }
 }
 
 impl KAdmin {
     pub fn builder() -> KAdminBuilder {
         KAdminBuilder::default()
     }
+}
 
-    // ank, addprinc, add_principal
-    pub fn add_principal() {
-        unimplemented!();
-    }
-
-    // delprinc, delete_principal
-    pub fn delete_principal() {
-        unimplemented!();
-    }
-
-    // modify_principal, modprinc
-    pub fn modify_principal() {
-        unimplemented!();
-    }
-
-    // rename_principal, renprinc
-    pub fn rename_principal() {
-        unimplemented!();
-    }
-
-    // get_principal, getprinc
-    #[allow(unreachable_code)]
-    #[allow(unused_variables)]
-    pub fn get_principal(&self, name: &str) -> Result<Option<Principal<'_>>> {
-        unimplemented!();
+impl KAdminImpl for KAdmin {
+    fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
         let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
         krb5_error_code_escape_hatch(&self.context, code)?;
-        let mut principal_entry = Principal::new(self);
+        let mut principal_ent = _kadm5_principal_ent_t::default();
         let code = unsafe {
             kadm5_get_principal(
                 self.server_handle,
                 temp_princ,
-                &mut principal_entry.inner,
+                &mut principal_ent,
                 (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA) as i64,
             )
         };
@@ -76,11 +117,27 @@ impl KAdmin {
             return Ok(None);
         }
         kadm5_ret_t_escape_hatch(code)?;
-        Ok(Some(principal_entry))
+        let principal = Principal::from_raw(self, &principal_ent)?;
+        let code = unsafe { kadm5_free_principal_ent(self.server_handle, &mut principal_ent) };
+        kadm5_ret_t_escape_hatch(code)?;
+        Ok(Some(principal))
     }
 
-    // list_principals, listprincs, get_principals, getprincs
-    pub fn list_principals(&self, query: &str) -> Result<Vec<String>> {
+    fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
+        let mut temp_princ = null_mut();
+        let name = CString::new(name)?;
+        let password = CString::new(password)?;
+        let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
+        krb5_error_code_escape_hatch(&self.context, code)?;
+        let code = unsafe { kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut()) };
+        unsafe {
+            krb5_free_principal(self.context.context, temp_princ);
+        }
+        kadm5_ret_t_escape_hatch(code)?;
+        Ok(())
+    }
+
+    fn list_principals(&self, query: &str) -> Result<Vec<String>> {
         let query = CString::new(query)?;
         let mut count = 0;
         let mut princs: *mut *mut c_char = null_mut();
@@ -97,28 +154,7 @@ impl KAdmin {
         Ok(result)
     }
 
-    // add_policy, addpol
-    pub fn add_policy() {
-        unimplemented!();
-    }
-
-    // modify_policy, modpol
-    pub fn modify_policy() {
-        unimplemented!();
-    }
-
-    // delete_policy, delpol
-    pub fn delete_policy() {
-        unimplemented!();
-    }
-
-    // get_policy, getpol
-    pub fn get_policy() {
-        unimplemented!();
-    }
-
-    // list_policies, listpols, get_policies, getpols
-    pub fn list_policies(&self, query: &str) -> Result<Vec<String>> {
+    fn list_policies(&self, query: &str) -> Result<Vec<String>> {
         let query = CString::new(query)?;
         let mut count = 0;
         let mut policies: *mut *mut c_char = null_mut();
@@ -133,11 +169,6 @@ impl KAdmin {
             kadm5_free_name_list(self.server_handle, policies, count);
         }
         Ok(result)
-    }
-
-    // get_privs, getprivs
-    pub fn get_privs() {
-        unimplemented!();
     }
 }
 

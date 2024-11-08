@@ -1,6 +1,6 @@
 [package]
 name = "kadmin"
-version = "0.0.1"
+version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,8 +18,9 @@ client = ["kadmin-sys/client"]
 local = ["kadmin-sys/server"]
 
 [dependencies]
-kadmin-sys = { path = "../kadmin-sys", version = "0.0.3", default-features = false }
-thiserror = "1"
+chrono = "0.4"
+kadmin-sys = { path = "../kadmin-sys", version = "0.1.0", default-features = false }
+thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
