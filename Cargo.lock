@@ -441,6 +441,7 @@ dependencies = [
 name = "python-kadmin-rs"
 version = "0.1.0"
 dependencies = [
+ "indoc",
  "kadmin",
  "pyo3",
 ]

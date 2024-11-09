@@ -1,4 +1,4 @@
-//! Manage [kerberos contexts][`KAdminContext`]
+//! Manage [kerberos contexts][`Context`]
 
 use std::{
     ffi::{CStr, CString},
@@ -11,28 +11,28 @@ use std::{
 use kadmin_sys::*;
 
 use crate::{
-    error::{Result, krb5_error_code_escape_hatch},
     conv::c_string_to_string,
+    error::{Result, krb5_error_code_escape_hatch},
 };
 
 static CONTEXT_INIT_LOCK: Mutex<()> = Mutex::new(());
 
 /// A Kerberos context (`krb5_context`) for use with KAdmin
 #[derive(Debug)]
-pub struct KAdminContext {
+pub struct Context {
     pub(crate) context: krb5_context,
     pub(crate) default_realm: Option<CString>,
 }
 
-impl KAdminContext {
+impl Context {
     /// Create a default context
     pub fn new() -> Result<Self> {
         Self::builder().build()
     }
 
-    /// Construct a new [builder][`KAdminContextBuilder`] for custom contexts
-    pub fn builder() -> KAdminContextBuilder {
-        KAdminContextBuilder::default()
+    /// Construct a new [builder][`ContextBuilder`] for custom contexts
+    pub fn builder() -> ContextBuilder {
+        ContextBuilder::default()
     }
 
     /// Try to fill the `default_realm` field
@@ -69,36 +69,36 @@ impl KAdminContext {
     }
 }
 
-impl Default for KAdminContext {
+impl Default for Context {
     fn default() -> Self {
         Self::builder().build().unwrap()
     }
 }
 
-/// Builder for [`KAdminContext`]
+/// Builder for [`Context`]
 #[derive(Debug, Default)]
-pub struct KAdminContextBuilder {
+pub struct ContextBuilder {
     /// Optional [`krb5_context`] provided by the user
     context: Option<krb5_context>,
 }
 
-impl KAdminContextBuilder {
+impl ContextBuilder {
     /// Use a custom [`krb5_context`]
     ///
     /// # Safety
     ///
-    /// Context will be freed with [`krb5_free_context`] when [`KAdminContext`] is dropped.
+    /// Context will be freed with [`krb5_free_context`] when [`Context`] is dropped.
     pub unsafe fn context(mut self, context: krb5_context) -> Self {
         self.context = Some(context);
         self
     }
 
-    /// Build a [`KAdminContext`] instance
+    /// Build a [`Context`] instance
     ///
     /// If no context was provided, a default one is created with [`kadm5_init_krb5_context`]
-    pub fn build(self) -> Result<KAdminContext> {
+    pub fn build(self) -> Result<Context> {
         if let Some(ctx) = self.context {
-            let mut context = KAdminContext {
+            let mut context = Context {
                 context: ctx,
                 default_realm: None,
             };
@@ -113,7 +113,7 @@ impl KAdminContextBuilder {
         let mut context_ptr: MaybeUninit<krb5_context> = MaybeUninit::zeroed();
 
         let code = unsafe { kadm5_init_krb5_context(context_ptr.as_mut_ptr()) };
-        let mut context = KAdminContext {
+        let mut context = Context {
             context: unsafe { context_ptr.assume_init() },
             default_realm: None,
         };
@@ -123,7 +123,7 @@ impl KAdminContextBuilder {
     }
 }
 
-impl Drop for KAdminContext {
+impl Drop for Context {
     fn drop(&mut self) {
         let _guard = CONTEXT_INIT_LOCK
             .lock()
@@ -139,20 +139,20 @@ mod tests {
 
     #[test]
     fn new() {
-        let context = KAdminContext::new();
+        let context = Context::new();
         assert!(context.is_ok());
     }
 
     #[test]
     fn error_code_to_message() {
-        let context = KAdminContext::new().unwrap();
+        let context = Context::new().unwrap();
         let message = context.error_code_to_message(-1765328384);
         assert_eq!(message, "No error".to_string());
     }
 
     #[test]
     fn error_code_to_message_wrong_code() {
-        let context = KAdminContext::new().unwrap();
+        let context = Context::new().unwrap();
         let message = context.error_code_to_message(-1);
         assert_eq!(message, "Unknown code ____ 255".to_string());
     }

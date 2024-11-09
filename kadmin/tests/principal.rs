@@ -17,7 +17,7 @@ macro_rules! gen_tests {
             let realm = K5Test::new()?;
             let kadmin = KAdmin::builder()
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-            let principals = kadmin.list_principals("*")?;
+            let principals = kadmin.list_principals(Some("*"))?;
             assert_eq!(
                 principals
                     .into_iter()

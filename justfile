@@ -132,7 +132,7 @@ _install-python:
 # Build and install wheel
 install-python: clean-python build-python _install-python
 
-docs-python:
+docs-python: install-python
   cd python-kadmin-rs/docs && sphinx-build -M html . _build
 
 # Cleanup rust build directory

@@ -15,7 +15,7 @@ fn with_password() -> Result<()> {
     let realm = K5Test::new()?;
     let kadmin =
         KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-    kadmin.list_principals("*")?;
+    kadmin.list_principals(None)?;
     Ok(())
 }
 
@@ -26,7 +26,7 @@ fn with_keytab() -> Result<()> {
     let realm = K5Test::new()?;
     let kadmin =
         KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-    kadmin.list_principals("*")?;
+    kadmin.list_principals(None)?;
     Ok(())
 }
 
@@ -39,7 +39,7 @@ fn with_ccache() -> Result<()> {
     let kadmin_ccache = realm.kadmin_ccache()?;
     let kadmin =
         KAdmin::builder().with_ccache(Some(&realm.admin_princ()?), Some(&kadmin_ccache))?;
-    kadmin.list_principals("*")?;
+    kadmin.list_principals(None)?;
     Ok(())
 }
 
@@ -82,7 +82,7 @@ mod sync {
         let realm = K5Test::new()?;
         let kadmin =
             KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-        kadmin.list_principals("*")?;
+        kadmin.list_principals(None)?;
         Ok(())
     }
 
@@ -93,7 +93,7 @@ mod sync {
         let realm = K5Test::new()?;
         let kadmin =
             KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-        kadmin.list_principals("*")?;
+        kadmin.list_principals(None)?;
         Ok(())
     }
 
@@ -106,7 +106,7 @@ mod sync {
         let kadmin_ccache = realm.kadmin_ccache()?;
         let kadmin =
             KAdmin::builder().with_ccache(Some(&realm.admin_princ()?), Some(&kadmin_ccache))?;
-        kadmin.list_principals("*")?;
+        kadmin.list_principals(None)?;
         Ok(())
     }
 

@@ -2,7 +2,7 @@
 
 use kadmin_sys::*;
 
-use crate::context::KAdminContext;
+use crate::context::Context;
 
 /// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
@@ -14,7 +14,9 @@ pub enum Error {
     /// returned by [`krb5_get_error_message`]
     #[error("Kerberos error: {message} (code: {code})")]
     Kerberos {
+        /// Kerberos error code
         code: krb5_error_code,
+        /// Kerberos error message
         message: String,
     },
 
@@ -23,7 +25,12 @@ pub enum Error {
     /// Provided are the origin error code plus an error message
     /// from the MIT krb5 implementation (which are not exposed via a function)
     #[error("KAdmin error: {message} (code: {code})")]
-    KAdmin { code: kadm5_ret_t, message: String },
+    KAdmin {
+        /// kadm5 error code
+        code: kadm5_ret_t,
+        /// kadm5 error message
+        message: String
+    },
 
     /// When converting a `*c_char` to a [`String`], if the provided pointer was `NULL`, this error
     /// is returned
@@ -61,10 +68,7 @@ impl<T> From<std::sync::mpsc::SendError<T>> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Helper function to "raise" an error from a [`krb5_error_code`]
-pub(crate) fn krb5_error_code_escape_hatch(
-    context: &KAdminContext,
-    code: krb5_error_code,
-) -> Result<()> {
+pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: krb5_error_code) -> Result<()> {
     if code == KRB5_OK {
         Ok(())
     } else {
@@ -76,7 +80,7 @@ pub(crate) fn krb5_error_code_escape_hatch(
 }
 
 /// Helper function to "raise" an error from a [`kadm5_ret_t`]
-pub(crate) fn kadm5_ret_t_escape_hatch(code: kadm5_ret_t) -> Result<()> {
+pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> Result<()> {
     if code == KADM5_OK as kadm5_ret_t {
         return Ok(());
     }
@@ -164,5 +168,9 @@ pub(crate) fn kadm5_ret_t_escape_hatch(code: kadm5_ret_t) -> Result<()> {
         _ => "Unknown error",
     }
     .to_owned();
-    Err(Error::KAdmin { code, message })
+    if message != "Unknown error".to_string() {
+        Err(Error::KAdmin { code, message })
+    } else {
+        krb5_error_code_escape_hatch(context, code as i32)
+    }
 }

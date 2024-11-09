@@ -7,6 +7,9 @@ NullPointerDereference = exceptions.NullPointerDereference
 CStringConversion = exceptions.CStringConversion
 CStringImportFromVec = exceptions.CStringImportFromVec
 StringConversion = exceptions.StringConversion
+ThreadSendError = exceptions.ThreadSendError
+ThreadRecvError = exceptions.ThreadRecvError
+TimestampConversion = exceptions.TimestampConversion
 
 __all__ = (
     "PyKAdminException",
@@ -16,4 +19,7 @@ __all__ = (
     "CStringConversion",
     "CStringImportFromVec",
     "StringConversion",
+    "ThreadSendError",
+    "ThreadRecvError",
+    "TimestampConversion",
 )

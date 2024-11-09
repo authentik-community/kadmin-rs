@@ -1,7 +1,7 @@
 Welcome to python-kadmin-rs's documentation!
 ============================================
 
-These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
+This is a Python interface to libkadm5. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
 
 With `kadmin`:
 

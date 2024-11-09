@@ -15,7 +15,7 @@
 //!
 //! let kadmin = KAdmin::builder().with_password(&princ, &password).unwrap();
 //!
-//! dbg!("{}", kadmin.list_principals("*").unwrap());
+//! dbg!("{}", kadmin.list_principals(None).unwrap());
 //! # }
 //! ```
 //!
@@ -31,7 +31,7 @@
 //!
 //! let kadmin = KAdmin::builder().with_local().unwrap();
 //!
-//! dbg!("{}", kadmin.list_principals("*").unwrap());
+//! dbg!("{}", kadmin.list_principals(None).unwrap());
 //! # }
 //! ```
 //!
@@ -44,10 +44,12 @@
 //! non-thread-safe one, but should be close enough that switching between one or the other is
 //! easy enough.
 
-#[cfg(all(feature = "client", feature = "local", not(docsrs)))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
+#[cfg(all(feature = "client", feature = "local", not(doc)))]
 compile_error!("Feature \"client\" and feature \"local\" cannot be enabled at the same time.");
 
-#[cfg(all(not(feature = "client"), not(feature = "local"), not(docsrs)))]
+#[cfg(all(not(feature = "client"), not(feature = "local"), not(doc)))]
 compile_error!("Exactly one of feature \"client\" or feature \"local\" must be selected.");
 
 mod conv;
@@ -56,13 +58,13 @@ pub mod error;
 pub use error::Error;
 
 pub mod context;
-pub use context::KAdminContext;
+pub use context::Context;
 
 pub mod params;
-pub use params::KAdminParams;
+pub use params::Params;
 
 pub mod db_args;
-pub use db_args::KAdminDbArgs;
+pub use db_args::DbArgs;
 
 pub mod kadmin;
 pub use kadmin::{KAdmin, KAdminImpl};
