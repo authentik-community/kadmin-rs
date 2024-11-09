@@ -1,10 +1,13 @@
 class PyKAdminException(Exception): ...
+
 class KAdminException(PyKAdminException):
     code: int
     origin_message: str
+
 class KerberosException(PyKAdminException):
     code: int
     origin_message: str
+
 class NullPointerDereference(PyKAdminException): ...
 class CStringConversion(PyKAdminException): ...
 class CStringImportFromVec(PyKAdminException): ...
