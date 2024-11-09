@@ -1,3 +1,5 @@
+//! [`KAdmin`] interface to kadm5
+
 #[cfg(feature = "client")]
 use std::{ffi::CStr, mem::MaybeUninit};
 use std::{
@@ -10,86 +12,157 @@ use std::{
 use kadmin_sys::*;
 
 use crate::{
-    context::KAdminContext,
-    db_args::KAdminDbArgs,
+    context::Context,
+    conv::c_string_to_string,
+    db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
-    params::KAdminParams,
+    params::Params,
     principal::Principal,
-    strconv::c_string_to_string,
 };
 
+/// Lock acquired when creating or dropping a [`KAdmin`] instance
 static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 
+/// Interface to kadm5
+///
+/// This interface is not thread safe. Consider creating one per thread where needed, or using the
+/// [`sync::KAdmin`][`crate::sync::KAdmin`] interface that is thread safe.
 #[derive(Debug)]
 pub struct KAdmin {
-    pub(crate) context: KAdminContext,
+    /// Kerberos context
+    pub(crate) context: Context,
+    /// Server handle for kadm5
     pub(crate) server_handle: *mut c_void,
 }
 
+/// Common methods for `KAdmin` implementations
 pub trait KAdminImpl {
-    // ank, addprinc, add_principal
+    /// Create a principal. Not yet implemented
+    #[doc(alias("ank", "addprinc"))]
     fn add_principal() {
         unimplemented!();
     }
 
-    // delprinc, delete_principal
+    /// Delete a principal. Not yet implemented
+    #[doc(alias = "delprinc")]
     fn delete_principal() {
         unimplemented!();
     }
 
-    // modify_principal, modprinc
+    /// Modify a principal. Not yet implemented
+    #[doc(alias = "modprinc")]
     fn modify_principal() {
         unimplemented!();
     }
 
-    // rename_principal, renprinc
+    /// Rename a principal. Not yet implemented
+    #[doc(alias = "renprinc")]
     fn rename_principal() {
         unimplemented!();
     }
 
-    // get_principal, getprinc
+    /// Retrieve a principal
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = String::from("user@EXAMPLE.ORG");
+    /// let principal = kadm.get_principal(&princname).unwrap();
+    /// assert!(principal.is_some());
+    /// # }
+    /// ```
+    #[doc(alias = "getprinc")]
     fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
 
+    /// Check if a principal exists
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = String::from("user@EXAMPLE.ORG");
+    /// assert!(kadm.principal_exists(&princname).unwrap());
+    /// # }
+    /// ```
     fn principal_exists(&self, name: &str) -> Result<bool> {
         Ok(self.get_principal(name)?.is_some())
     }
 
-    // change_password, cpw
+    /// Change a principal password
+    ///
+    /// Don't use this method directly. Instead, use [`Principal::change_password`]
+    #[doc(alias = "cpw")]
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
 
-    // list_principals, listprincs, get_principals, getprincs
-    fn list_principals(&self, query: &str) -> Result<Vec<String>>;
+    /// List principals
+    ///
+    /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
+    /// and `[]`. All principal names matching the expression are retuned. If the expression
+    /// does not contain an `@` character, an `@` character followed by the local realm is
+    /// appended to the expression. If no query is provided, all principals are returned.
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// for princ in kadm.list_principals(None).unwrap() {
+    ///     println!("{princ}");
+    /// }
+    /// # }
+    /// ```
+    #[doc(alias("listprincs", "get_principals", "getprincs"))]
+    fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
 
-    // add_policy, addpol
+    /// Add a policy. Not yet implemented
+    #[doc(alias = "addpol")]
     fn add_policy() {
         unimplemented!();
     }
 
-    // modify_policy, modpol
+    /// Modify a policy. Not yet implemented
+    #[doc(alias = "modpol")]
     fn modify_policy() {
         unimplemented!();
     }
 
-    // delete_policy, delpol
+    /// Delete a policy. Not yet implemented
+    #[doc(alias = "delpol")]
     fn delete_policy() {
         unimplemented!();
     }
 
-    // get_policy, getpol
+    /// Retrieve a policy. Not yet implemented
+    #[doc(alias = "getpol")]
     fn get_policy() {
         unimplemented!();
     }
 
-    // list_policies, listpols, get_policies, getpols
-    fn list_policies(&self, query: &str) -> Result<Vec<String>>;
-
-    // get_privs, getprivs
-    fn get_privs() {
-        unimplemented!();
-    }
+    /// List policies
+    ///
+    /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
+    /// and `[]`. All policy names matching the expression are returned. If no query is provided,
+    /// all existing policy names are returned.
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// for princ in kadm.list_principals(None).unwrap() {
+    ///     println!("{princ}");
+    /// }
+    /// # }
+    /// ```
+    #[doc(alias("listpols", "get_policies", "getpols"))]
+    fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;
 }
 
 impl KAdmin {
+    /// Construct a new [`KAdminBuilder`]
     pub fn builder() -> KAdminBuilder {
         KAdminBuilder::default()
     }
@@ -99,7 +172,13 @@ impl KAdminImpl for KAdmin {
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
-        let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
+        let code = unsafe {
+            krb5_parse_name(
+                self.context.context,
+                name.as_ptr().cast_mut(),
+                &mut temp_princ,
+            )
+        };
         krb5_error_code_escape_hatch(&self.context, code)?;
         let mut principal_ent = _kadm5_principal_ent_t::default();
         let code = unsafe {
@@ -116,10 +195,10 @@ impl KAdminImpl for KAdmin {
         if code == KADM5_UNK_PRINC as i64 {
             return Ok(None);
         }
-        kadm5_ret_t_escape_hatch(code)?;
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
         let principal = Principal::from_raw(self, &principal_ent)?;
         let code = unsafe { kadm5_free_principal_ent(self.server_handle, &mut principal_ent) };
-        kadm5_ret_t_escape_hatch(code)?;
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(Some(principal))
     }
 
@@ -127,23 +206,37 @@ impl KAdminImpl for KAdmin {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
         let password = CString::new(password)?;
-        let code = unsafe { krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut temp_princ) };
+        let code = unsafe {
+            krb5_parse_name(
+                self.context.context,
+                name.as_ptr().cast_mut(),
+                &mut temp_princ,
+            )
+        };
         krb5_error_code_escape_hatch(&self.context, code)?;
-        let code = unsafe { kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut()) };
+        let code = unsafe {
+            kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut())
+        };
         unsafe {
             krb5_free_principal(self.context.context, temp_princ);
         }
-        kadm5_ret_t_escape_hatch(code)?;
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
 
-    fn list_principals(&self, query: &str) -> Result<Vec<String>> {
-        let query = CString::new(query)?;
+    fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
+        let query = CString::new(query.unwrap_or("*"))?;
         let mut count = 0;
         let mut princs: *mut *mut c_char = null_mut();
-        let code =
-            unsafe { kadm5_get_principals(self.server_handle, query.as_ptr().cast_mut(), &mut princs, &mut count) };
-        kadm5_ret_t_escape_hatch(code)?;
+        let code = unsafe {
+            kadm5_get_principals(
+                self.server_handle,
+                query.as_ptr().cast_mut(),
+                &mut princs,
+                &mut count,
+            )
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
         for raw in unsafe { std::slice::from_raw_parts(princs, count as usize) }.iter() {
             result.push(c_string_to_string(*raw)?);
@@ -154,13 +247,19 @@ impl KAdminImpl for KAdmin {
         Ok(result)
     }
 
-    fn list_policies(&self, query: &str) -> Result<Vec<String>> {
-        let query = CString::new(query)?;
+    fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
+        let query = CString::new(query.unwrap_or("*"))?;
         let mut count = 0;
         let mut policies: *mut *mut c_char = null_mut();
-        let code =
-            unsafe { kadm5_get_policies(self.server_handle, query.as_ptr().cast_mut(), &mut policies, &mut count) };
-        kadm5_ret_t_escape_hatch(code)?;
+        let code = unsafe {
+            kadm5_get_policies(
+                self.server_handle,
+                query.as_ptr().cast_mut(),
+                &mut policies,
+                &mut count,
+            )
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
         for raw in unsafe { std::slice::from_raw_parts(policies, count as usize) }.iter() {
             result.push(c_string_to_string(*raw)?);
@@ -184,33 +283,38 @@ impl Drop for KAdmin {
     }
 }
 
+/// [`KAdmin`] builder
 #[derive(Debug, Default)]
 pub struct KAdminBuilder {
-    context: Option<Result<KAdminContext>>,
-    params: Option<KAdminParams>,
-    db_args: Option<KAdminDbArgs>,
+    context: Option<Context>,
+    params: Option<Params>,
+    db_args: Option<DbArgs>,
 }
 
 impl KAdminBuilder {
-    pub fn context(mut self, context: KAdminContext) -> Self {
-        self.context = Some(Ok(context));
+    /// Set the [`Context`] to use for this [`KAdmin`] instance
+    pub fn context(mut self, context: Context) -> Self {
+        self.context = Some(context);
         self
     }
 
-    pub fn params(mut self, params: KAdminParams) -> Self {
+    /// Provide additional [`Params`] to this [`KAdmin`] instance
+    pub fn params(mut self, params: Params) -> Self {
         self.params = Some(params);
         self
     }
 
-    pub fn db_args(mut self, db_args: KAdminDbArgs) -> Self {
+    /// Provide additional [`DbArgs`] to this [`KAdmin`] instance
+    pub fn db_args(mut self, db_args: DbArgs) -> Self {
         self.db_args = Some(db_args);
         self
     }
 
-    fn get_kadmin(self) -> Result<(KAdmin, KAdminParams, KAdminDbArgs)> {
+    /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
+    fn get_kadmin(self) -> Result<(KAdmin, Params, DbArgs)> {
         let params = self.params.unwrap_or_default();
         let db_args = self.db_args.unwrap_or_default();
-        let context = self.context.unwrap_or(KAdminContext::new())?;
+        let context = self.context.unwrap_or(Context::new()?);
         let kadmin = KAdmin {
             context,
             server_handle: null_mut(),
@@ -218,9 +322,14 @@ impl KAdminBuilder {
         Ok((kadmin, params, db_args))
     }
 
-    #[cfg(feature = "client")]
+    /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
+    /// name) and a password
+    #[cfg(any(feature = "client", doc))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -244,14 +353,25 @@ impl KAdminBuilder {
             )
         };
 
-        kadm5_ret_t_escape_hatch(code)?;
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
 
         Ok(kadmin)
     }
 
-    #[cfg(feature = "client")]
+    /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
+    /// principal name) and an optional keytab
+    ///
+    /// If no client name is provided, `host/hostname` will be used
+    ///
+    /// If no keytab is provided, the default keytab will be used
+    #[cfg(any(feature = "client", doc))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -271,7 +391,8 @@ impl KAdminBuilder {
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let princ = unsafe { princ_ptr.assume_init() };
             let mut raw_client_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             unsafe {
                 krb5_free_principal(kadmin.context.context, princ);
@@ -305,14 +426,30 @@ impl KAdminBuilder {
             )
         };
 
-        kadm5_ret_t_escape_hatch(code)?;
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
 
         Ok(kadmin)
     }
 
-    #[cfg(feature = "client")]
-    pub fn with_ccache(self, client_name: Option<&str>, ccache_name: Option<&str>) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+    /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
+    /// principal name) and an optional credentials cache name
+    ///
+    /// If no client name is provided, the default principal from the credentials cache will be
+    /// used
+    ///
+    /// If no credentials cache name is provided, the default credentials cache will be used
+    #[cfg(any(feature = "client", doc))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
+    pub fn with_ccache(
+        self,
+        client_name: Option<&str>,
+        ccache_name: Option<&str>,
+    ) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -338,11 +475,14 @@ impl KAdminBuilder {
             CString::new(client_name)?
         } else {
             let mut princ_ptr: MaybeUninit<krb5_principal> = MaybeUninit::zeroed();
-            let code = unsafe { krb5_cc_get_principal(kadmin.context.context, ccache, princ_ptr.as_mut_ptr()) };
+            let code = unsafe {
+                krb5_cc_get_principal(kadmin.context.context, ccache, princ_ptr.as_mut_ptr())
+            };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let princ = unsafe { princ_ptr.assume_init() };
             let mut raw_client_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             unsafe {
                 krb5_free_principal(kadmin.context.context, princ);
@@ -375,23 +515,33 @@ impl KAdminBuilder {
             krb5_cc_close(kadmin.context.context, ccache);
         }
 
-        kadm5_ret_t_escape_hatch(code)?;
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
 
         Ok(kadmin)
     }
 
-    #[cfg(feature = "client")]
+    /// Not implemented
+    #[cfg(any(feature = "client", doc))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut _kadmin, _params, _db_args) = self.get_kadmin()?;
 
         unimplemented!();
     }
 
-    #[cfg(any(feature = "local", docsrs))]
+    /// Construct a [`KAdmin`] object from this builder for local database manipulation.
+    #[cfg(any(feature = "local", doc))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "local")))]
     pub fn with_local(self) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK
+            .lock()
+            .expect("Failed to lock context initialization.");
 
         let (mut kadmin, params, db_args) = self.get_kadmin()?;
 
@@ -420,7 +570,9 @@ impl KAdminBuilder {
             )
         };
 
-        kadm5_ret_t_escape_hatch(code)?;
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
 
         Ok(kadmin)
     }

@@ -1,18 +1,17 @@
+//! kadm5 principal
+
 use std::{os::raw::c_char, ptr::null_mut, time::Duration};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
 
 use crate::{
-    error::{Error, Result, krb5_error_code_escape_hatch},
+    conv::{c_string_to_string, ts_to_dt},
+    error::{Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
-    strconv::c_string_to_string,
 };
 
-fn ts_to_dt(ts: krb5_timestamp) -> Result<DateTime<Utc>> {
-    DateTime::from_timestamp((ts as u32).into(), 0).ok_or(Error::TimestampConversion)
-}
-
+/// A kadm5 principal
 #[derive(Debug)]
 #[allow(dead_code)] // TODO: remove me once implemented
 pub struct Principal {
@@ -38,11 +37,14 @@ pub struct Principal {
 }
 
 impl Principal {
+    /// Create a [`Principal`] from [`_kadm5_principal_ent_t`]
     pub(crate) fn from_raw(kadmin: &KAdmin, entry: &_kadm5_principal_ent_t) -> Result<Self> {
         // TODO: make a function out of this
         let name = {
             let mut raw_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, entry.principal, &mut raw_name) };
+            let code = unsafe {
+                krb5_unparse_name(kadmin.context.context, entry.principal, &mut raw_name)
+            };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let name = c_string_to_string(raw_name)?;
             unsafe {
@@ -52,7 +54,8 @@ impl Principal {
         };
         let modified_by = {
             let mut raw_name: *mut c_char = null_mut();
-            let code = unsafe { krb5_unparse_name(kadmin.context.context, entry.mod_name, &mut raw_name) };
+            let code =
+                unsafe { krb5_unparse_name(kadmin.context.context, entry.mod_name, &mut raw_name) };
             krb5_error_code_escape_hatch(&kadmin.context, code)?;
             let name = c_string_to_string(raw_name)?;
             unsafe {
@@ -84,6 +87,12 @@ impl Principal {
         })
     }
 
+    /// Get the name of the principal
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Change the password of the principal
     pub fn change_password<K: KAdminImpl>(&self, kadmin: &K, password: &str) -> Result<()> {
         kadmin.principal_change_password(&self.name, password)
     }

@@ -15,8 +15,9 @@ macro_rules! gen_tests {
         #[serial]
         fn list_principals() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-            let principals = kadmin.list_principals("*")?;
+            let kadmin = KAdmin::builder()
+                .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+            let principals = kadmin.list_principals(Some("*"))?;
             assert_eq!(
                 principals
                     .into_iter()
@@ -43,7 +44,8 @@ macro_rules! gen_tests {
         #[serial]
         fn principal_exists() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+            let kadmin = KAdmin::builder()
+                .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             assert!(kadmin.principal_exists(&realm.user_princ()?)?);
             assert!(!kadmin.principal_exists(&format!("nonexistent@{}", &realm.realm_name()?))?);
             Ok(())
@@ -54,7 +56,8 @@ macro_rules! gen_tests {
         #[serial]
         fn change_password() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder().with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+            let kadmin = KAdmin::builder()
+                .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
             princ.change_password(&kadmin, "new_password")?;
             realm.kinit(&realm.user_princ()?, "new_password")?;

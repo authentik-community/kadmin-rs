@@ -1,39 +1,60 @@
+//! Define [`DbArgs`] to pass to kadm5
+
 use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 
 use crate::error::Result;
 
+/// Database specific arguments
+///
+/// See `man kadmin(1)` for a list of supported arguments
+///
+/// ```
+/// let db_args = kadmin::DbArgs::builder()
+///     .arg("host", Some("ldap.example.org"))
+///     .build()
+///     .unwrap();
+/// ```
 #[derive(Debug)]
-pub struct KAdminDbArgs {
+pub struct DbArgs {
+    /// NULL-terminated list of strings of the form `arg[=value]`
+    ///
+    /// There are additional fields to store transient strings so the pointer stored in db_args
+    /// doesn't become invalid while this struct lives
     pub(crate) db_args: *mut *mut c_char,
 
-    // Additional fields to store transient strings so the pointer stored in db_args
-    // doesn't become invalid while this struct lives.
+    /// Store CStrings that are of the form `arg[=value]`
     _origin_args: Vec<CString>,
+    /// Store the Vec containing the pointers to the above CStrings
     _ptr_vec: Vec<*mut c_char>,
 }
 
-impl KAdminDbArgs {
-    pub fn builder() -> KAdminDbArgsBuilder {
-        KAdminDbArgsBuilder::default()
+impl DbArgs {
+    /// Construct a new [`DbArgsBuilder`]
+    pub fn builder() -> DbArgsBuilder {
+        DbArgsBuilder::default()
     }
 }
 
-impl Default for KAdminDbArgs {
+impl Default for DbArgs {
+    /// Construct an empty [`DbArgs`]
     fn default() -> Self {
         Self::builder().build().unwrap()
     }
 }
 
+/// [`DbArgs`] builder
 #[derive(Clone, Debug, Default)]
-pub struct KAdminDbArgsBuilder(Vec<(String, Option<String>)>);
+pub struct DbArgsBuilder(Vec<(String, Option<String>)>);
 
-impl KAdminDbArgsBuilder {
+impl DbArgsBuilder {
+    /// Add an argument with an optional value
     pub fn arg(mut self, name: &str, value: Option<&str>) -> Self {
         self.0.push((name.to_owned(), value.map(|s| s.to_owned())));
         self
     }
 
-    pub fn build(&self) -> Result<KAdminDbArgs> {
+    /// Construct [`DbArgs`] from the provided arguments
+    pub fn build(&self) -> Result<DbArgs> {
         let formatted_args = self.0.clone().into_iter().map(|(name, value)| {
             if let Some(value) = value {
                 format!("{name}={value}")
@@ -53,7 +74,7 @@ impl KAdminDbArgsBuilder {
 
         let db_args = _ptr_vec.as_mut_ptr();
 
-        Ok(KAdminDbArgs {
+        Ok(DbArgs {
             db_args,
             _origin_args,
             _ptr_vec,
@@ -69,7 +90,7 @@ mod tests {
 
     #[test]
     fn build_empty() {
-        let db_args = KAdminDbArgs::builder().build().unwrap();
+        let db_args = DbArgs::builder().build().unwrap();
 
         unsafe {
             assert_eq!(*db_args.db_args, null_mut());
@@ -78,7 +99,7 @@ mod tests {
 
     #[test]
     fn build_no_value() {
-        let db_args = KAdminDbArgs::builder().arg("lockiter", None).build().unwrap();
+        let db_args = DbArgs::builder().arg("lockiter", None).build().unwrap();
         assert_eq!(
             unsafe { CStr::from_ptr(*db_args.db_args).to_owned() },
             CString::new("lockiter").unwrap()
@@ -87,7 +108,10 @@ mod tests {
 
     #[test]
     fn build_with_value() {
-        let db_args = KAdminDbArgs::builder().arg("host", Some("ldap.test")).build().unwrap();
+        let db_args = DbArgs::builder()
+            .arg("host", Some("ldap.test"))
+            .build()
+            .unwrap();
         assert_eq!(
             unsafe { CStr::from_ptr(*db_args.db_args).to_owned() },
             CString::new("host=ldap.test").unwrap()

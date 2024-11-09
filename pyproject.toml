@@ -75,6 +75,8 @@ build = "*"
 cibuildwheel = "*"
 mypy = "*"
 ruff = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
 
 [tool.poetry.group.test.dependencies]
 k5test = "*"

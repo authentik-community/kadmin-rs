@@ -1,94 +1,129 @@
+//! Define [`Params`] to pass to kadm5
+
 use std::{ffi::CString, ptr::null_mut};
 
 use kadmin_sys::*;
 
 use crate::error::Result;
 
+/// kadm5 config options
+///
+/// ```
+/// let params = kadmin::Params::builder()
+///     .realm("EXAMPLE.ORG")
+///     .build()
+///     .unwrap();
+/// ```
 #[derive(Debug)]
-pub struct KAdminParams {
+pub struct Params {
+    /// Params for kadm5
+    ///
+    /// Additional fields to store transient strings so the pointer stored in
+    /// [`kadm5_config_params`]
+    /// doesn't become invalid while this struct lives.
     pub(crate) params: kadm5_config_params,
 
-    // Additional fields to store transient strings so the pointer stored in kadm5_config_params
-    // doesn't become invalid while this struct lives.
+    /// Store [`CString`] that are in `params`
     _strings: Vec<Option<CString>>,
 }
 
-impl KAdminParams {
-    pub fn builder() -> KAdminParamsBuilder {
-        KAdminParamsBuilder::default()
+impl Params {
+    /// Construct a new [`ParamsBuilder`]
+    pub fn builder() -> ParamsBuilder {
+        ParamsBuilder::default()
     }
 }
 
-impl Default for KAdminParams {
+impl Default for Params {
+    /// Construct an empty [`Params`]
     fn default() -> Self {
         Self::builder().build().unwrap()
     }
 }
 
+/// [`Params`] builder
 #[derive(Clone, Debug, Default)]
-pub struct KAdminParamsBuilder {
+pub struct ParamsBuilder {
+    /// Mask for which values are set
     mask: i64,
 
+    /// Default database realm
     realm: Option<String>,
+    /// kadmind port to connect to
     kadmind_port: i32,
+    /// kpasswd port to connect to
     kpasswd_port: i32,
+    /// Admin server which kadmin should contact
     admin_server: Option<String>,
+    /// Name of the KDC database
     dbname: Option<String>,
+    /// Location of the access control list file
     acl_file: Option<String>,
+    /// Location of the dictionary file containing strings that are not allowed as passwords
     dict_file: Option<String>,
+    /// Location where the master key has been stored
     stash_file: Option<String>,
 }
 
-impl KAdminParamsBuilder {
+impl ParamsBuilder {
+    /// Set the default database realm
     pub fn realm(mut self, realm: &str) -> Self {
         self.realm = Some(realm.to_owned());
         self.mask |= KADM5_CONFIG_REALM as i64;
         self
     }
 
+    /// Set the kadmind port to connect to
     pub fn kadmind_port(mut self, port: i32) -> Self {
         self.kadmind_port = port;
         self.mask |= KADM5_CONFIG_KADMIND_PORT as i64;
         self
     }
 
+    /// Set the kpasswd port to connect to
     pub fn kpasswd_port(mut self, port: i32) -> Self {
         self.kpasswd_port = port;
         self.mask |= KADM5_CONFIG_KPASSWD_PORT as i64;
         self
     }
 
+    /// Set the admin server which kadmin should contact
     pub fn admin_server(mut self, admin_server: &str) -> Self {
         self.admin_server = Some(admin_server.to_owned());
         self.mask |= KADM5_CONFIG_ADMIN_SERVER as i64;
         self
     }
 
+    /// Set the name of the KDC database
     pub fn dbname(mut self, dbname: &str) -> Self {
         self.dbname = Some(dbname.to_owned());
         self.mask |= KADM5_CONFIG_DBNAME as i64;
         self
     }
 
+    /// Set the location of the access control list file
     pub fn acl_file(mut self, acl_file: &str) -> Self {
         self.acl_file = Some(acl_file.to_owned());
         self.mask |= KADM5_CONFIG_ACL_FILE as i64;
         self
     }
 
+    /// Set the location of the dictionary file containing strings that are not allowed as passwords
     pub fn dict_file(mut self, dict_file: &str) -> Self {
         self.dict_file = Some(dict_file.to_owned());
         self.mask |= KADM5_CONFIG_DICT_FILE as i64;
         self
     }
 
+    /// Set the location where the master key has been stored
     pub fn stash_file(mut self, stash_file: &str) -> Self {
         self.stash_file = Some(stash_file.to_owned());
         self.mask |= KADM5_CONFIG_STASH_FILE as i64;
         self
     }
 
-    pub fn build(self) -> Result<KAdminParams> {
+    /// Construct [`Params`] from the provided options
+    pub fn build(self) -> Result<Params> {
         let realm = self.realm.map(CString::new).transpose()?;
         let admin_server = self.admin_server.map(CString::new).transpose()?;
         let dbname = self.dbname.map(CString::new).transpose()?;
@@ -153,7 +188,7 @@ impl KAdminParamsBuilder {
             iprop_listen: null_mut(),
         };
 
-        Ok(KAdminParams {
+        Ok(Params {
             params,
             _strings: vec![realm, admin_server, dbname, acl_file, dict_file, stash_file],
         })
@@ -168,14 +203,14 @@ mod tests {
 
     #[test]
     fn build_empty() {
-        let params = KAdminParams::builder().build().unwrap();
+        let params = Params::builder().build().unwrap();
 
         assert_eq!(params.params.mask, 0);
     }
 
     #[test]
     fn build_realm() {
-        let params = KAdminParams::builder().realm("EXAMPLE.ORG").build().unwrap();
+        let params = Params::builder().realm("EXAMPLE.ORG").build().unwrap();
 
         assert_eq!(params.params.mask, 1);
         assert_eq!(
@@ -186,7 +221,7 @@ mod tests {
 
     #[test]
     fn build_all() {
-        let params = KAdminParams::builder()
+        let params = Params::builder()
             .realm("EXAMPLE.ORG")
             .admin_server("kdc.example.org")
             .kadmind_port(750)
