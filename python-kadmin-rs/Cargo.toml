@@ -11,7 +11,7 @@ local = ["kadmin/local"]
 
 [dependencies]
 indoc = "2"
-kadmin = { path = "../kadmin", version = "0.1.0", default-features = false }
+kadmin = { path = "../kadmin", version = "0.2.0", default-features = false }
 pyo3 = { version = "0.22", features = ["extension-module"] }
 
 [lints]
