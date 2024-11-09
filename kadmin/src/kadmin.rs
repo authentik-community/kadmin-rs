@@ -65,10 +65,13 @@ pub trait KAdminImpl {
     ///
     /// ```no_run
     /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let princname = String::from("user@EXAMPLE.ORG");
     /// let principal = kadm.get_principal(&princname).unwrap();
     /// assert!(principal.is_some());
+    /// # }
     /// ```
     #[doc(alias = "getprinc")]
     fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
@@ -77,9 +80,12 @@ pub trait KAdminImpl {
     ///
     /// ```no_run
     /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let princname = String::from("user@EXAMPLE.ORG");
     /// assert!(kadm.principal_exists(&princname).unwrap());
+    /// # }
     /// ```
     fn principal_exists(&self, name: &str) -> Result<bool> {
         Ok(self.get_principal(name)?.is_some())
@@ -100,10 +106,13 @@ pub trait KAdminImpl {
     ///
     /// ```no_run
     /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// for princ in kadm.list_principals(None).unwrap() {
     ///     println!("{princ}");
     /// }
+    /// # }
     /// ```
     #[doc(alias("listprincs", "get_principals", "getprincs"))]
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
@@ -140,10 +149,13 @@ pub trait KAdminImpl {
     ///
     /// ```no_run
     /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// for princ in kadm.list_principals(None).unwrap() {
     ///     println!("{princ}");
     /// }
+    /// # }
     /// ```
     #[doc(alias("listpols", "get_policies", "getpols"))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;

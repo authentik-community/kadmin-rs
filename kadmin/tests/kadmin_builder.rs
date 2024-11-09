@@ -3,7 +3,7 @@ use kadmin::KAdmin;
 #[cfg(feature = "client")]
 use kadmin::KAdminImpl;
 #[cfg(feature = "local")]
-use kadmin::{KAdminDbArgs, KAdminParams};
+use kadmin::{DbArgs, Params};
 use serial_test::serial;
 mod k5test;
 use k5test::K5Test;
@@ -48,10 +48,10 @@ fn with_ccache() -> Result<()> {
 #[serial]
 fn with_local() -> Result<()> {
     let realm = K5Test::new()?;
-    let db_args = KAdminDbArgs::builder()
+    let db_args = DbArgs::builder()
         .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
         .build()?;
-    let params = KAdminParams::builder()
+    let params = Params::builder()
         .dbname(&format!("{}/db", realm.tmpdir()?))
         .acl_file(&format!("{}/acl", realm.tmpdir()?))
         .dict_file(&format!("{}/dict", realm.tmpdir()?))
@@ -70,7 +70,7 @@ mod sync {
     use kadmin::KAdminImpl;
     use kadmin::sync::KAdmin;
     #[cfg(feature = "local")]
-    use kadmin::{KAdminDbArgs, KAdminParams};
+    use kadmin::{DbArgs, Params};
     use serial_test::serial;
 
     use crate::K5Test;
@@ -116,8 +116,8 @@ mod sync {
     fn with_local() -> Result<()> {
         let realm = K5Test::new()?;
         let db_args_builder =
-            KAdminDbArgs::builder().arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)));
-        let params_builder = KAdminParams::builder()
+            DbArgs::builder().arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)));
+        let params_builder = Params::builder()
             .dbname(&format!("{}/db", realm.tmpdir()?))
             .acl_file(&format!("{}/acl", realm.tmpdir()?))
             .dict_file(&format!("{}/dict", realm.tmpdir()?))
