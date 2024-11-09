@@ -29,7 +29,7 @@ pub enum Error {
         /// kadm5 error code
         code: kadm5_ret_t,
         /// kadm5 error message
-        message: String
+        message: String,
     },
 
     /// When converting a `*c_char` to a [`String`], if the provided pointer was `NULL`, this error

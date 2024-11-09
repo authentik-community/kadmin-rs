@@ -127,19 +127,22 @@ pub struct KAdminBuilder {
 }
 
 impl KAdminBuilder {
-    /// Provide additional [`Params`][`crate::params::Params`] through [`ParamsBuilder`] to this [`KAdmin`] instance
+    /// Provide additional [`Params`][`crate::params::Params`] through [`ParamsBuilder`] to this
+    /// [`KAdmin`] instance
     pub fn params_builder(mut self, params_builder: ParamsBuilder) -> Self {
         self.params_builder = Some(params_builder);
         self
     }
 
-    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] through [`DbArgsBuilder`] to this [`KAdmin`] instance
+    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] through [`DbArgsBuilder`] to this
+    /// [`KAdmin`] instance
     pub fn db_args_builder(mut self, db_args_builder: DbArgsBuilder) -> Self {
         self.db_args_builder = Some(db_args_builder);
         self
     }
 
-    /// Construct a [`crate::kadmin::KAdminBuilder`] object that isn't initialized yet from the builder inputs
+    /// Construct a [`crate::kadmin::KAdminBuilder`] object that isn't initialized yet from the
+    /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
         let mut builder = crate::kadmin::KAdmin::builder();
         if let Some(params_builder) = self.params_builder {
