@@ -43,9 +43,6 @@ With the `local` feature:
 ```rust
 use kadmin::{KAdmin, KAdminImpl};
 
-let princ = "user/admin@EXAMPLE.ORG";
-let password = "vErYsEcUrE";
-
 let kadmin = KAdmin::builder().with_local().unwrap();
 
 dbg!("{}", kadmin.list_principals("*").unwrap());

@@ -26,9 +26,6 @@
 //!
 //! # #[cfg(feature = "local")]
 //! # fn example() {
-//! let princ = "user/admin@EXAMPLE.ORG";
-//! let password = "vErYsEcUrE";
-//!
 //! let kadmin = KAdmin::builder().with_local().unwrap();
 //!
 //! dbg!("{}", kadmin.list_principals(None).unwrap());
