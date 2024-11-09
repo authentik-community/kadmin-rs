@@ -113,6 +113,7 @@ impl ContextBuilder {
         let mut context_ptr: MaybeUninit<krb5_context> = MaybeUninit::zeroed();
 
         let code = unsafe { kadm5_init_krb5_context(context_ptr.as_mut_ptr()) };
+        drop(_guard);
         let mut context = Context {
             context: unsafe { context_ptr.assume_init() },
             default_realm: None,
