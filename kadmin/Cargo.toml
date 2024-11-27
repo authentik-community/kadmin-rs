@@ -18,7 +18,9 @@ client = ["kadmin-sys/client"]
 local = ["kadmin-sys/server"]
 
 [dependencies]
+bitflags = "2.6"
 chrono = "0.4"
+getset = "0.1"
 kadmin-sys = { path = "../kadmin-sys", version = "0.2.0", default-features = false }
 thiserror = "2"
 

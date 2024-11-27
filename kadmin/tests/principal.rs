@@ -54,6 +54,17 @@ macro_rules! gen_tests {
         #[cfg(feature = "client")]
         #[test]
         #[serial]
+        fn get_principal() -> Result<()> {
+            let realm = K5Test::new()?;
+            let kadmin = KAdmin::builder()
+                .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+            dbg!(kadmin.get_principal(&realm.user_princ()?)?);
+            Ok(())
+        }
+
+        #[cfg(feature = "client")]
+        #[test]
+        #[serial]
         fn change_password() -> Result<()> {
             let realm = K5Test::new()?;
             let kadmin = KAdmin::builder()

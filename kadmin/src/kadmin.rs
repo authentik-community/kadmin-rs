@@ -17,7 +17,7 @@ use crate::{
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
-    principal::Principal,
+    principal::{Principal, PrincipalBuilder},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -39,7 +39,7 @@ pub struct KAdmin {
 pub trait KAdminImpl {
     /// Create a principal. Not yet implemented
     #[doc(alias("ank", "addprinc"))]
-    fn add_principal() {
+    fn add_principal(&self, _builder: &PrincipalBuilder) -> Result<()> {
         unimplemented!();
     }
 
@@ -169,6 +169,12 @@ impl KAdmin {
 }
 
 impl KAdminImpl for KAdmin {
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
+        let code = unsafe {
+            kadm5_create_principal(self.server_handle, entity, builder.mask)
+        }
+    }
+
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
@@ -186,7 +192,7 @@ impl KAdminImpl for KAdmin {
                 self.server_handle,
                 temp_princ,
                 &mut principal_ent,
-                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA) as i64,
+                KADM5_PRINCIPAL_NORMAL_MASK as i64,
             )
         };
         unsafe {
