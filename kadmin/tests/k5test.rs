@@ -1,9 +1,13 @@
+use std::ffi::CStr;
+
 use anyhow::Result;
+use pyo3::ffi::c_str;
 #[allow(unused_imports)]
 use pyo3::{prelude::*, types::PyDict};
 
 #[allow(dead_code)]
-const K5REALM_INIT: &str = r#"
+const K5REALM_INIT: &CStr = c_str!(
+    r#"
 import os
 from copy import deepcopy
 from k5test import realm
@@ -17,9 +21,11 @@ realm.extract_keytab(realm.http_princ, realm.http_keytab)
 saved_env = deepcopy(os.environ)
 for k, v in realm.env.items():
     os.environ[k] = v
-"#;
+"#
+);
 
-const RESTORE_ENV: &str = r#"
+const RESTORE_ENV: &CStr = c_str!(
+    r#"
 import os
 from copy import deepcopy
 
@@ -29,7 +35,8 @@ def restore_env(saved_env):
             os.environ[k] = saved_env[k]
         else:
             del os.environ[k]
-"#;
+"#
+);
 
 pub(crate) struct K5Test {
     realm: PyObject,
@@ -40,7 +47,7 @@ impl K5Test {
     #[allow(dead_code)]
     pub(crate) fn new() -> Result<Self> {
         let (realm, saved_env) = Python::with_gil(|py| {
-            let module = PyModule::from_code_bound(py, K5REALM_INIT, "", "")?;
+            let module = PyModule::from_code(py, K5REALM_INIT, c_str!(""), c_str!(""))?;
             let realm = module.getattr("realm")?;
             let saved_env = module.getattr("saved_env")?;
             Ok::<(PyObject, PyObject), PyErr>((realm.into(), saved_env.into()))
@@ -130,7 +137,7 @@ impl Drop for K5Test {
 
             realm.call_method0("stop")?;
 
-            let module = PyModule::from_code_bound(py, RESTORE_ENV, "", "")?;
+            let module = PyModule::from_code(py, RESTORE_ENV, c_str!(""), c_str!(""))?;
             let restore_env = module.getattr("restore_env")?;
             restore_env.call1((saved_env,))?;
 
