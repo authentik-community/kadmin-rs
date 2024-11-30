@@ -263,6 +263,9 @@ impl KAdminImpl for KAdmin {
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
+        if count == 0 {
+            return Ok(result);
+        }
         for raw in unsafe { std::slice::from_raw_parts(princs, count as usize) }.iter() {
             result.push(c_string_to_string(*raw)?);
         }
@@ -273,14 +276,17 @@ impl KAdminImpl for KAdmin {
     }
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
-        let (mut policy, mask) = builder.make_entry()?;
+        let (mut policy, mask, _guard) = builder.make_entry()?;
+        let mask = mask | KADM5_POLICY as i64;
         let code = unsafe { kadm5_create_policy(self.server_handle, &mut policy, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
-        let (mut policy, mask) = modifier.make_entry()?;
+        let (mut policy, mask, _guard) = modifier.make_entry()?;
+        dbg!(&policy);
+        dbg!(&mask);
         let code = unsafe { kadm5_modify_policy(self.server_handle, &mut policy, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
@@ -327,6 +333,9 @@ impl KAdminImpl for KAdmin {
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
+        if count == 0 {
+            return Ok(result);
+        }
         for raw in unsafe { std::slice::from_raw_parts(policies, count as usize) }.iter() {
             result.push(c_string_to_string(*raw)?);
         }

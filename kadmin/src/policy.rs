@@ -1,5 +1,6 @@
 //! kadm5 policy
 use std::time::Duration;
+use std::ffi::CString;
 
 use getset::Getters;
 use kadmin_sys::*;
@@ -264,9 +265,10 @@ macro_rules! policy_doer_impl {
         }
 
         /// Create a [`_kadm5_policy_ent_t`] from this builder
-        pub(crate) fn make_entry(&self) -> Result<(_kadm5_policy_ent_t, i64)> {
+        pub(crate) fn make_entry(&self) -> Result<(_kadm5_policy_ent_t, i64, CString)> {
             let mut policy = _kadm5_policy_ent_t::default();
-            let mask = self.mask | KADM5_POLICY as i64;
+            let name = CString::new(self.name.clone())?;
+            policy.policy = name.as_ptr().cast_mut();
             if let Some(password_min_life) = self.password_min_life {
                 policy.pw_min_life = dur_to_delta(password_min_life)?.into();
             }
@@ -300,7 +302,7 @@ macro_rules! policy_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 policy.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
-            Ok((policy, mask))
+            Ok((policy, self.mask, name))
         }
     };
 }
@@ -343,9 +345,9 @@ impl PolicyBuilder {
     }
 
     /// Create the policy
-    pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<Option<Policy>> {
+    pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<Policy> {
         kadmin.add_policy(self)?;
-        kadmin.get_policy(&self.name)
+        Ok(kadmin.get_policy(&self.name)?.unwrap())
     }
 }
 
@@ -380,8 +382,8 @@ impl PolicyModifier {
     }
 
     /// Modify the policy
-    pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Option<Policy>> {
+    pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Policy> {
         kadmin.modify_policy(self)?;
-        kadmin.get_policy(&self.name)
+        Ok(kadmin.get_policy(&self.name)?.unwrap())
     }
 }
