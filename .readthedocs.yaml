@@ -24,5 +24,3 @@ sphinx:
   builder: html
   configuration: python-kadmin-rs/docs/conf.py
   fail_on_warning: true
-
-formats: all
