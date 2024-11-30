@@ -1,7 +1,7 @@
 //! kadm5 policy
 use std::{ffi::CString, time::Duration};
 
-use getset::Getters;
+use getset::{Getters, CopyGetters};
 use kadmin_sys::*;
 
 use crate::{
@@ -11,10 +11,11 @@ use crate::{
 };
 
 /// A kadm5 policy
-#[derive(Clone, Debug, Getters)]
-#[getset(get = "pub")]
+#[derive(Clone, Debug, Getters, CopyGetters)]
+#[getset(get_copy = "pub")]
 pub struct Policy {
     /// The policy name
+    #[getset(skip)]
     name: String,
     /// Minimum lifetime of a password
     password_min_life: Option<Duration>,
@@ -73,6 +74,11 @@ impl Policy {
         })
     }
 
+    /// Name of the policy
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Construct a new [`PolicyBuilder`] for a policy with `name`
     ///
     /// ```no_run
@@ -87,7 +93,7 @@ impl Policy {
     ///     .password_max_life(password_max_life)
     ///     .create(&kadm)
     ///     .unwrap();
-    /// assert_eq!(*policy.password_max_life(), password_max_life);
+    /// assert_eq!(policy.password_max_life(), password_max_life);
     /// # }
     /// ```
     pub fn builder(name: &str) -> PolicyBuilder {
@@ -109,7 +115,7 @@ impl Policy {
     ///     .password_min_length(16)
     ///     .modify(&kadm)
     ///     .unwrap();
-    /// assert_eq!(*policy.password_min_length(), 16);
+    /// assert_eq!(policy.password_min_length(), 16);
     /// # }
     /// ```
     pub fn modifier(&self) -> PolicyModifier {
@@ -321,7 +327,7 @@ policy_doer_struct!(
     ///     .password_max_life(password_max_life)
     ///     .create(&kadm)
     ///     .unwrap();
-    /// assert_eq!(*policy.password_max_life(), password_max_life);
+    /// assert_eq!(policy.password_max_life(), password_max_life);
     /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
@@ -364,7 +370,7 @@ policy_doer_struct!(
     /// let polname = String::from("mynewpol");
     /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
     /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap();
-    /// assert_eq!(*policy.password_min_length(), 16);
+    /// assert_eq!(policy.password_min_length(), 16);
     /// # }
     /// ```
     #[derive(Clone, Debug, Default)]

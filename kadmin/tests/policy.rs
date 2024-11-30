@@ -48,8 +48,8 @@ macro_rules! gen_tests {
             let polname = random_string(16);
             let policy = Policy::builder(&polname).create(&kadmin)?;
             assert_eq!(policy.name(), &polname);
-            assert_eq!(*policy.password_max_life(), None);
-            assert_eq!(*policy.attributes(), 0);
+            assert_eq!(policy.password_max_life(), None);
+            assert_eq!(policy.attributes(), 0);
             policy.delete(&kadmin)?;
             Ok(())
         }
@@ -79,9 +79,9 @@ macro_rules! gen_tests {
             let polname = random_string(16);
             let policy = Policy::builder(&polname).create(&kadmin)?;
             let policy = policy.modifier().password_min_length(42).modify(&kadmin)?;
-            assert_eq!(*policy.password_min_length(), 42);
+            assert_eq!(policy.password_min_length(), 42);
             let policy = kadmin.get_policy(&polname)?.unwrap();
-            assert_eq!(*policy.password_min_length(), 42);
+            assert_eq!(policy.password_min_length(), 42);
             Ok(())
         }
     };

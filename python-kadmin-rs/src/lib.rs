@@ -570,7 +570,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_password_min_life(&self) -> Option<Duration> {
-            *self.inner.password_min_life()
+            self.inner.password_min_life()
         }
 
         /// Ignored
@@ -592,7 +592,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_password_max_life(&self) -> Option<Duration> {
-            *self.inner.password_max_life()
+            self.inner.password_max_life()
         }
 
         /// Ignored
@@ -614,7 +614,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_password_min_length(&self) -> i64 {
-            *self.inner.password_min_length()
+            self.inner.password_min_length()
         }
 
         /// Ignored
@@ -639,7 +639,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_password_min_classes(&self) -> i64 {
-            *self.inner.password_min_classes()
+            self.inner.password_min_classes()
         }
 
         /// Ignored
@@ -664,7 +664,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_password_history_num(&self) -> i64 {
-            *self.inner.password_history_num()
+            self.inner.password_history_num()
         }
 
         /// Ignored
@@ -687,7 +687,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_policy_refcnt(&self) -> i64 {
-            *self.inner.policy_refcnt()
+            self.inner.policy_refcnt()
         }
 
         /// Number of authentication failures before the principal is locked
@@ -701,7 +701,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_password_max_fail(&self) -> u32 {
-            *self.inner.password_max_fail()
+            self.inner.password_max_fail()
         }
 
         /// Ignored
@@ -727,7 +727,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_password_failcount_interval(&self) -> Option<Duration> {
-            *self.inner.password_failcount_interval()
+            self.inner.password_failcount_interval()
         }
 
         /// Ignored
@@ -754,7 +754,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_password_lockout_duration(&self) -> Option<Duration> {
-            *self.inner.password_lockout_duration()
+            self.inner.password_lockout_duration()
         }
 
         /// Ignored
@@ -779,7 +779,7 @@ pub mod pykadmin {
         /// :type: int
         #[getter]
         pub fn get_attributes(&self) -> i32 {
-            *self.inner.attributes()
+            self.inner.attributes()
         }
 
         /// Ignored
@@ -801,7 +801,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_max_life(&self) -> Option<Duration> {
-            *self.inner.max_life()
+            self.inner.max_life()
         }
 
         /// Ignored
@@ -823,7 +823,7 @@ pub mod pykadmin {
         /// :type: datetime.timedelta, optional
         #[getter]
         pub fn get_max_renewable_life(&self) -> Option<Duration> {
-            *self.inner.max_renewable_life()
+            self.inner.max_renewable_life()
         }
 
         /// Ignored
