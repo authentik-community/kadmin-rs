@@ -16,7 +16,11 @@ use std::{
 };
 
 use crate::{
-    db_args::DbArgsBuilder, error::Result, kadmin::KAdminImpl, params::ParamsBuilder,
+    db_args::DbArgsBuilder,
+    error::Result,
+    kadmin::KAdminImpl,
+    params::ParamsBuilder,
+    policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
 };
 
@@ -95,6 +99,18 @@ impl KAdminImpl for KAdmin {
             sender,
         ))?;
         receiver.recv()?
+    }
+
+    fn add_policy(&self, _builder: &PolicyBuilder) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn modify_policy(&self, _modifier: &PolicyModifier) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn get_policy(&self, _name: &str) -> Result<Option<Policy>> {
+        unimplemented!()
     }
 
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {

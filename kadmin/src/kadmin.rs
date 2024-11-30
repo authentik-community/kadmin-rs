@@ -17,6 +17,7 @@ use crate::{
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
+    policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
 };
 
@@ -119,15 +120,11 @@ pub trait KAdminImpl {
 
     /// Add a policy. Not yet implemented
     #[doc(alias = "addpol")]
-    fn add_policy() {
-        unimplemented!();
-    }
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
 
     /// Modify a policy. Not yet implemented
     #[doc(alias = "modpol")]
-    fn modify_policy() {
-        unimplemented!();
-    }
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()>;
 
     /// Delete a policy. Not yet implemented
     #[doc(alias = "delpol")]
@@ -137,8 +134,21 @@ pub trait KAdminImpl {
 
     /// Retrieve a policy. Not yet implemented
     #[doc(alias = "getpol")]
-    fn get_policy() {
-        unimplemented!();
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>>;
+
+    /// Check if a policy exists
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mypolicy");
+    /// assert!(kadm.policy_exists(&princname).unwrap());
+    /// # }
+    /// ```
+    fn policy_exists(&self, name: &str) -> Result<bool> {
+        Ok(self.get_policy(name)?.is_some())
     }
 
     /// List policies
@@ -245,6 +255,40 @@ impl KAdminImpl for KAdmin {
             kadm5_free_name_list(self.server_handle, princs, count);
         }
         Ok(result)
+    }
+
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
+        let (mut policy, mask) = builder.make_entry()?;
+        let code = unsafe { kadm5_create_policy(self.server_handle, &mut policy, mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
+        let (mut policy, mask) = modifier.make_entry()?;
+        let code = unsafe { kadm5_modify_policy(self.server_handle, &mut policy, mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
+        let name = CString::new(name)?;
+        let mut policy_ent = _kadm5_policy_ent_t::default();
+        let code = unsafe {
+            kadm5_get_policy(
+                self.server_handle,
+                name.as_ptr().cast_mut(),
+                &mut policy_ent,
+            )
+        };
+        if code == KADM5_UNK_POLICY as i64 {
+            return Ok(None);
+        }
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        let policy = Policy::from_raw(&policy_ent)?;
+        let code = unsafe { kadm5_free_policy_ent(self.server_handle, &mut policy_ent) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(Some(policy))
     }
 
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
