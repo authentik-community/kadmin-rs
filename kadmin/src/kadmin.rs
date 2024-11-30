@@ -13,11 +13,11 @@ use kadmin_sys::*;
 
 use crate::{
     context::Context,
-    conv::c_string_to_string,
+    conv::{c_string_to_string, dt_to_ts, dur_to_delta},
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
-    principal::{Principal, PrincipalBuilder},
+    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -170,9 +170,60 @@ impl KAdmin {
 
 impl KAdminImpl for KAdmin {
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
+        let mut entry = _kadm5_principal_ent_t::default();
+        let mut mask = builder.mask;
+
+        let name = CString::new(builder.name.clone())?;
         let code = unsafe {
-            kadm5_create_principal(self.server_handle, entity, builder.mask)
+            krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut entry.principal)
+        };
+        krb5_error_code_escape_hatch(&self.context, code)?;
+
+        if let Some(expire_time) = builder.expire_time {
+            entry.princ_expire_time = dt_to_ts(expire_time)?;
         }
+        if let Some(password_expiration) = builder.password_expiration {
+            entry.pw_expiration = dt_to_ts(password_expiration)?;
+        }
+        if let Some(max_life) = builder.max_life {
+            entry.max_life = dur_to_delta(max_life)?;
+        }
+        if let Some(attributes) = builder.attributes {
+            entry.attributes = attributes.bits();
+        }
+        // TODO: policy
+        if let Some(max_renewable_life) = builder.max_renewable_life {
+            entry.max_renewable_life = dur_to_delta(max_renewable_life)?;
+        }
+
+        let prepare_dummy_pass = || {
+            let mut dummy_pass = String::with_capacity(256);
+            dummy_pass.push_str("6F a[");
+            for i in dummy_pass.len()..=256 {
+                dummy_pass.push((b'a' + ((i % 26) as u8)) as char);
+            }
+            CString::new(dummy_pass)
+        };
+
+        let pass = match &builder.key {
+            PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
+            PrincipalBuilderKey::NoKey => {
+                mask |= KADM5_KEY_DATA as i64;
+                None
+            },
+            PrincipalBuilderKey::RandKey => None,
+            PrincipalBuilderKey::ServerRandKey => None,
+            PrincipalBuilderKey::OldStyleRandKey => Some(prepare_dummy_pass()?),
+        };
+        let raw_pass = if let Some(pass) = pass {
+            pass.as_ptr().cast_mut()
+        } else { null_mut() };
+
+        let code = unsafe {
+            kadm5_create_principal(self.server_handle, &mut entry, mask, raw_pass)
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
     }
 
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {

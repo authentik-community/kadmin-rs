@@ -8,7 +8,7 @@ use getset::Getters;
 use kadmin_sys::*;
 
 use crate::{
-    conv::{c_string_to_string, ts_to_dt, unparse_name},
+    conv::{c_string_to_string, ts_to_dt, unparse_name, delta_to_dur},
     error::Result,
     kadmin::{KAdmin, KAdminImpl},
 };
@@ -74,7 +74,7 @@ pub struct Principal {
     /// When the password expires
     password_expiration: Option<DateTime<Utc>>,
     /// Max ticket life
-    max_life: Duration,
+    max_life: Option<Duration>,
     /// Last principal to modify this principal
     modified_by: String,
     /// When the principal was last modified
@@ -90,7 +90,7 @@ pub struct Principal {
     /// Extra attributes
     aux_attributes: i64,
     /// Max renewable ticket life
-    max_renewable_life: Duration,
+    max_renewable_life: Option<Duration>,
     /// When the last successful authentication occurred
     last_success: Option<DateTime<Utc>>,
     /// When the last failed authentication occurred
@@ -107,7 +107,7 @@ impl Principal {
             expire_time: ts_to_dt(entry.princ_expire_time)?,
             last_password_change: ts_to_dt(entry.last_pwd_change)?,
             password_expiration: ts_to_dt(entry.pw_expiration)?,
-            max_life: Duration::from_secs(entry.max_life as u64),
+            max_life: delta_to_dur(entry.max_life),
             modified_by: unparse_name(&kadmin.context, entry.mod_name)?,
             modified_at: ts_to_dt(entry.mod_date)?,
             attributes: PrincipalAttributes::from_bits_retain(entry.attributes),
@@ -119,7 +119,7 @@ impl Principal {
                 None
             },
             aux_attributes: entry.aux_attributes,
-            max_renewable_life: Duration::from_secs(entry.max_renewable_life as u64),
+            max_renewable_life: delta_to_dur(entry.max_renewable_life),
             last_success: ts_to_dt(entry.last_success)?,
             last_failed: ts_to_dt(entry.last_failed)?,
             fail_auth_count: entry.fail_auth_count,
@@ -140,15 +140,15 @@ impl Principal {
 /// Utility to create a principal
 #[derive(Clone, Debug, Default)]
 pub struct PrincipalBuilder {
-    name: String,
-    mask: i64,
-    expire_time: Option<Option<DateTime<Utc>>>,
-    password_expiration: Option<Option<DateTime<Utc>>>,
-    max_life: Option<Duration>,
-    attributes: Option<PrincipalAttributes>,
-    policy: Option<Option<String>>,
-    max_renewable_life: Option<Duration>,
-    key: PrincipalBuilderKey,
+    pub(crate) name: String,
+    pub(crate) mask: i64,
+    pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
+    pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
+    pub(crate) max_life: Option<Option<Duration>>,
+    pub(crate) attributes: Option<PrincipalAttributes>,
+    pub(crate) policy: Option<Option<String>>,
+    pub(crate) max_renewable_life: Option<Option<Duration>>,
+    pub(crate) key: PrincipalBuilderKey,
 }
 
 // TODO: enctypes
@@ -189,7 +189,7 @@ impl PrincipalBuilder {
     /// Set the maximum ticket life for the principal
     ///
     /// Pass `None` to clear it. Defaults to not set
-    pub fn max_life(mut self, max_life: Duration) -> Self {
+    pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
         self.max_life = Some(max_life);
         self.mask |= KADM5_MAX_LIFE as i64;
         self
@@ -222,7 +222,7 @@ impl PrincipalBuilder {
     /// Set the maximum renewable life of tickets for the principal
     ///
     /// Pass `None` to clear it. Defaults to not set
-    pub fn max_renewable_life(mut self, max_renewable_life: Duration) -> Self {
+    pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
         self.max_renewable_life = Some(max_renewable_life);
         self.mask |= KADM5_MAX_RLIFE as i64;
         self
@@ -250,8 +250,15 @@ pub enum PrincipalBuilderKey {
     Password(String),
     /// No key should be set on the principal
     NoKey,
-    /// A random key should be generated for the principal
+    /// A random key should be generated for the principal. Tries `ServerRandKey` and falls back to
+    /// `OldStyleRandKey`
     RandKey,
+    /// A random key should be generated for the principal by the server
+    ServerRandKey,
+    /// Old-style random key. Creates the principal with [`KRB5_KDB_DISALLOW_ALL_TIX`] and a
+    /// generated dummy key, then calls `randkey` on the principal and finally removes
+    /// [`KRB5_KDB_DISALLOW_ALL_TIX`]
+    OldStyleRandKey,
 }
 
 impl Default for PrincipalBuilderKey {

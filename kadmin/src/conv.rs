@@ -1,6 +1,6 @@
 //! Conversion utilities
 
-use std::{ffi::CStr, os::raw::c_char, ptr::null_mut};
+use std::{ffi::CStr, os::raw::c_char, ptr::null_mut, time::Duration};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
@@ -30,6 +30,34 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
     DateTime::from_timestamp((ts as u32).into(), 0)
         .map(|dt| Some(dt))
         .ok_or(Error::TimestampConversion)
+}
+
+/// Convert a [`DateTime<Utc>`] to a [`krb5_timestamp`]
+pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
+    if let Some(dt) = dt {
+        dt.timestamp().try_into().map_err(|e| Error::DateTimeConversion(e))
+    }
+    else {
+        Ok(0)
+    }
+}
+
+/// Convert a [`krb5_deltat`] to a [`Duration`]
+pub(crate) fn delta_to_dur(delta: krb5_deltat) -> Option<Duration> {
+    if delta == 0 {
+        return None;
+    }
+    Some(Duration::from_secs(delta as u64))
+}
+
+/// Convert a [`Duration`] to a [`krb5_deltat`]
+pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<krb5_deltat> {
+    if let Some(dur) = dur {
+        dur.as_secs().try_into().map_err(|e| Error::DateTimeConversion(e))
+    }
+    else {
+        Ok(0)
+    }
 }
 
 /// Convert a [`krb5_principal`] to a [`String`]
