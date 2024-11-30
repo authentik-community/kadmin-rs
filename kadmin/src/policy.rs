@@ -84,7 +84,8 @@ impl Policy {
     /// let polname = String::from("mynewpol");
     /// let policy = Policy::builder(&polname)
     ///     .password_max_life(Some(Duration::from_secs(365 * 24 * 60 * 60)))
-    ///     .create(&kadm).unwrap();
+    ///     .create(&kadm)
+    ///     .unwrap();
     /// assert!(policy.is_some());
     /// # }
     /// ```
@@ -102,7 +103,12 @@ impl Policy {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let polname = String::from("mynewpol");
     /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
-    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap().unwrap();
+    /// let policy = policy
+    ///     .modifier()
+    ///     .password_min_length(16)
+    ///     .modify(&kadm)
+    ///     .unwrap()
+    ///     .unwrap();
     /// assert_eq!(*policy.password_min_length(), 16);
     /// # }
     /// ```
