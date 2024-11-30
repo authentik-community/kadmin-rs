@@ -1,7 +1,7 @@
 //! kadm5 policy
 use std::{ffi::CString, time::Duration};
 
-use getset::{Getters, CopyGetters};
+use getset::{CopyGetters, Getters};
 use kadmin_sys::*;
 
 use crate::{

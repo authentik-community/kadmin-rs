@@ -5,9 +5,12 @@ from unittest import TestCase
 from random import SystemRandom
 import string
 
+
 def random_string(length: int) -> str:
     rand = SystemRandom()
-    return "".join(rand.choice(string.ascii_lowercase + string.digits) for _ in range(length))
+    return "".join(
+        rand.choice(string.ascii_lowercase + string.digits) for _ in range(length)
+    )
 
 
 class KerberosTestCase(TestCase):
