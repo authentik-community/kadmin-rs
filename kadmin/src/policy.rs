@@ -82,11 +82,12 @@ impl Policy {
     /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let polname = String::from("mynewpol");
+    /// let password_max_life = Some(Duration::from_secs(365 * 24 * 60 * 60));
     /// let policy = Policy::builder(&polname)
-    ///     .password_max_life(Some(Duration::from_secs(365 * 24 * 60 * 60)))
+    ///     .password_max_life(password_max_life)
     ///     .create(&kadm)
     ///     .unwrap();
-    /// assert!(policy.is_some());
+    /// assert_eq!(*policy.password_max_life(), password_max_life);
     /// # }
     /// ```
     pub fn builder(name: &str) -> PolicyBuilder {
@@ -107,7 +108,6 @@ impl Policy {
     ///     .modifier()
     ///     .password_min_length(16)
     ///     .modify(&kadm)
-    ///     .unwrap()
     ///     .unwrap();
     /// assert_eq!(*policy.password_min_length(), 16);
     /// # }
@@ -316,10 +316,12 @@ policy_doer_struct!(
     /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let polname = String::from("mynewpol");
+    /// let password_max_life = Some(Duration::from_secs(365 * 24 * 60 * 60));
     /// let policy = Policy::builder(&polname)
-    ///     .password_max_life(Some(Duration::from_secs(365 * 24 * 60 * 60)))
-    ///     .create(&kadm).unwrap();
-    /// assert!(policy.is_some());
+    ///     .password_max_life(password_max_life)
+    ///     .create(&kadm)
+    ///     .unwrap();
+    /// assert_eq!(*policy.password_max_life(), password_max_life);
     /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
@@ -361,7 +363,7 @@ policy_doer_struct!(
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
     /// let polname = String::from("mynewpol");
     /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
-    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap().unwrap();
+    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap();
     /// assert_eq!(*policy.password_min_length(), 16);
     /// # }
     /// ```
