@@ -77,6 +77,19 @@ impl Policy {
     pub fn builder(name: &str) -> PolicyBuilder {
         PolicyBuilder::new(name)
     }
+
+    /// Construct a new [`PolicyModifier`] from this policy
+    pub fn modifier(self) -> PolicyModifier {
+        PolicyModifier::from_policy(self)
+    }
+
+    /// Delete this policy
+    ///
+    /// The [`Policy`] object is not consumed by this method, but after deletion, it shouldn't be
+    /// used for modifying, as the policy may not exist anymore
+    pub fn delete<K: KAdminImpl>(&self, kadmin: &K) -> Result<()> {
+        kadmin.delete_policy(&self.name)
+    }
 }
 
 macro_rules! policy_doer_struct {

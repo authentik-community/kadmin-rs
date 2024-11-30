@@ -118,21 +118,36 @@ pub trait KAdminImpl {
     #[doc(alias("listprincs", "get_principals", "getprincs"))]
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
 
-    /// Add a policy. Not yet implemented
+    /// Add a policy
+    ///
+    /// Don't use this method directly. Instead, use a [`PolicyBuilder`]
     #[doc(alias = "addpol")]
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
 
-    /// Modify a policy. Not yet implemented
+    /// Modify a policy
+    ///
+    /// Don't use this method directly. Instead, use a [`PolicyModifier`], via [`Policy::modifier`]
     #[doc(alias = "modpol")]
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()>;
 
-    /// Delete a policy. Not yet implemented
+    /// Delete a policy
+    ///
+    /// [`Policy::delete`] is also available
     #[doc(alias = "delpol")]
-    fn delete_policy() {
-        unimplemented!();
-    }
+    fn delete_policy(&self, name: &str) -> Result<()>;
 
-    /// Retrieve a policy. Not yet implemented
+    /// Retrieve a policy
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mypol");
+    /// let policy = kadm.get_policy(&polname).unwrap();
+    /// assert!(policy.is_some());
+    /// # }
+    /// ```
     #[doc(alias = "getpol")]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>>;
 
@@ -143,8 +158,8 @@ pub trait KAdminImpl {
     /// # #[cfg(feature = "client")]
     /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    /// let polname = String::from("mypolicy");
-    /// assert!(kadm.policy_exists(&princname).unwrap());
+    /// let polname = String::from("mypol");
+    /// assert!(kadm.policy_exists(&polname).unwrap());
     /// # }
     /// ```
     fn policy_exists(&self, name: &str) -> Result<bool> {
@@ -267,6 +282,13 @@ impl KAdminImpl for KAdmin {
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
         let (mut policy, mask) = modifier.make_entry()?;
         let code = unsafe { kadm5_modify_policy(self.server_handle, &mut policy, mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn delete_policy(&self, name: &str) -> Result<()> {
+        let name = CString::new(name)?;
+        let code = unsafe { kadm5_delete_policy(self.server_handle, name.as_ptr().cast_mut()) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
