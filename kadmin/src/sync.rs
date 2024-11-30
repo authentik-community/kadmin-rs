@@ -16,7 +16,11 @@ use std::{
 };
 
 use crate::{
-    db_args::DbArgsBuilder, error::Result, kadmin::KAdminImpl, params::ParamsBuilder,
+    db_args::DbArgsBuilder,
+    error::Result,
+    kadmin::KAdminImpl,
+    params::ParamsBuilder,
+    policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
 };
 
@@ -28,6 +32,14 @@ enum KAdminOperation {
     PrincipalChangePassword(String, String, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
+    /// See [`KAdminImpl::add_policy`]
+    AddPolicy(PolicyBuilder, Sender<Result<()>>),
+    /// See [`KAdminImpl::modify_policy`]
+    ModifyPolicy(PolicyModifier, Sender<Result<()>>),
+    /// See [`KAdminImpl::delete_policy`]
+    DeletePolicy(String, Sender<Result<()>>),
+    /// See [`KAdminImpl::get_policy`]
+    GetPolicy(String, Sender<Result<Option<Policy>>>),
     /// See [`KAdminImpl::list_policies`]
     ListPolicies(Option<String>, Sender<Result<Vec<String>>>),
     /// Stop the kadmin thread
@@ -46,6 +58,18 @@ impl KAdminOperation {
             }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
+            }
+            Self::AddPolicy(builder, sender) => {
+                let _ = sender.send(kadmin.add_policy(builder));
+            }
+            Self::ModifyPolicy(modifier, sender) => {
+                let _ = sender.send(kadmin.modify_policy(modifier));
+            }
+            Self::DeletePolicy(name, sender) => {
+                let _ = sender.send(kadmin.delete_policy(name));
+            }
+            Self::GetPolicy(name, sender) => {
+                let _ = sender.send(kadmin.get_policy(name));
             }
             Self::ListPolicies(query, sender) => {
                 let _ = sender.send(kadmin.list_policies(query.as_deref()));
@@ -94,6 +118,34 @@ impl KAdminImpl for KAdmin {
             query.map(String::from),
             sender,
         ))?;
+        receiver.recv()?
+    }
+
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.op_sender
+            .send(KAdminOperation::AddPolicy(builder.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.op_sender
+            .send(KAdminOperation::ModifyPolicy(modifier.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn delete_policy(&self, name: &str) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.op_sender
+            .send(KAdminOperation::DeletePolicy(name.to_owned(), sender))?;
+        receiver.recv()?
+    }
+
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
+        let (sender, receiver) = channel();
+        self.op_sender
+            .send(KAdminOperation::GetPolicy(name.to_owned(), sender))?;
         receiver.recv()?
     }
 

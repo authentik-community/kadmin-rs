@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use kadmin_sys::*;
 
 use crate::{
-    conv::{c_string_to_string, ts_to_dt},
+    conv::{c_string_to_string, delta_to_dur, ts_to_dt},
     error::{Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
 };
@@ -16,12 +16,12 @@ use crate::{
 #[allow(dead_code)] // TODO: remove me once implemented
 pub struct Principal {
     name: String,
-    expire_time: DateTime<Utc>,
-    last_password_change: DateTime<Utc>,
-    password_expiration: DateTime<Utc>,
-    max_life: Duration,
+    expire_time: Option<DateTime<Utc>>,
+    last_password_change: Option<DateTime<Utc>>,
+    password_expiration: Option<DateTime<Utc>>,
+    max_life: Option<Duration>,
     modified_by: String,
-    modified_at: DateTime<Utc>,
+    modified_at: Option<DateTime<Utc>>,
     // TODO: enum
     attributes: i32,
     kvno: u32,
@@ -29,9 +29,9 @@ pub struct Principal {
     policy: Option<String>,
     // TODO: figure out what that does
     aux_attributes: i64,
-    max_renewable_life: Duration,
-    last_success: DateTime<Utc>,
-    last_failed: DateTime<Utc>,
+    max_renewable_life: Option<Duration>,
+    last_success: Option<DateTime<Utc>>,
+    last_failed: Option<DateTime<Utc>>,
     fail_auth_count: u32,
     // TODO: key data
 }
@@ -68,7 +68,7 @@ impl Principal {
             expire_time: ts_to_dt(entry.princ_expire_time)?,
             last_password_change: ts_to_dt(entry.last_pwd_change)?,
             password_expiration: ts_to_dt(entry.pw_expiration)?,
-            max_life: Duration::from_secs(entry.max_life as u64),
+            max_life: delta_to_dur(entry.max_life.into()),
             modified_by,
             modified_at: ts_to_dt(entry.mod_date)?,
             attributes: entry.attributes,
@@ -80,7 +80,7 @@ impl Principal {
                 None
             },
             aux_attributes: entry.aux_attributes,
-            max_renewable_life: Duration::from_secs(entry.max_renewable_life as u64),
+            max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
             last_success: ts_to_dt(entry.last_success)?,
             last_failed: ts_to_dt(entry.last_failed)?,
             fail_auth_count: entry.fail_auth_count,

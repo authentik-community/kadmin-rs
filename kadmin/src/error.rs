@@ -56,6 +56,12 @@ pub enum Error {
     /// Failed to convert a [`krb5_timestamp`] to a [`chrono::DateTime`]
     #[error("Failed to convert krb5 timestamp to chrono DateTime")]
     TimestampConversion,
+    /// Failed to convert a [`chrono::DateTime`] to a [`krb5_timestamp`]
+    #[error("Failed to convert chrono DateTime to krb5 timestamp")]
+    DateTimeConversion(std::num::TryFromIntError),
+    /// Failed to convert a [`Duration`][`std::time::Duration`] to a [`krb5_deltat`]
+    #[error("Failed to convert Duration to a krb5 deltat")]
+    DurationConversion(std::num::TryFromIntError),
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {

@@ -68,5 +68,8 @@ pub use kadmin::{KAdmin, KAdminImpl};
 
 pub mod sync;
 
+pub mod policy;
+pub use policy::Policy;
+
 pub mod principal;
 pub use principal::Principal;

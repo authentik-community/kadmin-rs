@@ -19,12 +19,14 @@ local = ["kadmin-sys/server"]
 
 [dependencies]
 chrono = "0.4"
+getset = "0.1"
 kadmin-sys = { path = "../kadmin-sys", version = "0.2.0", default-features = false }
 thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
 pyo3 = { version = "0.23", features = ["auto-initialize"] }
+rand = "0.8"
 serial_test = { version = "3.1", default-features = false, features = [
   "log",
   "logging",
