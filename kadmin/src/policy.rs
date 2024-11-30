@@ -74,11 +74,38 @@ impl Policy {
     }
 
     /// Construct a new [`PolicyBuilder`] for a policy with `name`
+    ///
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mynewpol");
+    /// let policy = Policy::builder(&polname)
+    ///     .password_max_life(Some(Duration::from_secs(365 * 24 * 60 * 60)))
+    ///     .create(&kadm).unwrap();
+    /// assert!(policy.is_some());
+    /// # }
+    /// ```
     pub fn builder(name: &str) -> PolicyBuilder {
         PolicyBuilder::new(name)
     }
 
     /// Construct a new [`PolicyModifier`] from this policy
+    ///
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mynewpol");
+    /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
+    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap().unwrap();
+    /// assert_eq!(*policy.password_min_length(), 16);
+    /// # }
+    /// ```
     pub fn modifier(self) -> PolicyModifier {
         PolicyModifier::from_policy(self)
     }
@@ -274,6 +301,20 @@ macro_rules! policy_doer_impl {
 
 policy_doer_struct!(
     /// Utility to create a policy
+    ///
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mynewpol");
+    /// let policy = Policy::builder(&polname)
+    ///     .password_max_life(Some(Duration::from_secs(365 * 24 * 60 * 60)))
+    ///     .create(&kadm).unwrap();
+    /// assert!(policy.is_some());
+    /// # }
+    /// ```
     #[derive(Clone, Debug, Default)]
     PolicyBuilder {}
 );
@@ -304,6 +345,19 @@ impl PolicyBuilder {
 
 policy_doer_struct!(
     /// Utility to modify a policy
+    ///
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mynewpol");
+    /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
+    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap().unwrap();
+    /// assert_eq!(*policy.password_min_length(), 16);
+    /// # }
+    /// ```
     #[derive(Clone, Debug, Default)]
     PolicyModifier {}
 );
