@@ -50,7 +50,6 @@ macro_rules! gen_tests {
             assert_eq!(policy.name(), &polname);
             assert_eq!(policy.password_max_life(), None);
             assert_eq!(policy.attributes(), 0);
-            policy.delete(&kadmin)?;
             Ok(())
         }
 

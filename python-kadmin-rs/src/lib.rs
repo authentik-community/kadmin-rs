@@ -328,6 +328,16 @@ pub mod pykadmin {
             }))
         }
 
+        /// Check if a policy exists
+        ///
+        /// :param name: policy name to check for
+        /// :type name: str
+        /// :return: `True` if the policy exists, `False` otherwise
+        /// :rtype: bool
+        fn policy_exists(&self, name: &str) -> Result<bool> {
+            Ok(self.0.policy_exists(name)?)
+        }
+
         /// List policies
         ///
         /// :param query: a shell-style glob expression that can contain the wild-card characters
@@ -561,6 +571,15 @@ pub mod pykadmin {
         /// may not exist anymore
         pub fn delete(&self) -> Result<()> {
             Ok(self.inner.delete(self.kadmin.deref())?)
+        }
+
+        /// The policy name
+        ///
+        /// :getter: Get the policy name
+        /// :type: str
+        #[getter]
+        pub fn name(&self) -> &str {
+            self.inner.name()
         }
 
         /// Minimum lifetime of a password
