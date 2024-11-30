@@ -26,7 +26,7 @@ thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
-pyo3 = { version = "0.22", features = ["auto-initialize"] }
+pyo3 = { version = "0.23", features = ["auto-initialize"] }
 serial_test = { version = "3.1", default-features = false, features = [
   "log",
   "logging",

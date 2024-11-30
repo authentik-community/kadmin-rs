@@ -417,45 +417,24 @@ pub mod pykadmin {
 
         #[pymodule_init]
         fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
-            m.add(
-                "PyKAdminException",
-                m.py().get_type_bound::<PyKAdminException>(),
-            )?;
-            m.add(
-                "KAdminException",
-                m.py().get_type_bound::<KAdminException>(),
-            )?;
-            m.add(
-                "KerberosException",
-                m.py().get_type_bound::<KerberosException>(),
-            )?;
+            m.add("PyKAdminException", m.py().get_type::<PyKAdminException>())?;
+            m.add("KAdminException", m.py().get_type::<KAdminException>())?;
+            m.add("KerberosException", m.py().get_type::<KerberosException>())?;
             m.add(
                 "NullPointerDereference",
-                m.py().get_type_bound::<NullPointerDereference>(),
+                m.py().get_type::<NullPointerDereference>(),
             )?;
-            m.add(
-                "CStringConversion",
-                m.py().get_type_bound::<CStringConversion>(),
-            )?;
+            m.add("CStringConversion", m.py().get_type::<CStringConversion>())?;
             m.add(
                 "CStringImportFromVec",
-                m.py().get_type_bound::<CStringImportFromVec>(),
+                m.py().get_type::<CStringImportFromVec>(),
             )?;
-            m.add(
-                "StringConversion",
-                m.py().get_type_bound::<StringConversion>(),
-            )?;
-            m.add(
-                "ThreadSendError",
-                m.py().get_type_bound::<ThreadSendError>(),
-            )?;
-            m.add(
-                "ThreadRecvError",
-                m.py().get_type_bound::<ThreadRecvError>(),
-            )?;
+            m.add("StringConversion", m.py().get_type::<StringConversion>())?;
+            m.add("ThreadSendError", m.py().get_type::<ThreadSendError>())?;
+            m.add("ThreadRecvError", m.py().get_type::<ThreadRecvError>())?;
             m.add(
                 "TimestampConversion",
-                m.py().get_type_bound::<TimestampConversion>(),
+                m.py().get_type::<TimestampConversion>(),
             )?;
             Ok(())
         }
@@ -568,7 +547,7 @@ pub mod pykadmin {
                     };
 
                     if let Some((code, message)) = extras {
-                        let bound_exc = exc.value_bound(py);
+                        let bound_exc = exc.value(py);
                         if let Err(err) = bound_exc.setattr(intern!(py, "code"), code) {
                             return err;
                         }
