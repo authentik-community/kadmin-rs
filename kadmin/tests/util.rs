@@ -1,4 +1,4 @@
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 
 #[allow(dead_code)]
 pub(crate) fn random_string(len: usize) -> String {

@@ -1,6 +1,5 @@
 //! kadm5 policy
-use std::time::Duration;
-use std::ffi::CString;
+use std::{ffi::CString, time::Duration};
 
 use getset::Getters;
 use kadmin_sys::*;
@@ -113,7 +112,7 @@ impl Policy {
     /// assert_eq!(*policy.password_min_length(), 16);
     /// # }
     /// ```
-    pub fn modifier(self) -> PolicyModifier {
+    pub fn modifier(&self) -> PolicyModifier {
         PolicyModifier::from_policy(self)
     }
 
@@ -374,7 +373,7 @@ impl PolicyModifier {
     policy_doer_impl!();
 
     /// Construct a new [`PolicyModifier`] from a [`Policy`]
-    pub fn from_policy(policy: Policy) -> Self {
+    pub fn from_policy(policy: &Policy) -> Self {
         Self {
             name: policy.name().to_owned(),
             ..Default::default()

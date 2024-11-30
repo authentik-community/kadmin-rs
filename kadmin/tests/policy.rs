@@ -93,7 +93,7 @@ mod sync {
     #[cfg(feature = "client")]
     use anyhow::Result;
     #[cfg(feature = "client")]
-    use kadmin::{KAdminImpl, sync::KAdmin, Policy};
+    use kadmin::{KAdminImpl, Policy, sync::KAdmin};
     #[cfg(feature = "client")]
     use serial_test::serial;
 

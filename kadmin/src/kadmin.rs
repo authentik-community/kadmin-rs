@@ -285,8 +285,6 @@ impl KAdminImpl for KAdmin {
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
         let (mut policy, mask, _guard) = modifier.make_entry()?;
-        dbg!(&policy);
-        dbg!(&mask);
         let code = unsafe { kadm5_modify_policy(self.server_handle, &mut policy, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
