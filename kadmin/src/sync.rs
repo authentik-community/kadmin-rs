@@ -14,6 +14,7 @@ use std::{
     },
     thread::{JoinHandle, spawn},
 };
+
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 

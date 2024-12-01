@@ -2,9 +2,10 @@
 
 use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 
-use crate::error::Result;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
+
+use crate::error::Result;
 
 /// Database specific arguments
 ///

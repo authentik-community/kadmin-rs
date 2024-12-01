@@ -3,10 +3,10 @@
 use std::{ffi::CString, ptr::null_mut};
 
 use kadmin_sys::*;
-
-use crate::error::Result;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
+
+use crate::error::Result;
 
 /// kadm5 config options
 ///
