@@ -953,6 +953,29 @@ pub mod pykadmin {
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
+
+        /// Policy TL-data
+        ///
+        /// :getter: Get the TL-data
+        /// :setter: Set the TL-data. Completely overrides existing TL-data, make sure to re-use
+        ///     the old ones
+        /// :type: TlData
+        #[getter]
+        pub fn get_tl_data(&self) -> TlData {
+            (*self.inner.tl_data()).clone().into()
+        }
+
+        /// Ignored
+        #[setter]
+        pub fn set_tl_data(&mut self, tl_data: TlData) -> Result<()> {
+            let policy = self
+                .inner
+                .modifier()
+                .tl_data(tl_data.into())
+                .modify(self.kadmin.deref())?;
+            let _ = std::mem::replace(&mut self.inner, policy);
+            Ok(())
+        }
     }
 
     /// python-kadmin-rs exceptions
