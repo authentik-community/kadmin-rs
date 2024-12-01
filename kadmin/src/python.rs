@@ -176,10 +176,10 @@ pub mod pykadmin {
         fn get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
             let mut builder = KAdminBuilder::default();
             if let Some(params) = params {
-                builder = builder.params_builder(params.0);
+                builder = builder.params(params.0.build().unwrap());
             }
             if let Some(db_args) = db_args {
-                builder = builder.db_args_builder(db_args.0);
+                builder = builder.db_args(db_args.0.build().unwrap());
             }
             builder
         }
