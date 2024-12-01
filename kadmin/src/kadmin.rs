@@ -276,16 +276,17 @@ impl KAdminImpl for KAdmin {
     }
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
-        let (mut policy, mask, _guard) = builder.make_entry()?;
-        let mask = mask | KADM5_POLICY as i64;
-        let code = unsafe { kadm5_create_policy(self.server_handle, &mut policy, mask) };
+        let mut entry = unsafe { builder.make_entry() }?;
+        let mask = builder.mask | KADM5_POLICY as i64;
+        let code = unsafe { kadm5_create_policy(self.server_handle, &mut entry.raw, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
-        let (mut policy, mask, _guard) = modifier.make_entry()?;
-        let code = unsafe { kadm5_modify_policy(self.server_handle, &mut policy, mask) };
+        let mut entry = unsafe { modifier.make_entry() }?;
+        let code =
+            unsafe { kadm5_modify_policy(self.server_handle, &mut entry.raw, modifier.mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
