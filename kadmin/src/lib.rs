@@ -63,6 +63,9 @@ pub use params::Params;
 pub mod db_args;
 pub use db_args::DbArgs;
 
+pub mod tl_data;
+pub use tl_data::{TlData, TlDataEntry};
+
 pub mod kadmin;
 pub use kadmin::{KAdmin, KAdminImpl};
 

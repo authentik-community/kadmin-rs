@@ -37,6 +37,7 @@ pub mod pykadmin {
         policy::Policy as KPolicy,
         principal::Principal as KPrincipal,
         sync::{KAdmin as KKAdmin, KAdminBuilder},
+        tl_data::{TlData as KTlData, TlDataEntry as KTlDataEntry},
     };
     use pyo3::{
         prelude::*,
@@ -158,6 +159,71 @@ pub mod pykadmin {
                 }
             }
             Ok(Self(builder))
+        }
+    }
+
+    /// A single TL-data entry
+    #[pyclass]
+    #[derive(Clone, Debug, Default)]
+    #[allow(clippy::exhaustive_structs)]
+    pub struct TlDataEntry {
+        /// TL-data type
+        ///
+        /// :type: int
+        #[pyo3(get, set)]
+        pub data_type: i16,
+        /// Entry contents
+        ///
+        /// :type: list[int]
+        #[pyo3(get, set)]
+        pub contents: Vec<u8>,
+    }
+
+    impl From<KTlDataEntry> for TlDataEntry {
+        fn from(item: KTlDataEntry) -> Self {
+            Self {
+                data_type: item.data_type,
+                contents: item.contents,
+            }
+        }
+    }
+
+    #[allow(clippy::from_over_into)]
+    impl Into<KTlDataEntry> for TlDataEntry {
+        fn into(self) -> KTlDataEntry {
+            KTlDataEntry {
+                data_type: self.data_type,
+                contents: self.contents,
+            }
+        }
+    }
+
+    /// TL-data entries
+    #[pyclass]
+    #[derive(Clone, Debug, Default)]
+    #[allow(clippy::exhaustive_structs)]
+    pub struct TlData {
+        /// TL-data entries
+        ///
+        /// :type: list[TlDataEntry]
+        #[pyo3(get, set)]
+        pub entries: Vec<TlDataEntry>,
+    }
+
+    impl From<KTlData> for TlData {
+        fn from(item: KTlData) -> Self {
+            Self {
+                entries: item.entries.into_iter().map(|e| e.into()).collect(),
+            }
+        }
+    }
+
+    #[allow(clippy::from_over_into)]
+    impl Into<KTlData> for TlData {
+        fn into(self) -> KTlData {
+            KTlData {
+                entries: self.entries.into_iter().map(|e| e.into()).collect(),
+            }
         }
     }
 
@@ -295,6 +361,9 @@ pub mod pykadmin {
                 }
                 if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                     builder = builder.max_renewable_life(max_renewable_life.extract()?);
+                }
+                if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                    builder = builder.tl_data(tl_data.extract::<TlData>()?.into());
                 }
             }
             Ok(Policy {
@@ -553,6 +622,9 @@ pub mod pykadmin {
                 }
                 if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                     modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
+                }
+                if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                    modifier = modifier.tl_data(tl_data.extract::<TlData>()?.into());
                 }
                 Ok(Self {
                     inner: modifier
@@ -855,6 +927,29 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .max_renewable_life(max_renewable_life)
+                .modify(self.kadmin.deref())?;
+            let _ = std::mem::replace(&mut self.inner, policy);
+            Ok(())
+        }
+
+        /// Policy TL-data
+        ///
+        /// :getter: Get the TL-data
+        /// :setter: Set the TL-data. Completely overrides existing TL-data, make sure to re-use
+        ///     the old ones
+        /// :type: TlData
+        #[getter]
+        pub fn get_tl_data(&self) -> TlData {
+            (*self.inner.tl_data()).clone().into()
+        }
+
+        /// Ignored
+        #[setter]
+        pub fn set_tl_data(&mut self, tl_data: TlData) -> Result<()> {
+            let policy = self
+                .inner
+                .modifier()
+                .tl_data(tl_data.into())
                 .modify(self.kadmin.deref())?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
