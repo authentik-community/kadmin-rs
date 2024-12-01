@@ -165,6 +165,7 @@ pub mod pykadmin {
     /// A single TL-data entry
     #[pyclass]
     #[derive(Clone, Debug, Default)]
+    #[allow(clippy::exhaustive_structs)]
     pub struct TlDataEntry {
         /// TL-data type
         ///
@@ -187,6 +188,7 @@ pub mod pykadmin {
         }
     }
 
+    #[allow(clippy::from_over_into)]
     impl Into<KTlDataEntry> for TlDataEntry {
         fn into(self) -> KTlDataEntry {
             KTlDataEntry {
@@ -199,6 +201,7 @@ pub mod pykadmin {
     /// TL-data entries
     #[pyclass]
     #[derive(Clone, Debug, Default)]
+    #[allow(clippy::exhaustive_structs)]
     pub struct TlData {
         /// TL-data entries
         ///
@@ -215,6 +218,7 @@ pub mod pykadmin {
         }
     }
 
+    #[allow(clippy::from_over_into)]
     impl Into<KTlData> for TlData {
         fn into(self) -> KTlData {
             KTlData {
