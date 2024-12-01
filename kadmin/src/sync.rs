@@ -11,7 +11,10 @@
 //! [`DbArgs`][`crate::db_args::DbArgs`].
 use std::{
     panic::resume_unwind,
-    sync::mpsc::{Sender, channel},
+    sync::{
+        Arc,
+        mpsc::{Sender, channel},
+    },
     thread::{JoinHandle, spawn},
 };
 
@@ -78,12 +81,31 @@ impl KAdminOperation {
     }
 }
 
+/// Inner attributes to be wrapped in an [`Arc`]
+#[derive(Debug)]
+struct InnerKAdmin {
+    op_sender: Sender<KAdminOperation>,
+    join_handle: Option<JoinHandle<()>>,
+}
+
+impl Drop for InnerKAdmin {
+    fn drop(&mut self) {
+        // Thread might have already exited, so we don't care about the result of this
+        let _ = self.op_sender.send(KAdminOperation::Exit);
+        if let Some(join_handle) = self.join_handle.take() {
+            if let Err(e) = join_handle.join() {
+                resume_unwind(e);
+            }
+        }
+    }
+}
+
 /// Thread-safe interface to kadm5
 ///
 /// This is a thread-safe wrapper over [`crate::kadmin::KAdmin`].
+#[derive(Clone, Debug)]
 pub struct KAdmin {
-    op_sender: Sender<KAdminOperation>,
-    join_handle: Option<JoinHandle<()>>,
+    inner: Arc<InnerKAdmin>,
 }
 
 impl KAdmin {
@@ -96,14 +118,16 @@ impl KAdmin {
 impl KAdminImpl for KAdmin {
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::GetPrincipal(name.to_owned(), sender))?;
         receiver.recv()?
     }
 
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::PrincipalChangePassword(
                 name.to_owned(),
                 password.to_owned(),
@@ -114,7 +138,7 @@ impl KAdminImpl for KAdmin {
 
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
-        self.op_sender.send(KAdminOperation::ListPrincipals(
+        self.inner.op_sender.send(KAdminOperation::ListPrincipals(
             query.map(String::from),
             sender,
         ))?;
@@ -123,51 +147,43 @@ impl KAdminImpl for KAdmin {
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::AddPolicy(builder.clone(), sender))?;
         receiver.recv()?
     }
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::ModifyPolicy(modifier.clone(), sender))?;
         receiver.recv()?
     }
 
     fn delete_policy(&self, name: &str) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::DeletePolicy(name.to_owned(), sender))?;
         receiver.recv()?
     }
 
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::GetPolicy(name.to_owned(), sender))?;
         receiver.recv()?
     }
 
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
-        self.op_sender.send(KAdminOperation::ListPolicies(
+        self.inner.op_sender.send(KAdminOperation::ListPolicies(
             query.map(String::from),
             sender,
         ))?;
         receiver.recv()?
-    }
-}
-
-impl Drop for KAdmin {
-    fn drop(&mut self) {
-        // Thread might have already exited, so we don't care about the result of this.
-        let _ = self.op_sender.send(KAdminOperation::Exit);
-        if let Some(join_handle) = self.join_handle.take() {
-            if let Err(e) = join_handle.join() {
-                resume_unwind(e);
-            }
-        }
     }
 }
 
@@ -241,8 +257,10 @@ impl KAdminBuilder {
 
         match start_receiver.recv()? {
             Ok(_) => Ok(KAdmin {
-                op_sender,
-                join_handle: Some(join_handle),
+                inner: Arc::new(InnerKAdmin {
+                    op_sender,
+                    join_handle: Some(join_handle),
+                }),
             }),
             Err(e) => match join_handle.join() {
                 Ok(_) => Err(e),

@@ -28,7 +28,7 @@ use pyo3::prelude::*;
 /// ```
 #[pymodule(name = "_lib")]
 pub mod pykadmin {
-    use std::{ops::Deref, sync::Arc, time::Duration};
+    use std::time::Duration;
 
     use kadmin::{
         db_args::DbArgsBuilder,
@@ -231,7 +231,8 @@ pub mod pykadmin {
     ///
     /// This class has no constructor. Instead, use the `with_` methods
     #[pyclass]
-    pub struct KAdmin(Arc<KKAdmin>);
+    #[derive(Clone, Debug)]
+    pub struct KAdmin(KKAdmin);
 
     impl KAdmin {
         fn get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
@@ -277,7 +278,7 @@ pub mod pykadmin {
         pub fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
             Ok(self.0.get_principal(name)?.map(|p| Principal {
                 inner: p,
-                kadmin: Arc::clone(&self.0),
+                kadmin: self.clone(),
             }))
         }
 
@@ -368,9 +369,9 @@ pub mod pykadmin {
             }
             Ok(Policy {
                 inner: builder
-                    .create(self.0.deref())
+                    .create(&self.0)
                     .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
-                kadmin: Arc::clone(&self.0),
+                kadmin: self.clone(),
             })
         }
 
@@ -393,7 +394,7 @@ pub mod pykadmin {
         fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
             Ok(self.0.get_policy(name)?.map(|p| Policy {
                 inner: p,
-                kadmin: Arc::clone(&self.0),
+                kadmin: self.clone(),
             }))
         }
 
@@ -445,9 +446,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(Arc::new(
+            Ok(Self(
                 Self::get_builder(params, db_args).with_password(client_name, password)?,
-            )))
+            ))
         }
 
         /// Construct a KAdmin object using a keytab
@@ -473,9 +474,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(Arc::new(
+            Ok(Self(
                 Self::get_builder(params, db_args).with_keytab(client_name, keytab)?,
-            )))
+            ))
         }
 
         /// Construct a KAdmin object using a credentials cache
@@ -501,9 +502,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(Arc::new(
+            Ok(Self(
                 Self::get_builder(params, db_args).with_ccache(client_name, ccache_name)?,
-            )))
+            ))
         }
 
         /// Not implemented
@@ -515,9 +516,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(Arc::new(
+            Ok(Self(
                 Self::get_builder(params, db_args).with_anonymous(client_name)?,
-            )))
+            ))
         }
 
         /// Construct a KAdmin object for local database manipulation.
@@ -532,9 +533,7 @@ pub mod pykadmin {
         #[staticmethod]
         #[pyo3(signature = (params=None, db_args=None))]
         pub fn with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-            Ok(Self(Arc::new(
-                Self::get_builder(params, db_args).with_local()?,
-            )))
+            Ok(Self(Self::get_builder(params, db_args).with_local()?))
         }
     }
 
@@ -542,7 +541,7 @@ pub mod pykadmin {
     #[pyclass]
     pub struct Principal {
         inner: KPrincipal,
-        kadmin: Arc<KKAdmin>,
+        kadmin: KAdmin,
     }
 
     #[pymethods]
@@ -552,7 +551,7 @@ pub mod pykadmin {
         /// :param password: the new password
         /// :type password: str
         pub fn change_password(&self, password: &str) -> Result<()> {
-            Ok(self.inner.change_password(self.kadmin.deref(), password)?)
+            Ok(self.inner.change_password(&self.kadmin.0, password)?)
         }
     }
 
@@ -567,7 +566,7 @@ pub mod pykadmin {
     #[derive(Clone)]
     pub struct Policy {
         inner: KPolicy,
-        kadmin: Arc<KKAdmin>,
+        kadmin: KAdmin,
     }
 
     #[pymethods]
@@ -628,9 +627,9 @@ pub mod pykadmin {
                 }
                 Ok(Self {
                     inner: modifier
-                        .modify(self.kadmin.deref())
+                        .modify(&self.kadmin.0)
                         .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
-                    kadmin: Arc::clone(&self.kadmin),
+                    kadmin: self.kadmin.clone(),
                 })
             } else {
                 Ok(self.clone())
@@ -642,7 +641,7 @@ pub mod pykadmin {
         /// The object will still be available, but shouldn’t be used for modifying, as the policy
         /// may not exist anymore
         pub fn delete(&self) -> Result<()> {
-            Ok(self.inner.delete(self.kadmin.deref())?)
+            Ok(self.inner.delete(&self.kadmin.0)?)
         }
 
         /// The policy name
@@ -671,7 +670,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_life(password_min_life)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -693,7 +692,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_max_life(password_max_life)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -715,7 +714,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_length(password_min_length)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -740,7 +739,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_classes(password_min_classes)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -765,7 +764,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_history_num(password_history_num)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -802,7 +801,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_max_fail(password_max_fail)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -831,7 +830,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_failcount_interval(password_failcount_interval)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -858,7 +857,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_lockout_duration(password_lockout_duration)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -880,7 +879,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .attributes(attributes)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -902,7 +901,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .max_life(max_life)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -927,7 +926,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .max_renewable_life(max_renewable_life)
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -950,7 +949,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .tl_data(tl_data.into())
-                .modify(self.kadmin.deref())?;
+                .modify(&self.kadmin.0)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
