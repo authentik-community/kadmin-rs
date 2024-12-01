@@ -14,6 +14,8 @@ use std::{
     },
     thread::{JoinHandle, spawn},
 };
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::{
     db_args::DbArgs,
@@ -101,6 +103,7 @@ impl Drop for InnerKAdmin {
 ///
 /// This is a thread-safe wrapper over [`crate::kadmin::KAdmin`].
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct KAdmin {
     inner: Arc<InnerKAdmin>,
 }

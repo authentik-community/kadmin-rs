@@ -36,12 +36,12 @@ pub mod pykadmin {
     };
 
     use crate::{
-        db_args::DbArgsBuilder,
+        db_args::DbArgs,
         kadmin::KAdminImpl,
-        params::ParamsBuilder,
+        params::Params,
         policy::Policy as KPolicy,
         principal::Principal as KPrincipal,
-        sync::{KAdmin as KKAdmin, KAdminBuilder},
+        sync::{KAdmin, KAdminBuilder},
         tl_data::{TlData, TlDataEntry},
     };
 
@@ -55,39 +55,12 @@ pub mod pykadmin {
         Ok(())
     }
 
-    /// kadm5 config options
-    ///
-    /// :param realm: Default realm database
-    /// :type realm: str, optional
-    /// :param kadmind_port: kadmind port to connect to
-    /// :type kadmind_port: int, optional
-    /// :param kpasswd_port: kpasswd port to connect to
-    /// :type kpasswd_port: int, optional
-    /// :param admin_server: Admin server which kadmin should contact
-    /// :type admin_server: str, optional
-    /// :param dbname: Name of the KDC database
-    /// :type dbname: str, optional
-    /// :param acl_file: Location of the access control list file
-    /// :type acl_file: str, optional
-    /// :param dict_file: Location of the dictionary file containing strings that are not allowed as
-    ///     passwords
-    /// :type dict_file: str, optional
-    /// :param stash_file: Location where the master key has been stored
-    /// :type stash_file: str, optional
-    ///
-    /// .. code-block:: python
-    ///
-    ///    params = Params(realm="EXAMPLE.ORG")
-    #[pyclass]
-    #[derive(Clone)]
-    pub struct Params(ParamsBuilder);
-
     #[pymethods]
     impl Params {
         #[new]
         #[pyo3(signature = (realm=None, kadmind_port=None, kpasswd_port=None, admin_server=None, dbname=None, acl_file=None, dict_file=None, stash_file=None))]
         #[allow(clippy::too_many_arguments)]
-        fn new(
+        fn py_new(
             realm: Option<&str>,
             kadmind_port: Option<i32>,
             kpasswd_port: Option<i32>,
@@ -96,8 +69,8 @@ pub mod pykadmin {
             acl_file: Option<&str>,
             dict_file: Option<&str>,
             stash_file: Option<&str>,
-        ) -> Self {
-            let mut builder = ParamsBuilder::default();
+        ) -> Result<Self> {
+            let mut builder = Params::builder();
             if let Some(realm) = realm {
                 builder = builder.realm(realm);
             }
@@ -122,30 +95,16 @@ pub mod pykadmin {
             if let Some(stash_file) = stash_file {
                 builder = builder.stash_file(stash_file);
             }
-            Self(builder)
+            Ok(builder.build()?)
         }
     }
-
-    /// Database specific arguments
-    ///
-    /// See `man kadmin(1)` for a list of supported arguments
-    ///
-    /// :param \**kwargs: Database arguments
-    /// :type \**kwargs: dict[str, str | None]
-    ///
-    /// .. code-block:: python
-    ///
-    ///    db_args = DbArgs(host="ldap.example.org")
-    #[pyclass]
-    #[derive(Clone)]
-    pub struct DbArgs(DbArgsBuilder);
 
     #[pymethods]
     impl DbArgs {
         #[new]
         #[pyo3(signature = (**kwargs))]
-        fn new(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
-            let mut builder = DbArgsBuilder::default();
+        fn py_new(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+            let mut builder = DbArgs::builder();
             if let Some(kwargs) = kwargs {
                 for (name, value) in kwargs.iter() {
                     let name = if !name.is_instance_of::<PyString>() {
@@ -161,25 +120,41 @@ pub mod pykadmin {
                     };
                 }
             }
-            Ok(Self(builder))
+            Ok(builder.build().map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?)
         }
     }
 
-    /// Interface to kadm5
-    ///
-    /// This class has no constructor. Instead, use the `with_` methods
-    #[pyclass]
-    #[derive(Clone, Debug)]
-    pub struct KAdmin(KKAdmin);
+    #[pymethods]
+    impl TlDataEntry {
+        #[new]
+        fn py_new(data_type: i16, contents: Vec<u8>) -> Self {
+            Self { data_type, contents }
+        }
+    }
+
+    #[pymethods]
+    impl TlData {
+        #[new]
+        fn py_new(entries: Vec<TlDataEntry>) -> Self {
+            Self { entries }
+        }
+    }
+
+    // /// Interface to kadm5
+    // ///
+    // /// This class has no constructor. Instead, use the `with_` methods
+    // #[pyclass]
+    // #[derive(Clone, Debug)]
+    // pub struct KAdmin(KKAdmin);
 
     impl KAdmin {
         fn get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
             let mut builder = KAdminBuilder::default();
             if let Some(params) = params {
-                builder = builder.params(params.0.build().unwrap());
+                builder = builder.params(params);
             }
             if let Some(db_args) = db_args {
-                builder = builder.db_args(db_args.0.build().unwrap());
+                builder = builder.db_args(db_args);
             }
             builder
         }
@@ -188,22 +163,26 @@ pub mod pykadmin {
     #[pymethods]
     impl KAdmin {
         /// Not implemented
-        fn add_principal(&self) {
+        #[pyo3(name = "add_principal")]
+        fn py_add_principal(&self) {
             unimplemented!();
         }
 
         /// Not implemented
-        fn delete_principal(&self) {
+        #[pyo3(name = "delete_principal")]
+        fn py_delete_principal(&self) {
             unimplemented!();
         }
 
         /// Not implemented
-        fn modify_principal(&self) {
+        #[pyo3(name = "modify_principal")]
+        fn py_modify_principal(&self) {
             unimplemented!();
         }
 
         /// Not implemented
-        fn rename_principal(&self) {
+        #[pyo3(name = "rename_principal")]
+        fn py_rename_principal(&self) {
             unimplemented!();
         }
 
@@ -213,8 +192,9 @@ pub mod pykadmin {
         /// :type name: str
         /// :return: Principal if found, None otherwise
         /// :rtype: Principal, optional
-        pub fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
-            Ok(self.0.get_principal(name)?.map(|p| Principal {
+        #[pyo3(name = "get_principal")]
+        pub fn py_get_principal(&self, name: &str) -> Result<Option<Principal>> {
+            Ok(self.get_principal(name)?.map(|p| Principal {
                 inner: p,
                 kadmin: self.clone(),
             }))
@@ -226,8 +206,9 @@ pub mod pykadmin {
         /// :type name: str
         /// :return: `True` if the principal exists, `False` otherwise
         /// :rtype: bool
-        fn principal_exists(&self, name: &str) -> Result<bool> {
-            Ok(self.0.principal_exists(name)?)
+        #[pyo3(name = "principal_exists")]
+        pub fn py_principal_exists(&self, name: &str) -> Result<bool> {
+            Ok(self.principal_exists(name)?)
         }
 
         /// List principals
@@ -240,9 +221,9 @@ pub mod pykadmin {
         /// :type query: str, optional
         /// :return: the list of principal names matching the query
         /// :rtype: list[str]
-        #[pyo3(signature = (query=None))]
-        pub fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
-            Ok(self.0.list_principals(query)?)
+        #[pyo3(name = "list_principals", signature = (query=None))]
+        pub fn py_list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
+            Ok(self.list_principals(query)?)
         }
 
         /// Create a policy
@@ -254,8 +235,8 @@ pub mod pykadmin {
         ///     types.
         /// :return: the newly created Policy
         /// :rtype: Policy
-        #[pyo3(signature = (name, **kwargs))]
-        pub fn add_policy(
+        #[pyo3(name = "add_policy", signature = (name, **kwargs))]
+        pub fn py_add_policy(
             &self,
             name: &str,
             kwargs: Option<&Bound<'_, PyDict>>,
@@ -307,7 +288,7 @@ pub mod pykadmin {
             }
             Ok(Policy {
                 inner: builder
-                    .create(&self.0)
+                    .create(self)
                     .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
                 kadmin: self.clone(),
             })
@@ -319,8 +300,9 @@ pub mod pykadmin {
         ///
         /// :param name: name of the policy to delete
         /// :type name: str
-        fn delete_policy(&self, name: &str) -> Result<()> {
-            Ok(self.0.delete_policy(name)?)
+        #[pyo3(name = "delete_policy")]
+        fn py_delete_policy(&self, name: &str) -> Result<()> {
+            Ok(self.delete_policy(name)?)
         }
 
         /// Retrieve a policy
@@ -329,8 +311,9 @@ pub mod pykadmin {
         /// :type name: str
         /// :return: Policy if found, None otherwise
         /// :rtype: Policy, optional
-        fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
-            Ok(self.0.get_policy(name)?.map(|p| Policy {
+        #[pyo3(name = "get_policy")]
+        fn py_get_policy(&self, name: &str) -> Result<Option<Policy>> {
+            Ok(self.get_policy(name)?.map(|p| Policy {
                 inner: p,
                 kadmin: self.clone(),
             }))
@@ -342,8 +325,9 @@ pub mod pykadmin {
         /// :type name: str
         /// :return: `True` if the policy exists, `False` otherwise
         /// :rtype: bool
-        fn policy_exists(&self, name: &str) -> Result<bool> {
-            Ok(self.0.policy_exists(name)?)
+        #[pyo3(name = "policy_exists")]
+        fn py_policy_exists(&self, name: &str) -> Result<bool> {
+            Ok(self.policy_exists(name)?)
         }
 
         /// List policies
@@ -354,9 +338,9 @@ pub mod pykadmin {
         /// :type query: str, optional
         /// :return: the list of policy names matching the query
         /// :rtype: list[str]
-        #[pyo3(signature = (query=None))]
-        pub fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
-            Ok(self.0.list_policies(query)?)
+        #[pyo3(name = "list_policies", signature = (query=None))]
+        pub fn py_list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
+            Ok(self.list_policies(query)?)
         }
 
         /// Construct a KAdmin object using a password
@@ -384,9 +368,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
-                Self::get_builder(params, db_args).with_password(client_name, password)?,
-            ))
+            Ok(
+                Self::get_builder(params, db_args).with_password(client_name, password)?
+            )
         }
 
         /// Construct a KAdmin object using a keytab
@@ -412,9 +396,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
-                Self::get_builder(params, db_args).with_keytab(client_name, keytab)?,
-            ))
+            Ok(
+                Self::get_builder(params, db_args).with_keytab(client_name, keytab)?
+            )
         }
 
         /// Construct a KAdmin object using a credentials cache
@@ -440,9 +424,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
-                Self::get_builder(params, db_args).with_ccache(client_name, ccache_name)?,
-            ))
+            Ok(
+                Self::get_builder(params, db_args).with_ccache(client_name, ccache_name)?
+            )
         }
 
         /// Not implemented
@@ -454,9 +438,9 @@ pub mod pykadmin {
             params: Option<Params>,
             db_args: Option<DbArgs>,
         ) -> Result<Self> {
-            Ok(Self(
-                Self::get_builder(params, db_args).with_anonymous(client_name)?,
-            ))
+            Ok(
+                Self::get_builder(params, db_args).with_anonymous(client_name)?
+            )
         }
 
         /// Construct a KAdmin object for local database manipulation.
@@ -471,7 +455,7 @@ pub mod pykadmin {
         #[staticmethod]
         #[pyo3(signature = (params=None, db_args=None))]
         pub fn with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-            Ok(Self(Self::get_builder(params, db_args).with_local()?))
+            Ok(Self::get_builder(params, db_args).with_local()?)
         }
     }
 
@@ -489,7 +473,7 @@ pub mod pykadmin {
         /// :param password: the new password
         /// :type password: str
         pub fn change_password(&self, password: &str) -> Result<()> {
-            Ok(self.inner.change_password(&self.kadmin.0, password)?)
+            Ok(self.inner.change_password(&self.kadmin, password)?)
         }
     }
 
@@ -565,7 +549,7 @@ pub mod pykadmin {
                 }
                 Ok(Self {
                     inner: modifier
-                        .modify(&self.kadmin.0)
+                        .modify(&self.kadmin)
                         .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
                     kadmin: self.kadmin.clone(),
                 })
@@ -579,7 +563,7 @@ pub mod pykadmin {
         /// The object will still be available, but shouldn’t be used for modifying, as the policy
         /// may not exist anymore
         pub fn delete(&self) -> Result<()> {
-            Ok(self.inner.delete(&self.kadmin.0)?)
+            Ok(self.inner.delete(&self.kadmin)?)
         }
 
         /// The policy name
@@ -608,7 +592,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_life(password_min_life)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -630,7 +614,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_max_life(password_max_life)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -652,7 +636,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_length(password_min_length)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -677,7 +661,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_min_classes(password_min_classes)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -702,7 +686,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_history_num(password_history_num)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -739,7 +723,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_max_fail(password_max_fail)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -768,7 +752,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_failcount_interval(password_failcount_interval)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -795,7 +779,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .password_lockout_duration(password_lockout_duration)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -817,7 +801,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .attributes(attributes)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -839,7 +823,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .max_life(max_life)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -864,7 +848,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .max_renewable_life(max_renewable_life)
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
@@ -887,7 +871,7 @@ pub mod pykadmin {
                 .inner
                 .modifier()
                 .tl_data(tl_data.into())
-                .modify(&self.kadmin.0)?;
+                .modify(&self.kadmin)?;
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }

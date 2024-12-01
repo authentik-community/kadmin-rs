@@ -3,6 +3,8 @@
 use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 
 use crate::error::Result;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 /// Database specific arguments
 ///
@@ -15,6 +17,7 @@ use crate::error::Result;
 ///     .unwrap();
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct DbArgs {
     /// NULL-terminated list of strings of the form `arg[=value]`
     ///
