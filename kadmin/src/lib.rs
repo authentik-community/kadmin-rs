@@ -76,3 +76,6 @@ pub use policy::Policy;
 
 pub mod principal;
 pub use principal::Principal;
+
+#[cfg(feature = "python")]
+mod python;

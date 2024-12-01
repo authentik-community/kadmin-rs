@@ -1,5 +1,5 @@
 [workspace]
-members = ["kadmin-sys", "kadmin", "python-kadmin-rs"]
+members = ["kadmin-sys", "kadmin"]
 resolver = "2"
 
 [workspace.package]

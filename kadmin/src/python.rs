@@ -30,7 +30,12 @@ use pyo3::prelude::*;
 pub mod pykadmin {
     use std::time::Duration;
 
-    use kadmin::{
+    use pyo3::{
+        prelude::*,
+        types::{PyDict, PyString},
+    };
+
+    use crate::{
         db_args::DbArgsBuilder,
         kadmin::KAdminImpl,
         params::ParamsBuilder,
@@ -38,10 +43,6 @@ pub mod pykadmin {
         principal::Principal as KPrincipal,
         sync::{KAdmin as KKAdmin, KAdminBuilder},
         tl_data::{TlData as KTlData, TlDataEntry as KTlDataEntry},
-    };
-    use pyo3::{
-        prelude::*,
-        types::{PyDict, PyString},
     };
 
     type Result<T> = std::result::Result<T, exceptions::PyKAdminError>;
@@ -953,37 +954,15 @@ pub mod pykadmin {
             let _ = std::mem::replace(&mut self.inner, policy);
             Ok(())
         }
-
-        /// Policy TL-data
-        ///
-        /// :getter: Get the TL-data
-        /// :setter: Set the TL-data. Completely overrides existing TL-data, make sure to re-use
-        ///     the old ones
-        /// :type: TlData
-        #[getter]
-        pub fn get_tl_data(&self) -> TlData {
-            (*self.inner.tl_data()).clone().into()
-        }
-
-        /// Ignored
-        #[setter]
-        pub fn set_tl_data(&mut self, tl_data: TlData) -> Result<()> {
-            let policy = self
-                .inner
-                .modifier()
-                .tl_data(tl_data.into())
-                .modify(self.kadmin.deref())?;
-            let _ = std::mem::replace(&mut self.inner, policy);
-            Ok(())
-        }
     }
 
     /// python-kadmin-rs exceptions
     #[pymodule]
     pub mod exceptions {
         use indoc::indoc;
-        use kadmin::Error;
         use pyo3::{create_exception, exceptions::PyException, intern, prelude::*};
+
+        use crate::error::Error;
 
         #[pymodule_init]
         fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -1140,7 +1119,6 @@ pub mod pykadmin {
                         Error::DurationConversion(_) => {
                             (DurationConversion::new_err(error.to_string()), None)
                         }
-                        _ => (PyKAdminException::new_err("Unknown error: {}"), None),
                     };
 
                     if let Some((code, message)) = extras {
