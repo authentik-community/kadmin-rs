@@ -58,6 +58,7 @@ class Policy:
     attributes: int
     max_life: datetime.timedelta | None
     max_renewable_life: datetime.timedelta | None
+    tl_data: TlData
 
     def modify(self, **kwargs) -> Policy: ...
     def delete(self) -> None: ...
@@ -71,3 +72,12 @@ class Params: ...
 
 @final
 class DbArgs: ...
+
+@final
+class TlDataEntry:
+    data_type: int
+    contents: list[int]
+
+@final
+class TlData:
+    entries: list[TlDataEntry]

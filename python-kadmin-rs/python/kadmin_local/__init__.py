@@ -1,10 +1,21 @@
-from kadmin_local._lib import KAdmin, Policy, Principal, Params, DbArgs, __version__
+from kadmin_local._lib import (
+    DbArgs,
+    KAdmin,
+    Params,
+    Policy,
+    Principal,
+    TlData,
+    TlDataEntry,
+    __version__,
+)
 
 __all__ = (
-    "__version__",
+    "DbArgs",
     "KAdmin",
+    "Params",
     "Policy",
     "Principal",
-    "Params",
-    "DbArgs",
+    "TlData",
+    "TlDataEntry",
+    "__version__",
 )
