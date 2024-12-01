@@ -42,7 +42,7 @@ pub mod pykadmin {
         policy::Policy as KPolicy,
         principal::Principal as KPrincipal,
         sync::{KAdmin as KKAdmin, KAdminBuilder},
-        tl_data::{TlData as KTlData, TlDataEntry as KTlDataEntry},
+        tl_data::{TlData, TlDataEntry},
     };
 
     type Result<T> = std::result::Result<T, exceptions::PyKAdminError>;
@@ -50,6 +50,8 @@ pub mod pykadmin {
     #[pymodule_init]
     fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add("__version__", env!("CARGO_PKG_VERSION"))?;
+        m.add_class::<TlDataEntry>()?;
+        m.add_class::<TlData>()?;
         Ok(())
     }
 
@@ -160,71 +162,6 @@ pub mod pykadmin {
                 }
             }
             Ok(Self(builder))
-        }
-    }
-
-    /// A single TL-data entry
-    #[pyclass]
-    #[derive(Clone, Debug, Default)]
-    #[allow(clippy::exhaustive_structs)]
-    pub struct TlDataEntry {
-        /// TL-data type
-        ///
-        /// :type: int
-        #[pyo3(get, set)]
-        pub data_type: i16,
-        /// Entry contents
-        ///
-        /// :type: list[int]
-        #[pyo3(get, set)]
-        pub contents: Vec<u8>,
-    }
-
-    impl From<KTlDataEntry> for TlDataEntry {
-        fn from(item: KTlDataEntry) -> Self {
-            Self {
-                data_type: item.data_type,
-                contents: item.contents,
-            }
-        }
-    }
-
-    #[allow(clippy::from_over_into)]
-    impl Into<KTlDataEntry> for TlDataEntry {
-        fn into(self) -> KTlDataEntry {
-            KTlDataEntry {
-                data_type: self.data_type,
-                contents: self.contents,
-            }
-        }
-    }
-
-    /// TL-data entries
-    #[pyclass]
-    #[derive(Clone, Debug, Default)]
-    #[allow(clippy::exhaustive_structs)]
-    pub struct TlData {
-        /// TL-data entries
-        ///
-        /// :type: list[TlDataEntry]
-        #[pyo3(get, set)]
-        pub entries: Vec<TlDataEntry>,
-    }
-
-    impl From<KTlData> for TlData {
-        fn from(item: KTlData) -> Self {
-            Self {
-                entries: item.entries.into_iter().map(|e| e.into()).collect(),
-            }
-        }
-    }
-
-    #[allow(clippy::from_over_into)]
-    impl Into<KTlData> for TlData {
-        fn into(self) -> KTlData {
-            KTlData {
-                entries: self.entries.into_iter().map(|e| e.into()).collect(),
-            }
         }
     }
 
