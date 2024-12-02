@@ -17,8 +17,8 @@ use crate::{
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
-    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey},
     policy::{Policy, PolicyBuilder, PolicyModifier},
+    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -200,7 +200,11 @@ impl KAdminImpl for KAdmin {
 
         let name = CString::new(builder.name.clone())?;
         let code = unsafe {
-            krb5_parse_name(self.context.context, name.as_ptr().cast_mut(), &mut entry.principal)
+            krb5_parse_name(
+                self.context.context,
+                name.as_ptr().cast_mut(),
+                &mut entry.principal,
+            )
         };
         krb5_error_code_escape_hatch(&self.context, code)?;
 
@@ -235,18 +239,19 @@ impl KAdminImpl for KAdmin {
             PrincipalBuilderKey::NoKey => {
                 mask |= KADM5_KEY_DATA as i64;
                 None
-            },
+            }
             PrincipalBuilderKey::RandKey => None,
             PrincipalBuilderKey::ServerRandKey => None,
             PrincipalBuilderKey::OldStyleRandKey => Some(prepare_dummy_pass()?),
         };
         let raw_pass = if let Some(pass) = pass {
             pass.as_ptr().cast_mut()
-        } else { null_mut() };
-
-        let code = unsafe {
-            kadm5_create_principal(self.server_handle, &mut entry, mask, raw_pass)
+        } else {
+            null_mut()
         };
+
+        let code =
+            unsafe { kadm5_create_principal(self.server_handle, &mut entry, mask, raw_pass) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }

@@ -35,9 +35,8 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
 /// Convert a [`DateTime<Utc>`] to a [`krb5_timestamp`]
 pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
     if let Some(dt) = dt {
-        dt.timestamp().try_into().map_err(|e| Error::DateTimeConversion(e))
-    }
-    else {
+        dt.timestamp().try_into().map_err(Error::DateTimeConversion)
+    } else {
         Ok(0)
     }
 }
@@ -53,9 +52,8 @@ pub(crate) fn delta_to_dur(delta: i64) -> Option<Duration> {
 /// Convert a [`Duration`] to a [`krb5_deltat`]
 pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<krb5_deltat> {
     if let Some(dur) = dur {
-        dur.as_secs().try_into().map_err(|e| Error::DateTimeConversion(e))
-    }
-    else {
+        dur.as_secs().try_into().map_err(Error::DateTimeConversion)
+    } else {
         Ok(0)
     }
 }

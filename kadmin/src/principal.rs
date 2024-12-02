@@ -4,13 +4,13 @@ use std::time::Duration;
 
 use bitflags::bitflags;
 use chrono::{DateTime, Utc};
-use getset::{Getters, CopyGetters};
+use getset::{CopyGetters, Getters};
 use kadmin_sys::*;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 use crate::{
-    conv::{c_string_to_string, ts_to_dt, unparse_name, delta_to_dur},
+    conv::{c_string_to_string, delta_to_dur, ts_to_dt, unparse_name},
     error::Result,
     kadmin::{KAdmin, KAdminImpl},
 };
@@ -178,14 +178,14 @@ impl PrincipalBuilder {
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`
     pub fn new(name: &str) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             ..Default::default()
         }
     }
 
     /// Set the principal name
     pub fn name(mut self, name: &str) -> Self {
-        self.name = name.to_string();
+        self.name = name.to_owned();
         self
     }
 
@@ -266,6 +266,7 @@ impl PrincipalBuilder {
 
 /// How the principal key should be set
 #[derive(Clone, Debug)]
+#[allow(clippy::exhaustive_enums)]
 pub enum PrincipalBuilderKey {
     /// Provide a password to use
     Password(String),
