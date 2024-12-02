@@ -77,7 +77,7 @@ pub struct Principal {
     last_password_change: Option<DateTime<Utc>>,
     /// When the password expires
     password_expiration: Option<DateTime<Utc>>,
-    /// Max ticket life
+    /// Maximum ticket life
     max_life: Option<Duration>,
     /// Last principal to modify this principal
     #[getset(skip)]
@@ -95,7 +95,7 @@ pub struct Principal {
     policy: Option<String>,
     /// Extra attributes
     aux_attributes: i64,
-    /// Max renewable ticket life
+    /// Maximum renewable ticket life
     max_renewable_life: Option<Duration>,
     /// When the last successful authentication occurred
     last_success: Option<DateTime<Utc>>,
@@ -258,7 +258,7 @@ impl PrincipalBuilder {
     }
 
     /// Create the principal
-    pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<()> {
+    pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
         kadmin.add_principal(self)?;
         Ok(())
     }
