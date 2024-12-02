@@ -5,10 +5,7 @@
 //! and results over a [`channel`].
 //!
 //! The APIs between this wrapper and the underlying [`crate::kadmin::KAdmin`] are the same, and
-//! wrapped and the [`KAdminImpl`] trait, apart for the builder. The builder in this wrapper does
-//! not allow using a custom [`Context`][`crate::context::Context`], and takes [`ParamsBuilder`]
-//! and [`DbArgsBuilder`] instead of [`Params`][`crate::params::Params`] and
-//! [`DbArgs`][`crate::db_args::DbArgs`].
+//! wrapped and the [`KAdminImpl`] trait.
 use std::{
     panic::resume_unwind,
     sync::{
@@ -18,11 +15,14 @@ use std::{
     thread::{JoinHandle, spawn},
 };
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use crate::{
-    db_args::DbArgsBuilder,
+    db_args::DbArgs,
     error::Result,
     kadmin::KAdminImpl,
-    params::ParamsBuilder,
+    params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
 };
@@ -104,6 +104,7 @@ impl Drop for InnerKAdmin {
 ///
 /// This is a thread-safe wrapper over [`crate::kadmin::KAdmin`].
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct KAdmin {
     inner: Arc<InnerKAdmin>,
 }
@@ -190,22 +191,22 @@ impl KAdminImpl for KAdmin {
 /// [`KAdmin`] builder
 #[derive(Debug, Default)]
 pub struct KAdminBuilder {
-    params_builder: Option<ParamsBuilder>,
-    db_args_builder: Option<DbArgsBuilder>,
+    params: Option<Params>,
+    db_args: Option<DbArgs>,
 }
 
 impl KAdminBuilder {
-    /// Provide additional [`Params`][`crate::params::Params`] through [`ParamsBuilder`] to this
+    /// Provide additional [`Params`][`crate::params::Params`] to this
     /// [`KAdmin`] instance
-    pub fn params_builder(mut self, params_builder: ParamsBuilder) -> Self {
-        self.params_builder = Some(params_builder);
+    pub fn params(mut self, params: Params) -> Self {
+        self.params = Some(params);
         self
     }
 
-    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] through [`DbArgsBuilder`] to this
+    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] to this
     /// [`KAdmin`] instance
-    pub fn db_args_builder(mut self, db_args_builder: DbArgsBuilder) -> Self {
-        self.db_args_builder = Some(db_args_builder);
+    pub fn db_args(mut self, db_args: DbArgs) -> Self {
+        self.db_args = Some(db_args);
         self
     }
 
@@ -213,11 +214,11 @@ impl KAdminBuilder {
     /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
         let mut builder = crate::kadmin::KAdmin::builder();
-        if let Some(params_builder) = self.params_builder {
-            builder = builder.params(params_builder.build()?);
+        if let Some(params) = self.params {
+            builder = builder.params(params);
         }
-        if let Some(db_args_builder) = self.db_args_builder {
-            builder = builder.db_args(db_args_builder.build()?);
+        if let Some(db_args) = self.db_args {
+            builder = builder.db_args(db_args);
         }
         Ok(builder)
     }

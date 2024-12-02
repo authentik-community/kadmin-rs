@@ -18,10 +18,12 @@ With `kadmin_local`:
 
 .. code-block:: python
 
-   import kadmin
+   import kadmin_local
 
    kadm = kadmin.KAdmin.with_local()
    print(kadm.list_principals("*"))
+
+The only difference between the two modules is the `KAdmin.with_` methods used to construct the KAdmin object. As such, only the `kadmin` module is fully documented. The `kadmin_local` documentation only contains the addition of the specialized initialization method.
 
 .. toctree::
    :maxdepth: 3

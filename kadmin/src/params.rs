@@ -3,6 +3,8 @@
 use std::{ffi::CString, ptr::null_mut};
 
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::error::Result;
 
@@ -15,6 +17,7 @@ use crate::error::Result;
 ///     .unwrap();
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct Params {
     /// Params for kadm5
     ///

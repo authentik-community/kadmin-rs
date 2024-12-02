@@ -40,7 +40,7 @@ class TestPolicy(KerberosTestCase):
         polname = random_string(16)
         policy = kadm.add_policy(polname)
         self.assertTrue(kadm.policy_exists(polname))
-        policy.delete()
+        policy.delete(kadm)
         self.assertFalse(kadm.policy_exists(polname))
 
     def test_modify(self):
@@ -49,19 +49,7 @@ class TestPolicy(KerberosTestCase):
         )
         polname = random_string(16)
         policy = kadm.add_policy(polname)
-        policy = policy.modify(password_min_length=42)
-        self.assertEqual(policy.password_min_length, 42)
-        policy = kadm.get_policy(polname)
-        self.assertEqual(policy.password_min_length, 42)
-        kadm.delete_policy(polname)
-
-    def test_setter(self):
-        kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
-        )
-        polname = random_string(16)
-        policy = kadm.add_policy(polname)
-        policy.password_min_length = 42
+        policy = policy.modify(kadm, password_min_length=42)
         self.assertEqual(policy.password_min_length, 42)
         policy = kadm.get_policy(polname)
         self.assertEqual(policy.password_min_length, 42)

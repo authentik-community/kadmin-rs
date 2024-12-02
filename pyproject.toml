@@ -42,21 +42,21 @@ requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages]
-find = { where = ["python-kadmin-rs/python"] }
+find = { where = ["python/src"] }
 
 [[tool.setuptools-rust.ext-modules]]
 target = "kadmin._lib"
-path = "python-kadmin-rs/Cargo.toml"
+path = "kadmin/Cargo.toml"
 strip = "All"
 args = ["--no-default-features"]
-features = ["client"]
+features = ["client", "python"]
 
 [[tool.setuptools-rust.ext-modules]]
 target = "kadmin_local._lib"
-path = "python-kadmin-rs/Cargo.toml"
+path = "kadmin/Cargo.toml"
 strip = "All"
 args = ["--no-default-features"]
-features = ["local"]
+features = ["local", "python"]
 
 [tool.ruff]
 line-length = 100

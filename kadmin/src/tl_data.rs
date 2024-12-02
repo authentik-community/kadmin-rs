@@ -3,10 +3,13 @@
 use std::ptr::null_mut;
 
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 /// A single TL-data entry
-#[derive(Clone, Debug)]
 #[allow(clippy::exhaustive_structs)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlDataEntry {
     /// TL-data type
     pub data_type: i16,
@@ -17,6 +20,7 @@ pub struct TlDataEntry {
 /// TL-data entries
 #[derive(Clone, Debug, Default)]
 #[allow(clippy::exhaustive_structs)]
+#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlData {
     /// TL-data entries
     pub entries: Vec<TlDataEntry>,
