@@ -5,26 +5,26 @@ default:
 # Auto format code
 lint-fix:
   cargo fmt
-  black python-kadmin-rs
-  ruff check --fix python-kadmin-rs
+  black .
+  ruff check --fix .
 [private]
 ci-lint-rustfmt:
   cargo fmt --check
 [private]
 ci-lint-black:
-  black --check python-kadmin-rs
+  black --check .
 [private]
 ci-lint-ruff:
-  ruff check python-kadmin-rs
+  ruff check .
 
 # Lint code
 lint-rust:
   cd kadmin-sys && cargo clippy --features client
   cd kadmin-sys && cargo clippy --no-default-features --features server
   cd kadmin && cargo clippy
+  cd kadmin && cargo clippy --features python
   cd kadmin && cargo clippy --no-default-features --features local
-  cd python-kadmin-rs && cargo clippy
-  cd python-kadmin-rs && cargo clippy --no-default-features --features local
+  cd kadmin && cargo clippy --no-default-features --features local,python
 [private]
 ci-lint-clippy: ci-build-deps
   RUSTFLAGS="-Dwarnings" just lint-rust
@@ -49,9 +49,9 @@ build-rust:
   cd kadmin-sys && cargo build --features client
   cd kadmin-sys && cargo build --no-default-features --features server
   cd kadmin && cargo build
+  cd kadmin && cargo build --features python
   cd kadmin && cargo build --no-default-features --features local
-  cd python-kadmin-rs && cargo build
-  cd python-kadmin-rs && cargo build --no-default-features --features local
+  cd kadmin && cargo build --no-default-features --features local,python
 [private]
 ci-build-deps:
   sudo apt-get update
@@ -82,13 +82,9 @@ test-kadmin:
   cd kadmin && cargo test
   cd kadmin && cargo test --no-default-features --features local
 
-test-python-kadmin-rs:
-  cd python-kadmin-rs && cargo test
-  cd python-kadmin-rs && cargo test --no-default-features --features local
-
 alias t := test-rust
 # Test all rust crates
-test-rust: test-kadmin-sys test-kadmin test-python-kadmin-rs
+test-rust: test-kadmin-sys test-kadmin
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
@@ -113,7 +109,7 @@ ci-test-sanity: ci-test-deps-mit
   just test-sanity
 
 _test-python:
-  python -m unittest python-kadmin-rs/tests/test_*.py
+  python -m unittest python/tests/test_*.py
 # Test python bindings
 test-python: install-python _test-python
 [private]
@@ -132,8 +128,9 @@ _install-python:
 # Build and install wheel
 install-python: clean-python build-python _install-python
 
-docs-python: install-python
-  cd python-kadmin-rs/docs && sphinx-build -M html . _build
+# Generate the Python docs
+docs-python:
+  cd python/docs && sphinx-build -M html . _build
 
 # Cleanup rust build directory
 clean-rust:

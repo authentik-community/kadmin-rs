@@ -2,6 +2,9 @@
 
 use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use crate::error::Result;
 
 /// Database specific arguments
@@ -15,6 +18,7 @@ use crate::error::Result;
 ///     .unwrap();
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct DbArgs {
     /// NULL-terminated list of strings of the form `arg[=value]`
     ///
@@ -26,6 +30,32 @@ pub struct DbArgs {
     _origin_args: Vec<CString>,
     /// Store the Vec containing the pointers to the above CStrings
     _ptr_vec: Vec<*mut c_char>,
+}
+
+// Pointees are contained in the struct itself
+unsafe impl Send for DbArgs {}
+unsafe impl Sync for DbArgs {}
+
+impl Clone for DbArgs {
+    fn clone(&self) -> Self {
+        let mut _origin_args = vec![];
+        let mut _ptr_vec = vec![];
+        for arg in &self._origin_args {
+            let c_arg = arg.clone();
+            _ptr_vec.push(c_arg.as_ptr().cast_mut());
+            _origin_args.push(c_arg);
+        }
+        // Null terminated
+        _ptr_vec.push(null_mut());
+
+        let db_args = _ptr_vec.as_mut_ptr();
+
+        DbArgs {
+            db_args,
+            _origin_args,
+            _ptr_vec,
+        }
+    }
 }
 
 impl DbArgs {

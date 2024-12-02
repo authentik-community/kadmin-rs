@@ -10,6 +10,8 @@ StringConversion = exceptions.StringConversion
 ThreadSendError = exceptions.ThreadSendError
 ThreadRecvError = exceptions.ThreadRecvError
 TimestampConversion = exceptions.TimestampConversion
+DateTimeConversion = exceptions.DateTimeConversion
+DurationConversion = exceptions.DurationConversion
 
 __all__ = (
     "PyKAdminException",
@@ -22,4 +24,6 @@ __all__ = (
     "ThreadSendError",
     "ThreadRecvError",
     "TimestampConversion",
+    "DateTimeConversion",
+    "DurationConversion",
 )

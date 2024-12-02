@@ -4,8 +4,10 @@ use std::time::Duration;
 
 use bitflags::bitflags;
 use chrono::{DateTime, Utc};
-use getset::Getters;
+use getset::{Getters, CopyGetters};
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::{
     conv::{c_string_to_string, ts_to_dt, unparse_name, delta_to_dur},
@@ -62,10 +64,12 @@ bitflags! {
 }
 
 /// A kadm5 principal
-#[derive(Debug, Getters)]
-#[getset(get = "pub")]
+#[derive(Clone, Debug, Getters, CopyGetters)]
+#[getset(get_copy = "pub")]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Principal {
     /// The principal name
+    #[getset(skip)]
     name: String,
     /// When the principal expires
     expire_time: Option<DateTime<Utc>>,
@@ -76,7 +80,8 @@ pub struct Principal {
     /// Max ticket life
     max_life: Option<Duration>,
     /// Last principal to modify this principal
-    modified_by: String,
+    #[getset(skip)]
+    modified_by: Option<String>,
     /// When the principal was last modified
     modified_at: Option<DateTime<Utc>>,
     /// See [`PrincipalAttributes`]
@@ -86,6 +91,7 @@ pub struct Principal {
     /// Master key version number
     mkvno: u32,
     /// Associated policy
+    #[getset(skip)]
     policy: Option<String>,
     /// Extra attributes
     aux_attributes: i64,
@@ -103,11 +109,11 @@ impl Principal {
     /// Create a [`Principal`] from [`_kadm5_principal_ent_t`]
     pub(crate) fn from_raw(kadmin: &KAdmin, entry: &_kadm5_principal_ent_t) -> Result<Self> {
         Ok(Self {
-            name: unparse_name(&kadmin.context, entry.principal)?,
+            name: unparse_name(&kadmin.context, entry.principal)?.unwrap(), // can never be None
             expire_time: ts_to_dt(entry.princ_expire_time)?,
             last_password_change: ts_to_dt(entry.last_pwd_change)?,
             password_expiration: ts_to_dt(entry.pw_expiration)?,
-            max_life: delta_to_dur(entry.max_life),
+            max_life: delta_to_dur(entry.max_life.into()),
             modified_by: unparse_name(&kadmin.context, entry.mod_name)?,
             modified_at: ts_to_dt(entry.mod_date)?,
             attributes: PrincipalAttributes::from_bits_retain(entry.attributes),
@@ -119,11 +125,26 @@ impl Principal {
                 None
             },
             aux_attributes: entry.aux_attributes,
-            max_renewable_life: delta_to_dur(entry.max_renewable_life),
+            max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
             last_success: ts_to_dt(entry.last_success)?,
             last_failed: ts_to_dt(entry.last_failed)?,
             fail_auth_count: entry.fail_auth_count,
         })
+    }
+
+    /// Name of the policy
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Last principal to modify this principal
+    pub fn modified_by(&self) -> Option<&str> {
+        self.modified_by.as_deref()
+    }
+
+    /// Associated policy
+    pub fn policy(&self) -> Option<&str> {
+        self.policy.as_deref()
     }
 
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`

@@ -55,7 +55,7 @@ As far as I can tell, libkadm5 APIs are **not** thread safe. As such, the types 
 ## python-kadmin-rs
 
 ![PyPI - Version](https://img.shields.io/pypi/v/python-kadmin-rs)
-![Read the Docs](https://img.shields.io/readthedocs/python-kadmin-rs)
+![Read the Docs](https://img.shields.io/readthedocs/kadmin-rs)
 
 These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
 

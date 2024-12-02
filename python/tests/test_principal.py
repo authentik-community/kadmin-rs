@@ -3,7 +3,7 @@ from .utils import KerberosTestCase
 import kadmin
 
 
-class TestInit(KerberosTestCase):
+class TestPrincipal(KerberosTestCase):
     def test_list_principals(self):
         kadm = kadmin.KAdmin.with_password(
             self.realm.admin_princ, self.realm.password("admin")

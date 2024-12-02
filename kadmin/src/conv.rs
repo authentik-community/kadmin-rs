@@ -28,7 +28,7 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
         return Ok(None);
     }
     DateTime::from_timestamp((ts as u32).into(), 0)
-        .map(|dt| Some(dt))
+        .map(Some)
         .ok_or(Error::TimestampConversion)
 }
 
@@ -43,7 +43,7 @@ pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
 }
 
 /// Convert a [`krb5_deltat`] to a [`Duration`]
-pub(crate) fn delta_to_dur(delta: krb5_deltat) -> Option<Duration> {
+pub(crate) fn delta_to_dur(delta: i64) -> Option<Duration> {
     if delta == 0 {
         return None;
     }
@@ -61,7 +61,10 @@ pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<krb5_deltat> {
 }
 
 /// Convert a [`krb5_principal`] to a [`String`]
-pub(crate) fn unparse_name(context: &Context, principal: krb5_principal) -> Result<String> {
+pub(crate) fn unparse_name(context: &Context, principal: krb5_principal) -> Result<Option<String>> {
+    if principal.is_null() {
+        return Ok(None);
+    }
     let mut raw_name: *mut c_char = null_mut();
     let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
     krb5_error_code_escape_hatch(context, code)?;
@@ -69,5 +72,5 @@ pub(crate) fn unparse_name(context: &Context, principal: krb5_principal) -> Resu
     unsafe {
         krb5_free_unparsed_name(context.context, raw_name);
     }
-    Ok(name)
+    Ok(Some(name))
 }

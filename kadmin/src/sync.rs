@@ -5,18 +5,25 @@
 //! and results over a [`channel`].
 //!
 //! The APIs between this wrapper and the underlying [`crate::kadmin::KAdmin`] are the same, and
-//! wrapped and the [`KAdminImpl`] trait, apart for the builder. The builder in this wrapper does
-//! not allow using a custom [`Context`][`crate::context::Context`], and takes [`ParamsBuilder`]
-//! and [`DbArgsBuilder`] instead of [`Params`][`crate::params::Params`] and
-//! [`DbArgs`][`crate::db_args::DbArgs`].
+//! wrapped and the [`KAdminImpl`] trait.
 use std::{
     panic::resume_unwind,
-    sync::mpsc::{Sender, channel},
+    sync::{
+        Arc,
+        mpsc::{Sender, channel},
+    },
     thread::{JoinHandle, spawn},
 };
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use crate::{
-    db_args::DbArgsBuilder, error::Result, kadmin::KAdminImpl, params::ParamsBuilder,
+    db_args::DbArgs,
+    error::Result,
+    kadmin::KAdminImpl,
+    params::Params,
+    policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
 };
 
@@ -28,6 +35,14 @@ enum KAdminOperation {
     PrincipalChangePassword(String, String, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
+    /// See [`KAdminImpl::add_policy`]
+    AddPolicy(PolicyBuilder, Sender<Result<()>>),
+    /// See [`KAdminImpl::modify_policy`]
+    ModifyPolicy(PolicyModifier, Sender<Result<()>>),
+    /// See [`KAdminImpl::delete_policy`]
+    DeletePolicy(String, Sender<Result<()>>),
+    /// See [`KAdminImpl::get_policy`]
+    GetPolicy(String, Sender<Result<Option<Policy>>>),
     /// See [`KAdminImpl::list_policies`]
     ListPolicies(Option<String>, Sender<Result<Vec<String>>>),
     /// Stop the kadmin thread
@@ -47,8 +62,39 @@ impl KAdminOperation {
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
             }
+            Self::AddPolicy(builder, sender) => {
+                let _ = sender.send(kadmin.add_policy(builder));
+            }
+            Self::ModifyPolicy(modifier, sender) => {
+                let _ = sender.send(kadmin.modify_policy(modifier));
+            }
+            Self::DeletePolicy(name, sender) => {
+                let _ = sender.send(kadmin.delete_policy(name));
+            }
+            Self::GetPolicy(name, sender) => {
+                let _ = sender.send(kadmin.get_policy(name));
+            }
             Self::ListPolicies(query, sender) => {
                 let _ = sender.send(kadmin.list_policies(query.as_deref()));
+            }
+        }
+    }
+}
+
+/// Inner attributes to be wrapped in an [`Arc`]
+#[derive(Debug)]
+struct InnerKAdmin {
+    op_sender: Sender<KAdminOperation>,
+    join_handle: Option<JoinHandle<()>>,
+}
+
+impl Drop for InnerKAdmin {
+    fn drop(&mut self) {
+        // Thread might have already exited, so we don't care about the result of this
+        let _ = self.op_sender.send(KAdminOperation::Exit);
+        if let Some(join_handle) = self.join_handle.take() {
+            if let Err(e) = join_handle.join() {
+                resume_unwind(e);
             }
         }
     }
@@ -57,9 +103,10 @@ impl KAdminOperation {
 /// Thread-safe interface to kadm5
 ///
 /// This is a thread-safe wrapper over [`crate::kadmin::KAdmin`].
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct KAdmin {
-    op_sender: Sender<KAdminOperation>,
-    join_handle: Option<JoinHandle<()>>,
+    inner: Arc<InnerKAdmin>,
 }
 
 impl KAdmin {
@@ -72,14 +119,16 @@ impl KAdmin {
 impl KAdminImpl for KAdmin {
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::GetPrincipal(name.to_owned(), sender))?;
         receiver.recv()?
     }
 
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
         let (sender, receiver) = channel();
-        self.op_sender
+        self.inner
+            .op_sender
             .send(KAdminOperation::PrincipalChangePassword(
                 name.to_owned(),
                 password.to_owned(),
@@ -90,54 +139,74 @@ impl KAdminImpl for KAdmin {
 
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
-        self.op_sender.send(KAdminOperation::ListPrincipals(
+        self.inner.op_sender.send(KAdminOperation::ListPrincipals(
             query.map(String::from),
             sender,
         ))?;
+        receiver.recv()?
+    }
+
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::AddPolicy(builder.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::ModifyPolicy(modifier.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn delete_policy(&self, name: &str) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::DeletePolicy(name.to_owned(), sender))?;
+        receiver.recv()?
+    }
+
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::GetPolicy(name.to_owned(), sender))?;
         receiver.recv()?
     }
 
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
-        self.op_sender.send(KAdminOperation::ListPolicies(
+        self.inner.op_sender.send(KAdminOperation::ListPolicies(
             query.map(String::from),
             sender,
         ))?;
         receiver.recv()?
-    }
-}
-
-impl Drop for KAdmin {
-    fn drop(&mut self) {
-        // Thread might have already exited, so we don't care about the result of this.
-        let _ = self.op_sender.send(KAdminOperation::Exit);
-        if let Some(join_handle) = self.join_handle.take() {
-            if let Err(e) = join_handle.join() {
-                resume_unwind(e);
-            }
-        }
     }
 }
 
 /// [`KAdmin`] builder
 #[derive(Debug, Default)]
 pub struct KAdminBuilder {
-    params_builder: Option<ParamsBuilder>,
-    db_args_builder: Option<DbArgsBuilder>,
+    params: Option<Params>,
+    db_args: Option<DbArgs>,
 }
 
 impl KAdminBuilder {
-    /// Provide additional [`Params`][`crate::params::Params`] through [`ParamsBuilder`] to this
+    /// Provide additional [`Params`][`crate::params::Params`] to this
     /// [`KAdmin`] instance
-    pub fn params_builder(mut self, params_builder: ParamsBuilder) -> Self {
-        self.params_builder = Some(params_builder);
+    pub fn params(mut self, params: Params) -> Self {
+        self.params = Some(params);
         self
     }
 
-    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] through [`DbArgsBuilder`] to this
+    /// Provide additional [`DbArgs`][`crate::db_args::DbArgs`] to this
     /// [`KAdmin`] instance
-    pub fn db_args_builder(mut self, db_args_builder: DbArgsBuilder) -> Self {
-        self.db_args_builder = Some(db_args_builder);
+    pub fn db_args(mut self, db_args: DbArgs) -> Self {
+        self.db_args = Some(db_args);
         self
     }
 
@@ -145,11 +214,11 @@ impl KAdminBuilder {
     /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
         let mut builder = crate::kadmin::KAdmin::builder();
-        if let Some(params_builder) = self.params_builder {
-            builder = builder.params(params_builder.build()?);
+        if let Some(params) = self.params {
+            builder = builder.params(params);
         }
-        if let Some(db_args_builder) = self.db_args_builder {
-            builder = builder.db_args(db_args_builder.build()?);
+        if let Some(db_args) = self.db_args {
+            builder = builder.db_args(db_args);
         }
         Ok(builder)
     }
@@ -189,8 +258,10 @@ impl KAdminBuilder {
 
         match start_receiver.recv()? {
             Ok(_) => Ok(KAdmin {
-                op_sender,
-                join_handle: Some(join_handle),
+                inner: Arc::new(InnerKAdmin {
+                    op_sender,
+                    join_handle: Some(join_handle),
+                }),
             }),
             Err(e) => match join_handle.join() {
                 Ok(_) => Err(e),
