@@ -93,7 +93,7 @@ impl Params {
         if let Some(stash_file) = stash_file {
             builder = builder.stash_file(stash_file);
         }
-        Ok(builder.build()?)
+        builder.build()
     }
 }
 
@@ -188,7 +188,7 @@ impl KAdmin {
     /// :rtype: Principal, optional
     #[pyo3(name = "get_principal")]
     fn py_get_principal(&self, name: &str) -> Result<Option<Principal>> {
-        Ok(self.get_principal(name)?)
+        self.get_principal(name)
     }
 
     /// Check if a principal exists
@@ -199,7 +199,7 @@ impl KAdmin {
     /// :rtype: bool
     #[pyo3(name = "principal_exists")]
     fn py_principal_exists(&self, name: &str) -> Result<bool> {
-        Ok(self.principal_exists(name)?)
+        self.principal_exists(name)
     }
 
     /// List principals
@@ -214,7 +214,7 @@ impl KAdmin {
     /// :rtype: list[str]
     #[pyo3(name = "list_principals", signature = (query=None))]
     fn py_list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
-        Ok(self.list_principals(query)?)
+        self.list_principals(query)
     }
 
     /// Create a policy
@@ -267,7 +267,7 @@ impl KAdmin {
                 builder = builder.max_renewable_life(max_renewable_life.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                builder = builder.tl_data(tl_data.extract::<TlData>()?.into());
+                builder = builder.tl_data(tl_data.extract::<TlData>()?);
             }
         }
         Ok(builder.create(self)?)
@@ -281,7 +281,7 @@ impl KAdmin {
     /// :type name: str
     #[pyo3(name = "delete_policy")]
     fn py_delete_policy(&self, name: &str) -> Result<()> {
-        Ok(self.delete_policy(name)?)
+        self.delete_policy(name)
     }
 
     /// Retrieve a policy
@@ -292,7 +292,7 @@ impl KAdmin {
     /// :rtype: Policy, optional
     #[pyo3(name = "get_policy")]
     fn py_get_policy(&self, name: &str) -> Result<Option<Policy>> {
-        Ok(self.get_policy(name)?)
+        self.get_policy(name)
     }
 
     /// Check if a policy exists
@@ -303,7 +303,7 @@ impl KAdmin {
     /// :rtype: bool
     #[pyo3(name = "policy_exists")]
     fn py_policy_exists(&self, name: &str) -> Result<bool> {
-        Ok(self.policy_exists(name)?)
+        self.policy_exists(name)
     }
 
     /// List policies
@@ -316,7 +316,7 @@ impl KAdmin {
     /// :rtype: list[str]
     #[pyo3(name = "list_policies", signature = (query=None))]
     fn py_list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
-        Ok(self.list_policies(query)?)
+        self.list_policies(query)
     }
 
     /// Construct a KAdmin object using a password
@@ -344,7 +344,7 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::py_get_builder(params, db_args).with_password(client_name, password)?)
+        Self::py_get_builder(params, db_args).with_password(client_name, password)
     }
 
     /// Construct a KAdmin object using a keytab
@@ -370,7 +370,7 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::py_get_builder(params, db_args).with_keytab(client_name, keytab)?)
+        Self::py_get_builder(params, db_args).with_keytab(client_name, keytab)
     }
 
     /// Construct a KAdmin object using a credentials cache
@@ -396,7 +396,7 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::py_get_builder(params, db_args).with_ccache(client_name, ccache_name)?)
+        Self::py_get_builder(params, db_args).with_ccache(client_name, ccache_name)
     }
 
     /// Not implemented
@@ -408,7 +408,7 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::py_get_builder(params, db_args).with_anonymous(client_name)?)
+        Self::py_get_builder(params, db_args).with_anonymous(client_name)
     }
 
     /// Construct a KAdmin object for local database manipulation.
@@ -423,7 +423,7 @@ impl KAdmin {
     #[staticmethod]
     #[pyo3(name = "with_local", signature = (params=None, db_args=None))]
     fn py_with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-        Ok(Self::py_get_builder(params, db_args).with_local()?)
+        Self::py_get_builder(params, db_args).with_local()
     }
 }
 
@@ -435,7 +435,7 @@ impl Principal {
     /// :type password: str
     #[pyo3(name = "change_password")]
     fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
-        Ok(self.change_password(kadmin, password)?)
+        self.change_password(kadmin, password)
     }
 }
 
@@ -490,7 +490,7 @@ impl Policy {
                 modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                modifier = modifier.tl_data(tl_data.extract::<TlData>()?.into());
+                modifier = modifier.tl_data(tl_data.extract::<TlData>()?);
             }
             Ok(modifier.modify(kadmin)?)
         } else {
@@ -504,7 +504,7 @@ impl Policy {
     /// may not exist anymore
     #[pyo3(name = "delete")]
     fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
-        Ok(self.delete(kadmin)?)
+        self.delete(kadmin)
     }
 }
 
