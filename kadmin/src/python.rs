@@ -1,27 +1,4 @@
 //! Python bindings to libkadm5
-//!
-//! This is a Python interface to libkadm5. It provides two Python modules: `kadmin` for remote
-//! operations, and `kadmin_local` for local operations.
-//!
-//! With `kadmin`:
-//!
-//! ```python
-//! import kadmin
-//!
-//! princ = "user/admin@EXAMPLE.ORG"
-//! password = "vErYsEcUrE"
-//! kadm = kadmin.KAdmin.with_password(princ, password)
-//! print(kadm.list_principals())
-//! ```
-//!
-//! With `kadmin_local`:
-//!
-//! ```python
-//! import kadmin
-//!
-//! kadm = kadmin.KAdmin.with_local()
-//! print(kadm.list_principals())
-//! ```
 
 use pyo3::{
     prelude::*,
@@ -164,76 +141,41 @@ impl KAdmin {
 
 #[pymethods]
 impl KAdmin {
-    /// Not implemented
     #[pyo3(name = "add_principal")]
     fn py_add_principal(&self) {
         unimplemented!();
     }
 
-    /// Not implemented
     #[pyo3(name = "delete_principal")]
     fn py_delete_principal(&self) {
         unimplemented!();
     }
 
-    /// Not implemented
     #[pyo3(name = "modify_principal")]
     fn py_modify_principal(&self) {
         unimplemented!();
     }
 
-    /// Not implemented
     #[pyo3(name = "rename_principal")]
     fn py_rename_principal(&self) {
         unimplemented!();
     }
 
-    /// Retrieve a principal
-    ///
-    /// :param name: principal name to retrieve
-    /// :type name: str
-    /// :return: Principal if found, None otherwise
-    /// :rtype: Principal, optional
     #[pyo3(name = "get_principal")]
     fn py_get_principal(&self, name: &str) -> Result<Option<Principal>> {
         self.get_principal(name)
     }
 
-    /// Check if a principal exists
-    ///
-    /// :param name: principal name to check for
-    /// :type name: str
-    /// :return: `True` if the principal exists, `False` otherwise
-    /// :rtype: bool
     #[pyo3(name = "principal_exists")]
     fn py_principal_exists(&self, name: &str) -> Result<bool> {
         self.principal_exists(name)
     }
 
-    /// List principals
-    ///
-    /// :param query: a shell-style glob expression that can contain the wild-card characters
-    ///     `?`, `*`, and `[]`. All principal names matching the expression are retuned. If
-    ///     the expression does not contain an `@` character, an `@` character followed by
-    ///     the local realm is appended to the expression. If no query is provided, all
-    ///     principals are returned.
-    /// :type query: str, optional
-    /// :return: the list of principal names matching the query
-    /// :rtype: list[str]
     #[pyo3(name = "list_principals", signature = (query=None))]
     fn py_list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         self.list_principals(query)
     }
 
-    /// Create a policy
-    ///
-    /// :param name: the name of the policy to create
-    /// :type name: str
-    /// :param kwargs: Extra args for the creation. The name of those arguments must match the
-    ///     attributes name of the `Policy` class that have a setter. Same goes for their
-    ///     types.
-    /// :return: the newly created Policy
-    /// :rtype: Policy
     #[pyo3(name = "add_policy", signature = (name, **kwargs))]
     fn py_add_policy(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Policy> {
         let mut builder = Policy::builder(name);
@@ -281,68 +223,26 @@ impl KAdmin {
         Ok(builder.create(self)?)
     }
 
-    /// Delete a policy
-    ///
-    /// `Policy.delete` is also available
-    ///
-    /// :param name: name of the policy to delete
-    /// :type name: str
     #[pyo3(name = "delete_policy")]
     fn py_delete_policy(&self, name: &str) -> Result<()> {
         self.delete_policy(name)
     }
 
-    /// Retrieve a policy
-    ///
-    /// :param name: policy name to retrieve
-    /// :type name: str
-    /// :return: Policy if found, None otherwise
-    /// :rtype: Policy, optional
     #[pyo3(name = "get_policy")]
     fn py_get_policy(&self, name: &str) -> Result<Option<Policy>> {
         self.get_policy(name)
     }
 
-    /// Check if a policy exists
-    ///
-    /// :param name: policy name to check for
-    /// :type name: str
-    /// :return: `True` if the policy exists, `False` otherwise
-    /// :rtype: bool
     #[pyo3(name = "policy_exists")]
     fn py_policy_exists(&self, name: &str) -> Result<bool> {
         self.policy_exists(name)
     }
 
-    /// List policies
-    ///
-    /// :param query: a shell-style glob expression that can contain the wild-card characters
-    ///     `?`, `*`, and `[]`. All policy names matching the expression are returned.
-    ///     If no query is provided, all existing policy names are returned.
-    /// :type query: str, optional
-    /// :return: the list of policy names matching the query
-    /// :rtype: list[str]
     #[pyo3(name = "list_policies", signature = (query=None))]
     fn py_list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         self.list_policies(query)
     }
 
-    /// Construct a KAdmin object using a password
-    ///
-    /// :param client_name: client name, usually a principal name
-    /// :type client_name: str
-    /// :param password: password to authenticate with
-    /// :type password: str
-    /// :param params: additional kadm5 config options
-    /// :type params: Params, optional
-    /// :param db_args: additional database specific arguments
-    /// :type db_args: DbArgs, optional
-    /// :return: an initialized KAdmin object
-    /// :rtype: KAdmin
-    ///
-    /// .. code-block:: python
-    ///
-    ///    kadm = KAdmin.with_password("user@EXAMPLE.ORG", "vErYsEcUrE")
     #[cfg(feature = "client")]
     #[staticmethod]
     #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None))]
@@ -355,20 +255,6 @@ impl KAdmin {
         Self::py_get_builder(params, db_args).with_password(client_name, password)
     }
 
-    /// Construct a KAdmin object using a keytab
-    ///
-    /// :param client_name: client name, usually a principal name. If not provided,
-    ///     `host/hostname` will be used
-    /// :type client_name: str, optional
-    /// :param keytab: path to the keytab to use. If not provided, the default keytab will be
-    ///     used
-    /// :type keytab: str, optional
-    /// :param params: additional kadm5 config options
-    /// :type params: Params, optional
-    /// :param db_args: additional database specific arguments
-    /// :type db_args: DbArgs, optional
-    /// :return: an initialized KAdmin object
-    /// :rtype: KAdmin
     #[cfg(feature = "client")]
     #[staticmethod]
     #[pyo3(name = "with_keytab", signature = (client_name=None, keytab=None, params=None, db_args=None))]
@@ -381,20 +267,6 @@ impl KAdmin {
         Self::py_get_builder(params, db_args).with_keytab(client_name, keytab)
     }
 
-    /// Construct a KAdmin object using a credentials cache
-    ///
-    /// :param client_name: client name, usually a principal name. If not provided, the default
-    ///     principal from the credentials cache will be used
-    /// :type client_name: str, optional
-    /// :param ccache_name: credentials cache name. If not provided, the default credentials
-    ///     cache will be used
-    /// :type ccache_name: str, optional
-    /// :param params: additional kadm5 config options
-    /// :type params: Params, optional
-    /// :param db_args: additional database specific arguments
-    /// :type db_args: DbArgs, optional
-    /// :return: an initialized KAdmin object
-    /// :rtype: KAdmin
     #[cfg(feature = "client")]
     #[staticmethod]
     #[pyo3(name = "with_ccache", signature = (client_name=None, ccache_name=None, params=None, db_args=None))]
@@ -407,7 +279,6 @@ impl KAdmin {
         Self::py_get_builder(params, db_args).with_ccache(client_name, ccache_name)
     }
 
-    /// Not implemented
     #[cfg(feature = "client")]
     #[staticmethod]
     #[pyo3(name = "with_anonymous", signature = (client_name, params=None, db_args=None))]
@@ -419,14 +290,6 @@ impl KAdmin {
         Self::py_get_builder(params, db_args).with_anonymous(client_name)
     }
 
-    /// Construct a KAdmin object for local database manipulation.
-    ///
-    /// :param params: additional kadm5 config options
-    /// :type params: Params, optional
-    /// :param db_args: additional database specific arguments
-    /// :type db_args: DbArgs, optional
-    /// :return: an initialized KAdmin object
-    /// :rtype: KAdmin
     #[cfg(feature = "local")]
     #[staticmethod]
     #[pyo3(name = "with_local", signature = (params=None, db_args=None))]
@@ -437,10 +300,6 @@ impl KAdmin {
 
 #[pymethods]
 impl Principal {
-    /// Change the password of the principal
-    ///
-    /// :param password: the new password
-    /// :type password: str
     #[pyo3(name = "change_password")]
     fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
         self.change_password(kadmin, password)
@@ -449,14 +308,6 @@ impl Principal {
 
 #[pymethods]
 impl Policy {
-    /// Change this policy
-    ///
-    /// Check each property documentation for accepted types and documentation. Each parameter
-    /// has the same name and type as specified in the properties.
-    ///
-    /// :return: a new Policy object with the modifications made to it. The old object is still
-    ///     available, but will not be up-to-date
-    /// :rtype: Policy
     #[pyo3(name = "modify", signature = (kadmin, **kwargs))]
     fn py_modify(&self, kadmin: &KAdmin, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
         if let Some(kwargs) = kwargs {
@@ -506,10 +357,6 @@ impl Policy {
         }
     }
 
-    /// Delete this policy
-    ///
-    /// The object will still be available, but shouldn’t be used for modifying, as the policy
-    /// may not exist anymore
     #[pyo3(name = "delete")]
     fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
         self.delete(kadmin)
