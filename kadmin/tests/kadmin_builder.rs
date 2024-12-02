@@ -115,16 +115,17 @@ mod sync {
     #[serial]
     fn with_local() -> Result<()> {
         let realm = K5Test::new()?;
-        let db_args_builder =
-            DbArgs::builder().arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)));
-        let params_builder = Params::builder()
+        let db_args =
+            DbArgs::builder().arg("dbname", Some(&format!("{}/db", realm.tmpdir()?))).build()?;
+        let params= Params::builder()
             .dbname(&format!("{}/db", realm.tmpdir()?))
             .acl_file(&format!("{}/acl", realm.tmpdir()?))
             .dict_file(&format!("{}/dict", realm.tmpdir()?))
-            .stash_file(&format!("{}/stash", realm.tmpdir()?));
+            .stash_file(&format!("{}/stash", realm.tmpdir()?))
+            .build()?;
         let _kadmin = KAdmin::builder()
-            .db_args_builder(db_args_builder)
-            .params_builder(params_builder)
+            .db_args(db_args)
+            .params(params)
             .with_local()?;
         Ok(())
     }
