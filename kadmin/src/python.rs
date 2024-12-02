@@ -22,7 +22,6 @@
 //! kadm = kadmin.KAdmin.with_local()
 //! print(kadm.list_principals())
 //! ```
-use std::time::Duration;
 
 use pyo3::{
     prelude::*,
@@ -34,8 +33,8 @@ use crate::{
     error::Result,
     kadmin::KAdminImpl,
     params::Params,
-    policy::Policy as KPolicy,
-    principal::Principal as KPrincipal,
+    policy::Policy,
+    principal::Principal,
     sync::{KAdmin, KAdminBuilder},
     tl_data::{TlData, TlDataEntry},
 };
@@ -143,7 +142,7 @@ impl TlData {
 }
 
 impl KAdmin {
-    fn get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
+    fn py_get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
         let mut builder = KAdminBuilder::default();
         if let Some(params) = params {
             builder = builder.params(params);
@@ -189,10 +188,7 @@ impl KAdmin {
     /// :rtype: Principal, optional
     #[pyo3(name = "get_principal")]
     fn py_get_principal(&self, name: &str) -> Result<Option<Principal>> {
-        Ok(self.get_principal(name)?.map(|p| Principal {
-            inner: p,
-            kadmin: self.clone(),
-        }))
+        Ok(self.get_principal(name)?)
     }
 
     /// Check if a principal exists
@@ -232,7 +228,7 @@ impl KAdmin {
     /// :rtype: Policy
     #[pyo3(name = "add_policy", signature = (name, **kwargs))]
     fn py_add_policy(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Policy> {
-        let mut builder = KPolicy::builder(name);
+        let mut builder = Policy::builder(name);
         if let Some(kwargs) = kwargs {
             if let Some(password_min_life) = kwargs.get_item("password_min_life")? {
                 builder = builder.password_min_life(password_min_life.extract()?);
@@ -274,10 +270,7 @@ impl KAdmin {
                 builder = builder.tl_data(tl_data.extract::<TlData>()?.into());
             }
         }
-        Ok(Policy {
-            inner: builder.create(self)?,
-            kadmin: self.clone(),
-        })
+        Ok(builder.create(self)?)
     }
 
     /// Delete a policy
@@ -299,10 +292,7 @@ impl KAdmin {
     /// :rtype: Policy, optional
     #[pyo3(name = "get_policy")]
     fn py_get_policy(&self, name: &str) -> Result<Option<Policy>> {
-        Ok(self.get_policy(name)?.map(|p| Policy {
-            inner: p,
-            kadmin: self.clone(),
-        }))
+        Ok(self.get_policy(name)?)
     }
 
     /// Check if a policy exists
@@ -347,14 +337,14 @@ impl KAdmin {
     ///    kadm = KAdmin.with_password("user@EXAMPLE.ORG", "vErYsEcUrE")
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(signature = (client_name, password, params=None, db_args=None))]
-    fn with_password(
+    #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None))]
+    fn py_with_password(
         client_name: &str,
         password: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::get_builder(params, db_args).with_password(client_name, password)?)
+        Ok(Self::py_get_builder(params, db_args).with_password(client_name, password)?)
     }
 
     /// Construct a KAdmin object using a keytab
@@ -373,14 +363,14 @@ impl KAdmin {
     /// :rtype: KAdmin
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(signature = (client_name=None, keytab=None, params=None, db_args=None))]
-    fn with_keytab(
+    #[pyo3(name = "with_keytab", signature = (client_name=None, keytab=None, params=None, db_args=None))]
+    fn py_with_keytab(
         client_name: Option<&str>,
         keytab: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::get_builder(params, db_args).with_keytab(client_name, keytab)?)
+        Ok(Self::py_get_builder(params, db_args).with_keytab(client_name, keytab)?)
     }
 
     /// Construct a KAdmin object using a credentials cache
@@ -399,26 +389,26 @@ impl KAdmin {
     /// :rtype: KAdmin
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(signature = (client_name=None, ccache_name=None, params=None, db_args=None))]
-    fn with_ccache(
+    #[pyo3(name = "with_ccache", signature = (client_name=None, ccache_name=None, params=None, db_args=None))]
+    fn py_with_ccache(
         client_name: Option<&str>,
         ccache_name: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::get_builder(params, db_args).with_ccache(client_name, ccache_name)?)
+        Ok(Self::py_get_builder(params, db_args).with_ccache(client_name, ccache_name)?)
     }
 
     /// Not implemented
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(signature = (client_name, params=None, db_args=None))]
-    fn with_anonymous(
+    #[pyo3(name = "with_anonymous", signature = (client_name, params=None, db_args=None))]
+    fn py_with_anonymous(
         client_name: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
     ) -> Result<Self> {
-        Ok(Self::get_builder(params, db_args).with_anonymous(client_name)?)
+        Ok(Self::py_get_builder(params, db_args).with_anonymous(client_name)?)
     }
 
     /// Construct a KAdmin object for local database manipulation.
@@ -431,17 +421,10 @@ impl KAdmin {
     /// :rtype: KAdmin
     #[cfg(feature = "local")]
     #[staticmethod]
-    #[pyo3(signature = (params=None, db_args=None))]
-    fn with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-        Ok(Self::get_builder(params, db_args).with_local()?)
+    #[pyo3(name = "with_local", signature = (params=None, db_args=None))]
+    fn py_with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
+        Ok(Self::py_get_builder(params, db_args).with_local()?)
     }
-}
-
-/// A kadm5 principal
-#[pyclass]
-struct Principal {
-    inner: KPrincipal,
-    kadmin: KAdmin,
 }
 
 #[pymethods]
@@ -450,23 +433,10 @@ impl Principal {
     ///
     /// :param password: the new password
     /// :type password: str
-    fn change_password(&self, password: &str) -> Result<()> {
-        Ok(self.inner.change_password(&self.kadmin, password)?)
+    #[pyo3(name = "change_password")]
+    fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
+        Ok(self.change_password(kadmin, password)?)
     }
-}
-
-/// A kadm5 policy
-///
-/// This class has no constructor. Instead, use `KAdmin.add_policy`
-///
-/// Setters in this class use the `Policy.modify` method, which makes a call to the kadmin
-/// server. If you need to make changes to multiple attributes, it is recommended to use the
-/// modify method directly to avoid unnecessary operations
-#[pyclass]
-#[derive(Clone)]
-struct Policy {
-    inner: KPolicy,
-    kadmin: KAdmin,
 }
 
 #[pymethods]
@@ -479,10 +449,10 @@ impl Policy {
     /// :return: a new Policy object with the modifications made to it. The old object is still
     ///     available, but will not be up-to-date
     /// :rtype: Policy
-    #[pyo3(signature = (**kwargs))]
-    fn modify(&self, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+    #[pyo3(name = "modify", signature = (kadmin, **kwargs))]
+    fn py_modify(&self, kadmin: &KAdmin, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
         if let Some(kwargs) = kwargs {
-            let mut modifier = self.inner.modifier();
+            let mut modifier = self.modifier();
             if let Some(password_min_life) = kwargs.get_item("password_min_life")? {
                 modifier = modifier.password_min_life(password_min_life.extract()?);
             }
@@ -522,10 +492,7 @@ impl Policy {
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 modifier = modifier.tl_data(tl_data.extract::<TlData>()?.into());
             }
-            Ok(Self {
-                inner: modifier.modify(&self.kadmin)?,
-                kadmin: self.kadmin.clone(),
-            })
+            Ok(modifier.modify(kadmin)?)
         } else {
             Ok(self.clone())
         }
@@ -535,315 +502,9 @@ impl Policy {
     ///
     /// The object will still be available, but shouldn’t be used for modifying, as the policy
     /// may not exist anymore
-    fn delete(&self) -> Result<()> {
-        Ok(self.inner.delete(&self.kadmin)?)
-    }
-
-    /// The policy name
-    ///
-    /// :getter: Get the policy name
-    /// :type: str
-    #[getter]
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    /// Minimum lifetime of a password
-    ///
-    /// :getter: Get the minimum lifetime of a password
-    /// :setter: Set the minimum lifetime of a password. Pass `None` to clear it
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_password_min_life(&self) -> Option<Duration> {
-        self.inner.password_min_life()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_min_life(&mut self, password_min_life: Option<Duration>) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_min_life(password_min_life)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Maximum lifetime of a password
-    ///
-    /// :getter: Get the maximum lifetime of a password
-    /// :setter: Set the maximum lifetime of a password. Pass `None` to clear it
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_password_max_life(&self) -> Option<Duration> {
-        self.inner.password_max_life()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_max_life(&mut self, password_max_life: Option<Duration>) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_max_life(password_max_life)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Minimum length of a password
-    ///
-    /// :getter: Get the minimum length of a password
-    /// :setter: Set the minimum length of a password
-    /// :type: int
-    #[getter]
-    fn get_password_min_length(&self) -> i64 {
-        self.inner.password_min_length()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_min_length(&mut self, password_min_length: i64) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_min_length(password_min_length)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Minimum number of character classes required in a password
-    ///
-    /// The five character classes are lower case, upper case, numbers, punctuation, and
-    /// whitespace/unprintable characters
-    ///
-    /// :getter: Get the minimum number of character classes required in a password
-    /// :setter: Set the minimum number of character classes required in a password
-    /// :type: int
-    #[getter]
-    fn get_password_min_classes(&self) -> i64 {
-        self.inner.password_min_classes()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_min_classes(&mut self, password_min_classes: i64) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_min_classes(password_min_classes)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Number of past keys kept for a principal
-    ///
-    /// May be ignored if used with other database modules such as the MIT krb5 LDAP KDC
-    /// database module
-    ///
-    /// :getter: Get the number of past keys kept for a principal
-    /// :setter: Set the number of past keys kept for a principal
-    /// :type: int
-    #[getter]
-    fn get_password_history_num(&self) -> i64 {
-        self.inner.password_history_num()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_history_num(&mut self, password_history_num: i64) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_history_num(password_history_num)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// How many principals use this policy
-    ///
-    /// Not filled for at least MIT krb5
-    ///
-    /// :getter: Get how many principals use this policy
-    /// :type: int
-    #[getter]
-    fn get_policy_refcnt(&self) -> i64 {
-        self.inner.policy_refcnt()
-    }
-
-    /// Number of authentication failures before the principal is locked
-    ///
-    /// Authentication failures are only tracked for principals which require preauthentication.
-    /// The counter of failed attempts resets to 0 after a successful attempt to authenticate
-    ///
-    /// :getter: Get the number of authentication failures before the principal is locked
-    /// :setter: Set the number of authentication failures before the principal is locked. A
-    ///     value of 0 disables lock-out
-    /// :type: int
-    #[getter]
-    fn get_password_max_fail(&self) -> u32 {
-        self.inner.password_max_fail()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_max_fail(&mut self, password_max_fail: u32) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_max_fail(password_max_fail)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Allowable time between authentication failures
-    ///
-    /// If an authentication failure happens after this duration has elapsed since the previous
-    /// failure, the number of authentication failures is reset to 1
-    ///
-    /// :getter: Get the allowable time between authentication failures
-    /// :setter: Set the allowable time between authentication failures. Pass `None` to clear
-    ///     it, which means forever
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_password_failcount_interval(&self) -> Option<Duration> {
-        self.inner.password_failcount_interval()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_failcount_interval(
-        &mut self,
-        password_failcount_interval: Option<Duration>,
-    ) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_failcount_interval(password_failcount_interval)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Duration for which the principal is locked from authenticating if too many
-    /// authentication failures occur without the specified failure count interval elapsing
-    ///
-    /// :getter: Get the lockout duration
-    /// :setter: Set the lockout duration. Pass `None` to clear it, which means the principal
-    ///    remains locked out until it is administratively unlocked
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_password_lockout_duration(&self) -> Option<Duration> {
-        self.inner.password_lockout_duration()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_password_lockout_duration(
-        &mut self,
-        password_lockout_duration: Option<Duration>,
-    ) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .password_lockout_duration(password_lockout_duration)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Policy attributes
-    ///
-    /// :getter: Get the policy attributes
-    /// :setter: Set the policy attributes
-    /// :type: int
-    #[getter]
-    fn get_attributes(&self) -> i32 {
-        self.inner.attributes()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_attributes(&mut self, attributes: i32) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .attributes(attributes)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Maximum ticket life
-    ///
-    /// :getter: Get the maximum ticket life
-    /// :setter: Set the maximum ticket life. Pass `None` to clear it
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_max_life(&self) -> Option<Duration> {
-        self.inner.max_life()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_max_life(&mut self, max_life: Option<Duration>) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .max_life(max_life)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Maximum renewable ticket life
-    ///
-    /// :getter: Get the maximum renewable ticket life
-    /// :setter: Set the maximum renewable ticket life. Pass `None` to clear it
-    /// :type: datetime.timedelta, optional
-    #[getter]
-    fn get_max_renewable_life(&self) -> Option<Duration> {
-        self.inner.max_renewable_life()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_max_renewable_life(&mut self, max_renewable_life: Option<Duration>) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .max_renewable_life(max_renewable_life)
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
-    }
-
-    /// Policy TL-data
-    ///
-    /// :getter: Get the TL-data
-    /// :setter: Set the TL-data. Completely overrides existing TL-data, make sure to re-use
-    ///     the old ones
-    /// :type: TlData
-    #[getter]
-    fn get_tl_data(&self) -> TlData {
-        (*self.inner.tl_data()).clone().into()
-    }
-
-    /// Ignored
-    #[setter]
-    fn set_tl_data(&mut self, tl_data: TlData) -> Result<()> {
-        let policy = self
-            .inner
-            .modifier()
-            .tl_data(tl_data.into())
-            .modify(&self.kadmin)?;
-        let _ = std::mem::replace(&mut self.inner, policy);
-        Ok(())
+    #[pyo3(name = "delete")]
+    fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
+        Ok(self.delete(kadmin)?)
     }
 }
 

@@ -3,6 +3,8 @@ use std::{ffi::CString, ptr::null_mut, time::Duration};
 
 use getset::{CopyGetters, Getters};
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::{
     conv::{c_string_to_string, delta_to_dur, dur_to_delta},
@@ -14,6 +16,7 @@ use crate::{
 /// A kadm5 policy
 #[derive(Clone, Debug, Getters, CopyGetters)]
 #[getset(get_copy = "pub")]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Policy {
     /// The policy name
     #[getset(skip)]

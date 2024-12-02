@@ -4,6 +4,8 @@ use std::{os::raw::c_char, ptr::null_mut, time::Duration};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::{
     conv::{c_string_to_string, delta_to_dur, ts_to_dt},
@@ -14,6 +16,7 @@ use crate::{
 /// A kadm5 principal
 #[derive(Debug)]
 #[allow(dead_code)] // TODO: remove me once implemented
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Principal {
     name: String,
     expire_time: Option<DateTime<Utc>>,
