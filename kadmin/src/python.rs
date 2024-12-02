@@ -31,6 +31,7 @@ use pyo3::{
 
 use crate::{
     db_args::DbArgs,
+    error::Result,
     kadmin::KAdminImpl,
     params::Params,
     policy::Policy as KPolicy,
@@ -38,8 +39,6 @@ use crate::{
     sync::{KAdmin, KAdminBuilder},
     tl_data::{TlData, TlDataEntry},
 };
-
-type Result<T> = std::result::Result<T, exceptions::PyKAdminError>;
 
 #[pymodule(name = "_lib")]
 fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -120,9 +119,7 @@ impl DbArgs {
                 };
             }
         }
-        Ok(builder
-            .build()
-            .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?)
+        Ok(builder.build()?)
     }
 }
 
@@ -234,11 +231,7 @@ impl KAdmin {
     /// :return: the newly created Policy
     /// :rtype: Policy
     #[pyo3(name = "add_policy", signature = (name, **kwargs))]
-    fn py_add_policy(
-        &self,
-        name: &str,
-        kwargs: Option<&Bound<'_, PyDict>>,
-    ) -> PyResult<Policy> {
+    fn py_add_policy(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Policy> {
         let mut builder = KPolicy::builder(name);
         if let Some(kwargs) = kwargs {
             if let Some(password_min_life) = kwargs.get_item("password_min_life")? {
@@ -282,9 +275,7 @@ impl KAdmin {
             }
         }
         Ok(Policy {
-            inner: builder
-                .create(self)
-                .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
+            inner: builder.create(self)?,
             kadmin: self.clone(),
         })
     }
@@ -532,9 +523,7 @@ impl Policy {
                 modifier = modifier.tl_data(tl_data.extract::<TlData>()?.into());
             }
             Ok(Self {
-                inner: modifier
-                    .modify(&self.kadmin)
-                    .map_err(|e| PyErr::from(exceptions::PyKAdminError(e)))?,
+                inner: modifier.modify(&self.kadmin)?,
                 kadmin: self.kadmin.clone(),
             })
         } else {
@@ -971,56 +960,41 @@ mod exceptions {
         "Failed to convert a `Duration` to a `krb5_deltat`"
     );
 
-    /// Wrapper around [`kadmin::Error`] for type conversion to [`PyErr`]
-    #[allow(clippy::exhaustive_structs)]
-    pub(super) struct PyKAdminError(pub(super) Error);
-
-    impl From<Error> for PyKAdminError {
+    impl From<Error> for PyErr {
         fn from(error: Error) -> Self {
-            Self(error)
-        }
-    }
+            let (exc, extras) = match &error {
+                Error::Kerberos { code, message } => (
+                    KerberosException::new_err(error.to_string()),
+                    Some((*code as i64, message)),
+                ),
+                Error::KAdmin { code, message } => (
+                    KAdminException::new_err(error.to_string()),
+                    Some((*code, message)),
+                ),
+                Error::NullPointerDereference => {
+                    (NullPointerDereference::new_err(error.to_string()), None)
+                }
+                Error::CStringConversion(_) => {
+                    (CStringConversion::new_err(error.to_string()), None)
+                }
+                Error::CStringImportFromVec(_) => {
+                    (CStringImportFromVec::new_err(error.to_string()), None)
+                }
+                Error::StringConversion(_) => (StringConversion::new_err(error.to_string()), None),
+                Error::ThreadSendError => (ThreadSendError::new_err(error.to_string()), None),
+                Error::ThreadRecvError(_) => (ThreadRecvError::new_err(error.to_string()), None),
+                Error::TimestampConversion => {
+                    (TimestampConversion::new_err(error.to_string()), None)
+                }
+                Error::DateTimeConversion(_) => {
+                    (DateTimeConversion::new_err(error.to_string()), None)
+                }
+                Error::DurationConversion(_) => {
+                    (DurationConversion::new_err(error.to_string()), None)
+                }
+            };
 
-    impl From<PyKAdminError> for PyErr {
-        fn from(error: PyKAdminError) -> Self {
             Python::with_gil(|py| {
-                let error = error.0;
-                let (exc, extras) = match &error {
-                    Error::Kerberos { code, message } => (
-                        KerberosException::new_err(error.to_string()),
-                        Some((*code as i64, message)),
-                    ),
-                    Error::KAdmin { code, message } => (
-                        KAdminException::new_err(error.to_string()),
-                        Some((*code, message)),
-                    ),
-                    Error::NullPointerDereference => {
-                        (NullPointerDereference::new_err(error.to_string()), None)
-                    }
-                    Error::CStringConversion(_) => {
-                        (CStringConversion::new_err(error.to_string()), None)
-                    }
-                    Error::CStringImportFromVec(_) => {
-                        (CStringImportFromVec::new_err(error.to_string()), None)
-                    }
-                    Error::StringConversion(_) => {
-                        (StringConversion::new_err(error.to_string()), None)
-                    }
-                    Error::ThreadSendError => (ThreadSendError::new_err(error.to_string()), None),
-                    Error::ThreadRecvError(_) => {
-                        (ThreadRecvError::new_err(error.to_string()), None)
-                    }
-                    Error::TimestampConversion => {
-                        (TimestampConversion::new_err(error.to_string()), None)
-                    }
-                    Error::DateTimeConversion(_) => {
-                        (DateTimeConversion::new_err(error.to_string()), None)
-                    }
-                    Error::DurationConversion(_) => {
-                        (DurationConversion::new_err(error.to_string()), None)
-                    }
-                };
-
                 if let Some((code, message)) = extras {
                     let bound_exc = exc.value(py);
                     if let Err(err) = bound_exc.setattr(intern!(py, "code"), code) {
