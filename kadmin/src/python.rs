@@ -25,7 +25,7 @@
 
 use pyo3::{
     prelude::*,
-    types::{PyDict, PyString},
+    types::{PyDict, PyString, PyTuple},
 };
 
 use crate::{
@@ -100,9 +100,17 @@ impl Params {
 #[pymethods]
 impl DbArgs {
     #[new]
-    #[pyo3(signature = (**kwargs))]
-    fn py_new(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+    #[pyo3(signature = (*args, **kwargs))]
+    fn py_new(args: &Bound<'_, PyTuple>, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
         let mut builder = DbArgs::builder();
+        for arg in args.iter() {
+            let arg = if !arg.is_instance_of::<PyString>() {
+                arg.str()?
+            } else {
+                arg.extract()?
+            };
+            builder = builder.arg(arg.to_str()?, None);
+        }
         if let Some(kwargs) = kwargs {
             for (name, value) in kwargs.iter() {
                 let name = if !name.is_instance_of::<PyString>() {
