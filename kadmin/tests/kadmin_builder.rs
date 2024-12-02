@@ -115,9 +115,10 @@ mod sync {
     #[serial]
     fn with_local() -> Result<()> {
         let realm = K5Test::new()?;
-        let db_args =
-            DbArgs::builder().arg("dbname", Some(&format!("{}/db", realm.tmpdir()?))).build()?;
-        let params= Params::builder()
+        let db_args = DbArgs::builder()
+            .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
+            .build()?;
+        let params = Params::builder()
             .dbname(&format!("{}/db", realm.tmpdir()?))
             .acl_file(&format!("{}/acl", realm.tmpdir()?))
             .dict_file(&format!("{}/dict", realm.tmpdir()?))
