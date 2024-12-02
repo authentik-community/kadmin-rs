@@ -260,7 +260,7 @@ impl PrincipalBuilder {
     /// Create the principal
     pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
         kadmin.add_principal(self)?;
-        Ok(())
+        Ok(kadmin.get_principal(&self.name)?.unwrap())
     }
 }
 
