@@ -35,3 +35,6 @@ server = []
 [build-dependencies]
 bindgen = "0.70"
 system-deps = "7.0"
+
+[lints.clippy]
+manual_c_str_literals = "allow"
