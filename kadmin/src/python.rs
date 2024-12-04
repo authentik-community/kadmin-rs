@@ -1,5 +1,8 @@
 //! Python bindings to libkadm5
 
+use std::{collections::HashSet, str::FromStr};
+
+use either::Either;
 use pyo3::{
     prelude::*,
     types::{PyDict, PyString, PyTuple},
@@ -9,6 +12,7 @@ use crate::{
     db_args::DbArgs,
     error::Result,
     kadmin::KAdminImpl,
+    keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
     params::Params,
     policy::Policy,
     principal::Principal,
@@ -23,6 +27,10 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<DbArgs>()?;
     m.add_class::<TlDataEntry>()?;
     m.add_class::<TlData>()?;
+    m.add_class::<EncryptionType>()?;
+    m.add_class::<SaltType>()?;
+    m.add_class::<KeySalt>()?;
+    m.add_class::<KeySaltList>()?;
     m.add_class::<KAdmin>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
@@ -104,6 +112,52 @@ impl DbArgs {
             }
         }
         Ok(builder.build()?)
+    }
+}
+
+#[pymethods]
+impl EncryptionType {
+    #[new]
+    fn py_new(enctype: Either<i32, String>) -> Result<Self> {
+        Ok(match enctype {
+            Either::Left(i) => i.try_into()?,
+            Either::Right(s) => EncryptionType::from_str(&s)?,
+        })
+    }
+}
+
+#[pymethods]
+impl SaltType {
+    #[new]
+    #[pyo3(signature = (salttype = None))]
+    fn py_new(salttype: Option<Either<i32, String>>) -> Result<Self> {
+        Ok(match salttype {
+            None => Default::default(),
+            Some(salttype) => match salttype {
+                Either::Left(i) => i.try_into()?,
+                Either::Right(s) => SaltType::from_str(&s)?,
+            },
+        })
+    }
+}
+
+#[pymethods]
+impl KeySalt {
+    #[new]
+    #[pyo3(signature = (enctype, salttype = None))]
+    fn py_new(enctype: EncryptionType, salttype: Option<SaltType>) -> Self {
+        Self {
+            enctype,
+            salttype: salttype.unwrap_or_default(),
+        }
+    }
+}
+
+#[pymethods]
+impl KeySaltList {
+    #[new]
+    fn py_new(keysalts: HashSet<KeySalt>) -> Self {
+        Self { keysalts }
     }
 }
 
@@ -215,6 +269,9 @@ impl KAdmin {
             }
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 builder = builder.max_renewable_life(max_renewable_life.extract()?);
+            }
+            if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
+                builder = builder.allowed_keysalts(allowed_keysalts.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 builder = builder.tl_data(tl_data.extract::<TlData>()?);
@@ -348,8 +405,11 @@ impl Policy {
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
             }
+            if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
+                modifier = modifier.allowed_keysalts(allowed_keysalts.extract()?);
+            }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                modifier = modifier.tl_data(tl_data.extract::<TlData>()?);
+                modifier = modifier.tl_data(tl_data.extract()?);
             }
             Ok(modifier.modify(kadmin)?)
         } else {
@@ -374,6 +434,9 @@ mod exceptions {
         let m = PyModule::new(parent.py(), "exceptions")?;
         m.add("PyKAdminException", m.py().get_type::<PyKAdminException>())?;
         m.add("KAdminException", m.py().get_type::<KAdminException>())?;
+        m.add("KerberosException", m.py().get_type::<KerberosException>())?;
+        m.add("EncryptionTypeConversion", m.py().get_type::<EncryptionTypeConversion>())?;
+        m.add("SaltTypeConversion", m.py().get_type::<SaltTypeConversion>())?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
         m.add(
             "NullPointerDereference",
@@ -421,6 +484,18 @@ mod exceptions {
             :ivar code: Kerberos error code
             :ivar origin_message: Kerberos error message
             "});
+    create_exception!(
+        exceptions,
+        EncryptionTypeConversion,
+        PyKAdminException,
+        "Failed to convert to encryption type"
+    );
+    create_exception!(
+        exceptions,
+        SaltTypeConversion,
+        PyKAdminException,
+        "Failed to convert to salt type"
+    );
     create_exception!(
         exceptions,
         NullPointerDereference,
@@ -487,6 +562,10 @@ mod exceptions {
                     KAdminException::new_err(error.to_string()),
                     Some((*code, message)),
                 ),
+                Error::EncryptionTypeConversion => {
+                    (EncryptionTypeConversion::new_err(error.to_string()), None)
+                }
+                Error::SaltTypeConversion => (SaltTypeConversion::new_err(error.to_string()), None),
                 Error::NullPointerDereference => {
                     (NullPointerDereference::new_err(error.to_string()), None)
                 }

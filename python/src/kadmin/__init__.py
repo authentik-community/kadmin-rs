@@ -1,9 +1,13 @@
 from kadmin._lib import (
     DbArgs,
+    EncryptionType,
     KAdmin,
+    KeySalt,
+    KeySaltList,
     Params,
     Policy,
     Principal,
+    SaltType,
     TlData,
     TlDataEntry,
     __version__,
@@ -11,10 +15,14 @@ from kadmin._lib import (
 
 __all__ = (
     "DbArgs",
+    "EncryptionType",
     "KAdmin",
+    "KeySalt",
+    "KeySaltList",
     "Params",
     "Policy",
     "Principal",
+    "SaltType",
     "TlData",
     "TlDataEntry",
     "__version__",

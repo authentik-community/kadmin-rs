@@ -1,3 +1,4 @@
+//! Test policies
 #[cfg(feature = "client")]
 use anyhow::Result;
 #[cfg(feature = "client")]
