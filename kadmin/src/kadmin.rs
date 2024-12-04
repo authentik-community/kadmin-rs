@@ -20,7 +20,7 @@ use crate::{
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
-    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey},
+    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -89,7 +89,7 @@ pub trait KAdminImpl {
 
     /// Modify a principal. Not yet implemented
     #[doc(alias = "modprinc")]
-    fn modify_principal() {
+    fn modify_principal(&self, _modifier: &PrincipalModifier) -> Result<()> {
         unimplemented!();
     }
 
@@ -375,7 +375,7 @@ impl KAdminImpl for KAdmin {
     }
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
-        let mut entry = unsafe { builder.make_entry() }?;
+        let mut entry = builder.make_entry()?;
         let mask = builder.mask | KADM5_POLICY as i64;
         let code = unsafe { kadm5_create_policy(self.server_handle, &mut entry.raw, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
@@ -383,7 +383,7 @@ impl KAdminImpl for KAdmin {
     }
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
-        let mut entry = unsafe { modifier.make_entry() }?;
+        let mut entry = modifier.make_entry()?;
         let code =
             unsafe { kadm5_modify_policy(self.server_handle, &mut entry.raw, modifier.mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;

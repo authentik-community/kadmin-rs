@@ -15,7 +15,7 @@ use crate::{
     keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
     params::Params,
     policy::Policy,
-    principal::Principal,
+    principal::{Principal, PrincipalAttributes},
     sync::{KAdmin, KAdminBuilder},
     tl_data::{TlData, TlDataEntry},
 };
@@ -33,6 +33,7 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<KeySalt>()?;
     m.add_class::<KeySaltList>()?;
     m.add_class::<KAdmin>()?;
+    m.add_class::<PrincipalAttributes>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
     exceptions::init(m)?;

@@ -78,7 +78,7 @@ pub mod policy;
 pub use policy::Policy;
 
 pub mod principal;
-pub use principal::Principal;
+pub use principal::{Principal, PrincipalAttributes};
 
 #[cfg(feature = "python")]
 mod python;

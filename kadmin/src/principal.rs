@@ -19,8 +19,9 @@ bitflags! {
     /// Attributes set on a principal
     ///
     /// See `man kadmin(1)`, under the `add_principal` section for an explanation
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     #[repr(transparent)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "python", pyclass)]
     pub struct PrincipalAttributes: i32 {
         /// Prohibits the principal from obtaining postdated tickets
         const DisallowPostated = KRB5_KDB_DISALLOW_POSTDATED as i32;
@@ -103,6 +104,8 @@ pub struct Principal {
     last_failed: Option<DateTime<Utc>>,
     /// Number of failed authentication attempts
     fail_auth_count: u32,
+    // TODO: key_data
+    // TODO: tl_data
 }
 
 impl Principal {
@@ -158,23 +161,109 @@ impl Principal {
     }
 }
 
-/// Utility to create a principal
-#[derive(Clone, Debug, Default)]
-pub struct PrincipalBuilder {
-    pub(crate) name: String,
-    pub(crate) mask: i64,
-    pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
-    pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
-    pub(crate) max_life: Option<Option<Duration>>,
-    pub(crate) attributes: Option<PrincipalAttributes>,
-    pub(crate) policy: Option<Option<String>>,
-    pub(crate) max_renewable_life: Option<Option<Duration>>,
-    pub(crate) key: PrincipalBuilderKey,
+macro_rules! principal_doer_struct {
+    (
+        $(#[$outer:meta])*
+        $StructName:ident { $($manual_fields:tt)* }
+    ) => {
+        $(#[$outer])*
+        pub struct $StructName {
+            pub(crate) name: String,
+            pub(crate) mask: i64,
+            pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
+            pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
+            pub(crate) max_life: Option<Option<Duration>>,
+            pub(crate) attributes: Option<PrincipalAttributes>,
+            pub(crate) policy: Option<Option<String>>,
+            pub(crate) aux_attributes: Option<i64>,
+            pub(crate) max_renewable_life: Option<Option<Duration>>,
+            $($manual_fields)*
+        }
+    }
 }
 
-// TODO: enctypes
-// TODO: db_args
+macro_rules! principal_doer_impl {
+    () => {
+        /// Set when the principal expires
+        ///
+        /// Pass `None` to clear it. Defaults to not set
+        pub fn expire_time(mut self, expire_time: Option<DateTime<Utc>>) -> Self {
+            self.expire_time = Some(expire_time);
+            self.mask |= KADM5_PRINC_EXPIRE_TIME as i64;
+            self
+        }
+
+        /// Set the password expiration time
+        ///
+        /// Pass `None` to clear it. Defaults to not set
+        pub fn password_expiration(mut self, password_expiration: Option<DateTime<Utc>>) -> Self {
+            self.password_expiration = Some(password_expiration);
+            self.mask |= KADM5_PW_EXPIRATION as i64;
+            self
+        }
+
+        /// Set the maximum ticket life
+        pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
+            self.max_life = Some(max_life);
+            self.mask |= KADM5_MAX_LIFE as i64;
+            self
+        }
+
+        /// Set the principal attributes
+        pub fn attributes(mut self, attributes: PrincipalAttributes) -> Self {
+            self.attributes = Some(attributes);
+            self.mask |= KADM5_ATTRIBUTES as i64;
+            self
+        }
+
+        /// Set the principal policy
+        ///
+        /// By default, the policy named `default` is used if it exists. If no policy should be set,
+        /// pass `None` to this method
+        pub fn policy(mut self, policy: Option<&str>) -> Self {
+            let flag = if policy.is_some() {
+                KADM5_POLICY
+            } else {
+                KADM5_POLICY_CLR
+            };
+            self.policy = Some(policy.map(String::from));
+            self.mask |= flag as i64;
+            self
+        }
+
+        /// Set auxiliary attributes
+        pub fn aux_attributes(mut self, aux_attributes: i64) -> Self {
+            self.aux_attributes = Some(aux_attributes);
+            self.mask |= KADM5_AUX_ATTRIBUTES as i64;
+            self
+        }
+
+        /// Set the maximum renewable ticket life
+        pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
+            self.max_renewable_life = Some(max_renewable_life);
+            self.mask |= KADM5_MAX_RLIFE as i64;
+            self
+        }
+
+        /// Create a [`_kadm5_principal_ent_t`] from this builder
+        pub(crate) fn make_entry(&self) -> Result<PrincipalEntryRaw> {
+            unimplemented!()
+        }
+    };
+}
+
+principal_doer_struct!(
+    /// Utility to create a principal
+    // TODO: doc example
+    #[derive(Clone, Debug, Default)]
+    PrincipalBuilder {
+        pub(crate) key: PrincipalBuilderKey,
+    }
+);
+
 impl PrincipalBuilder {
+    principal_doer_impl!();
+
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`
     pub fn new(name: &str) -> Self {
         Self {
@@ -183,75 +272,15 @@ impl PrincipalBuilder {
         }
     }
 
-    /// Set the principal name
+    /// Set the name of the principal
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_owned();
         self
     }
 
-    /// Set the expiry time for the principal
-    ///
-    /// Pass `None` to clear it. Defaults to not set
-    pub fn expire_time(mut self, expire_time: Option<DateTime<Utc>>) -> Self {
-        self.expire_time = Some(expire_time);
-        self.mask |= KADM5_PRINC_EXPIRE_TIME as i64;
-        self
-    }
-
-    /// Set the password expiration for the principal
-    ///
-    /// Pass `None` to clear it. Defaults to not set
-    pub fn password_expiration(mut self, password_expiration: Option<DateTime<Utc>>) -> Self {
-        self.password_expiration = Some(password_expiration);
-        self.mask |= KADM5_PW_EXPIRATION as i64;
-        self
-    }
-
-    /// Set the maximum ticket life for the principal
-    ///
-    /// Pass `None` to clear it. Defaults to not set
-    pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
-        self.max_life = Some(max_life);
-        self.mask |= KADM5_MAX_LIFE as i64;
-        self
-    }
-
-    /// Set principal attributes
-    ///
-    /// By default no attributes are set
-    pub fn attributes(mut self, attributes: PrincipalAttributes) -> Self {
-        self.attributes = Some(attributes);
-        self.mask |= KADM5_ATTRIBUTES as i64;
-        self
-    }
-
-    /// Set the principal policy
-    ///
-    /// By default, the policy named `default` is used if it exists. If no policy should be set,
-    /// pass `None` to this method
-    pub fn policy(mut self, policy: Option<&str>) -> Self {
-        let flag = if policy.is_some() {
-            KADM5_POLICY
-        } else {
-            KADM5_POLICY_CLR
-        };
-        self.policy = Some(policy.map(String::from));
-        self.mask |= flag as i64;
-        self
-    }
-
-    /// Set the maximum renewable life of tickets for the principal
-    ///
-    /// Pass `None` to clear it. Defaults to not set
-    pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
-        self.max_renewable_life = Some(max_renewable_life);
-        self.mask |= KADM5_MAX_RLIFE as i64;
-        self
-    }
-
     /// How the principal key should be set
     ///
-    /// Defaults to randkey
+    /// See [`PrincipalBuilderKey`] for the default value
     pub fn key(mut self, key: &PrincipalBuilderKey) -> Self {
         self.key = key.clone();
         self
@@ -264,8 +293,36 @@ impl PrincipalBuilder {
     }
 }
 
+principal_doer_struct!(
+    /// Utility to modify a principal
+    // TODO: doc example
+    #[derive(Clone, Debug, Default)]
+    PrincipalModifier {}
+);
+
+impl PrincipalModifier {
+    principal_doer_impl!();
+
+    /// Construct a new [`PrincipalModifier`] from a [`Principal`]
+    pub fn from_principal(principal: &Principal) -> Self {
+        Self {
+            name: principal.name.to_owned(),
+            // TODO: tl_data
+            ..Default::default()
+        }
+    }
+
+    /// Modify the principal
+    pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
+        kadmin.modify_principal(self)?;
+        Ok(kadmin.get_principal(&self.name)?.unwrap())
+    }
+}
+
 /// How the principal key should be set
-#[derive(Clone, Debug)]
+///
+/// The default is [`Self::RandKey`]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(clippy::exhaustive_enums)]
 pub enum PrincipalBuilderKey {
     /// Provide a password to use
@@ -287,4 +344,8 @@ impl Default for PrincipalBuilderKey {
     fn default() -> Self {
         Self::RandKey
     }
+}
+
+pub(crate) struct PrincipalEntryRaw {
+    pub(crate) raw: _kadm5_principal_ent_t,
 }

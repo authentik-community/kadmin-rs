@@ -343,12 +343,7 @@ macro_rules! policy_doer_impl {
         }
 
         /// Create a [`_kadm5_policy_ent_t`] from this builder
-        ///
-        /// # Safety
-        ///
-        /// The element in the second position of the returned tuple needs to live as long as
-        /// [`_krb5_tl_data`] lives
-        pub(crate) unsafe fn make_entry(&self) -> Result<PolicyEntryRaw> {
+        pub(crate) fn make_entry(&self) -> Result<PolicyEntryRaw> {
             let mut policy = _kadm5_policy_ent_t::default();
             let name = CString::new(self.name.clone())?;
             policy.policy = name.as_ptr().cast_mut();
@@ -398,7 +393,8 @@ macro_rules! policy_doer_impl {
                 None
             };
             let tl_data = if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
-                let mut tl_data = self.tl_data.to_raw();
+                // We store the raw data in PolicyEntryRaw
+                let mut tl_data = unsafe { self.tl_data.to_raw() };
                 if let Some(ref mut tl_data) = &mut tl_data {
                     policy.n_tl_data = self.tl_data.entries.len() as i16;
                     policy.tl_data = &mut tl_data.raw;
@@ -492,6 +488,7 @@ impl PolicyModifier {
     pub fn from_policy(policy: &Policy) -> Self {
         Self {
             name: policy.name().to_owned(),
+            tl_data: policy.tl_data().clone(),
             ..Default::default()
         }
     }
