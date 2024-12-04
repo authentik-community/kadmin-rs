@@ -1,3 +1,2 @@
 avoid-breaking-exported-api = true
-disallowed-types = ["std::collections::HashMap", "std::collections::HashSet"]
 msrv = "1.77"
