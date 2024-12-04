@@ -11,7 +11,7 @@ use pyo3::{
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::KAdminImpl,
+    kadmin::{KAdminImpl, KAdminApiVersion},
     keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
     params::Params,
     policy::Policy,
@@ -23,6 +23,7 @@ use crate::{
 #[pymodule(name = "_lib")]
 fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
+    m.add_class::<KAdminApiVersion>()?;
     m.add_class::<Params>()?;
     m.add_class::<DbArgs>()?;
     m.add_class::<TlDataEntry>()?;
@@ -181,13 +182,16 @@ impl TlData {
 }
 
 impl KAdmin {
-    fn py_get_builder(params: Option<Params>, db_args: Option<DbArgs>) -> KAdminBuilder {
+    fn py_get_builder(params: Option<Params>, db_args: Option<DbArgs>, api_version: Option<KAdminApiVersion>) -> KAdminBuilder {
         let mut builder = KAdminBuilder::default();
         if let Some(params) = params {
             builder = builder.params(params);
         }
         if let Some(db_args) = db_args {
             builder = builder.db_args(db_args);
+        }
+        if let Some(api_version) = api_version {
+            builder = builder.api_version(api_version);
         }
         builder
     }
@@ -302,56 +306,60 @@ impl KAdmin {
 
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None))]
+    #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None, api_version=None))]
     fn py_with_password(
         client_name: &str,
         password: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args).with_password(client_name, password)
+        Self::py_get_builder(params, db_args, api_version).with_password(client_name, password)
     }
 
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_keytab", signature = (client_name=None, keytab=None, params=None, db_args=None))]
+    #[pyo3(name = "with_keytab", signature = (client_name=None, keytab=None, params=None, db_args=None, api_version=None))]
     fn py_with_keytab(
         client_name: Option<&str>,
         keytab: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args).with_keytab(client_name, keytab)
+        Self::py_get_builder(params, db_args, api_version).with_keytab(client_name, keytab)
     }
 
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_ccache", signature = (client_name=None, ccache_name=None, params=None, db_args=None))]
+    #[pyo3(name = "with_ccache", signature = (client_name=None, ccache_name=None, params=None, db_args=None, api_version=None))]
     fn py_with_ccache(
         client_name: Option<&str>,
         ccache_name: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args).with_ccache(client_name, ccache_name)
+        Self::py_get_builder(params, db_args, api_version).with_ccache(client_name, ccache_name)
     }
 
     #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_anonymous", signature = (client_name, params=None, db_args=None))]
+    #[pyo3(name = "with_anonymous", signature = (client_name, params=None, db_args=None, api_version=None))]
     fn py_with_anonymous(
         client_name: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args).with_anonymous(client_name)
+        Self::py_get_builder(params, db_args, api_version).with_anonymous(client_name)
     }
 
     #[cfg(feature = "local")]
     #[staticmethod]
-    #[pyo3(name = "with_local", signature = (params=None, db_args=None))]
-    fn py_with_local(params: Option<Params>, db_args: Option<DbArgs>) -> Result<Self> {
-        Self::py_get_builder(params, db_args).with_local()
+    #[pyo3(name = "with_local", signature = (params=None, db_args=None, api_version=None))]
+    fn py_with_local(params: Option<Params>, db_args: Option<DbArgs>, api_version: Option<KAdminApiVersion>) -> Result<Self> {
+        Self::py_get_builder(params, db_args, api_version).with_local()
     }
 }
 

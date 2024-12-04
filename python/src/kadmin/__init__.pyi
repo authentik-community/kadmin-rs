@@ -4,6 +4,12 @@ import datetime
 __version__: str
 
 @final
+class KAdminApiVersion:
+    Version2: Self
+    Version3: Self
+    Version4: Self
+
+@final
 class KAdmin:
     def add_principal(self): ...
     def delete_principal(self): ...
@@ -23,6 +29,7 @@ class KAdmin:
         password: str,
         params: Params | None = None,
         db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_keytab(
@@ -30,6 +37,7 @@ class KAdmin:
         keytab: str | None = None,
         params: Params | None = None,
         db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_ccache(
@@ -37,10 +45,12 @@ class KAdmin:
         ccache_name: str | None = None,
         params: Params | None = None,
         db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_anonymous(
-        client_name: str, params: Params | None = None, db_args: DbArgs | None = None
+        client_name: str, params: Params | None = None, db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
 
 @final

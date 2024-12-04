@@ -662,7 +662,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut kadmin, params, db_args) = self.get_kadmin()?;
+        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
         let client_name = if let Some(default_realm) = &kadmin.context.default_realm {
             let mut concat = CString::new("root/admin@")?.into_bytes();
@@ -683,7 +683,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                api_version.into(),
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )

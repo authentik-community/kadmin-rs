@@ -4,6 +4,12 @@ import datetime
 __version__: str
 
 @final
+class KAdminApiVersion:
+    Version2: Self
+    Version3: Self
+    Version4: Self
+
+@final
 class KAdmin:
     def add_principal(self): ...
     def delete_principal(self): ...
@@ -19,7 +25,8 @@ class KAdmin:
     def list_policies(self, query: str | None = None) -> List[str]: ...
     @staticmethod
     def with_local(
-        params: Params | None = None, db_args: DbArgs | None = None
+        params: Params | None = None, db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
 
 @final
