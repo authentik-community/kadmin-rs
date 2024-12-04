@@ -16,10 +16,11 @@ categories = ["api-bindings", "authentication"]
 default = ["client"]
 client = ["kadmin-sys/client"]
 local = ["kadmin-sys/server"]
-python = ["dep:pyo3", "dep:indoc"]
+python = ["dep:pyo3", "dep:indoc", "dep:either"]
 
 [dependencies]
 chrono = "0.4"
+either = { version = "1.13", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
 kadmin-sys = { path = "../kadmin-sys", version = "0.2.0", default-features = false }
@@ -27,6 +28,7 @@ pyo3 = { version = "0.23", features = [
   "extension-module",
   "chrono",
   "chrono-tz",
+  "either",
 ], optional = true }
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "2"

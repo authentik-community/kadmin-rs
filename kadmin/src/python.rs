@@ -1,5 +1,8 @@
 //! Python bindings to libkadm5
 
+use std::{collections::HashSet, str::FromStr};
+
+use either::Either;
 use pyo3::{
     prelude::*,
     types::{PyDict, PyString, PyTuple},
@@ -113,6 +116,52 @@ impl DbArgs {
 }
 
 #[pymethods]
+impl EncryptionType {
+    #[new]
+    fn py_new(enctype: Either<i32, String>) -> Result<Self> {
+        Ok(match enctype {
+            Either::Left(i) => i.try_into()?,
+            Either::Right(s) => EncryptionType::from_str(&s)?,
+        })
+    }
+}
+
+#[pymethods]
+impl SaltType {
+    #[new]
+    #[pyo3(signature = (salttype = None))]
+    fn py_new(salttype: Option<Either<i32, String>>) -> Result<Self> {
+        Ok(match salttype {
+            None => Default::default(),
+            Some(salttype) => match salttype {
+                Either::Left(i) => i.try_into()?,
+                Either::Right(s) => SaltType::from_str(&s)?,
+            },
+        })
+    }
+}
+
+#[pymethods]
+impl KeySalt {
+    #[new]
+    #[pyo3(signature = (enctype, salttype = None))]
+    fn py_new(enctype: EncryptionType, salttype: Option<SaltType>) -> Self {
+        Self {
+            enctype,
+            salttype: salttype.unwrap_or_default(),
+        }
+    }
+}
+
+#[pymethods]
+impl KeySaltList {
+    #[new]
+    fn py_new(keysalts: HashSet<KeySalt>) -> Self {
+        Self { keysalts }
+    }
+}
+
+#[pymethods]
 impl TlDataEntry {
     #[new]
     fn py_new(data_type: i16, contents: Vec<u8>) -> Self {
@@ -220,6 +269,9 @@ impl KAdmin {
             }
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 builder = builder.max_renewable_life(max_renewable_life.extract()?);
+            }
+            if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
+                builder = builder.allowed_keysalts(allowed_keysalts.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 builder = builder.tl_data(tl_data.extract::<TlData>()?);
@@ -382,6 +434,9 @@ mod exceptions {
         let m = PyModule::new(parent.py(), "exceptions")?;
         m.add("PyKAdminException", m.py().get_type::<PyKAdminException>())?;
         m.add("KAdminException", m.py().get_type::<KAdminException>())?;
+        m.add("KerberosException", m.py().get_type::<KerberosException>())?;
+        m.add("EncryptionTypeConversion", m.py().get_type::<EncryptionTypeConversion>())?;
+        m.add("SaltTypeConversion", m.py().get_type::<SaltTypeConversion>())?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
         m.add(
             "NullPointerDereference",

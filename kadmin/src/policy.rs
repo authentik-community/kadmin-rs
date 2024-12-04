@@ -378,7 +378,9 @@ macro_rules! policy_doer_impl {
                     policy.allowed_keysalts = null_mut();
                     None
                 }
-            } else { None };
+            } else {
+                None
+            };
             let tl_data = if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
                 let mut tl_data = self.tl_data.to_raw();
                 if let Some(ref mut tl_data) = &mut tl_data {
@@ -389,7 +391,9 @@ macro_rules! policy_doer_impl {
                     policy.tl_data = null_mut();
                 }
                 tl_data
-            } else { None };
+            } else {
+                None
+            };
             Ok(PolicyEntryRaw {
                 raw: policy,
                 _raw_name: name,

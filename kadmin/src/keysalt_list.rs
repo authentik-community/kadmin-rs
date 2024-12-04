@@ -70,6 +70,14 @@ impl FromStr for EncryptionType {
     }
 }
 
+impl TryFrom<&str> for EncryptionType {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        Self::from_str(s)
+    }
+}
+
 impl TryFrom<EncryptionType> for String {
     type Error = Error;
 
@@ -84,14 +92,6 @@ impl TryFrom<EncryptionType> for String {
         }
         let s = CStr::from_bytes_until_nul(&buffer).map_err(|_| Error::EncryptionTypeConversion)?;
         Ok(s.to_owned().into_string()?)
-    }
-}
-
-impl TryFrom<&str> for EncryptionType {
-    type Error = Error;
-
-    fn try_from(s: &str) -> Result<Self> {
-        Self::from_str(s)
     }
 }
 
