@@ -1,3 +1,4 @@
+//! Test KAdmin builders
 use anyhow::Result;
 use kadmin::KAdmin;
 #[cfg(feature = "client")]

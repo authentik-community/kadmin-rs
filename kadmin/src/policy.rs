@@ -10,6 +10,7 @@ use crate::{
     conv::{c_string_to_string, delta_to_dur, dur_to_delta},
     error::Result,
     kadmin::KAdminImpl,
+    keysalt_list::KeySaltList,
     tl_data::{TlData, TlDataEntry, TlDataRaw},
 };
 
@@ -39,25 +40,43 @@ pub struct Policy {
     /// are only tracked for principals which require preauthentication. The counter of failed
     /// attempts resets to 0 after a successful attempt to authenticate. A value of 0 disables
     /// lock‐out
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_max_fail: u32,
     /// Allowable time between authentication failures. If an authentication failure happens after
     /// this duration has elapsed since the previous failure, the number of authentication failures
     /// is reset to 1. A value of `None` means forever
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_failcount_interval: Option<Duration>,
     /// Duration for which the principal is locked from authenticating if too many authentication
     /// failures occur without the specified failure count interval elapsing. A duration of `None`
     /// means the principal remains locked out until it is administratively unlocked
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_lockout_duration: Option<Duration>,
     /// Policy attributes
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     attributes: i32,
     /// Maximum ticket life
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_life: Option<Duration>,
     /// Maximum renewable ticket life
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_renewable_life: Option<Duration>,
+    /// Allowed keysalts
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    #[getset(skip)]
+    allowed_keysalts: Option<KeySaltList>,
     /// TL-data
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     #[getset(skip)]
     tl_data: TlData,
-    // TODO: allowed keysalts
 }
 
 impl Policy {
@@ -77,6 +96,13 @@ impl Policy {
             attributes: entry.attributes,
             max_life: delta_to_dur(entry.max_life.into()),
             max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
+            allowed_keysalts: if !entry.allowed_keysalts.is_null() {
+                Some(KeySaltList::from_str(&c_string_to_string(
+                    entry.allowed_keysalts,
+                )?)?)
+            } else {
+                None
+            },
             tl_data: TlData::from_raw(entry.n_tl_data, entry.tl_data),
         })
     }
@@ -84,6 +110,11 @@ impl Policy {
     /// Name of the policy
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Allowed keysalts
+    pub fn allowed_keysalts(&self) -> Option<&KeySaltList> {
+        self.allowed_keysalts.as_ref()
     }
 
     /// TL-data
@@ -163,8 +194,8 @@ macro_rules! policy_doer_struct {
             pub(crate) attributes: Option<i32>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
+            pub(crate) allowed_keysalts: Option<Option<KeySaltList>>,
             pub(crate) tl_data: TlData,
-            // TODO: allowed keysalts
             $($manual_fields)*
         }
     }
@@ -281,6 +312,15 @@ macro_rules! policy_doer_impl {
             self
         }
 
+        /// Set the allowed keysalts
+        ///
+        /// Pass `None` to clear it. Defaults to not set
+        pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySaltList>) -> Self {
+            self.allowed_keysalts = Some(allowed_keysalts);
+            self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as i64;
+            self
+        }
+
         /// Override existing TL-data completely
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
             self.tl_data = tl_data;
@@ -311,7 +351,6 @@ macro_rules! policy_doer_impl {
         pub(crate) unsafe fn make_entry(&self) -> Result<PolicyEntryRaw> {
             let mut policy = _kadm5_policy_ent_t::default();
             let name = CString::new(self.name.clone())?;
-            let tl_data = None;
             policy.policy = name.as_ptr().cast_mut();
             if let Some(password_min_life) = self.password_min_life {
                 policy.pw_min_life = dur_to_delta(password_min_life)?.into();
@@ -346,19 +385,35 @@ macro_rules! policy_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 policy.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
-            if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
-                let tl_data = self.tl_data.to_raw();
-                if let Some(mut tl_data) = tl_data {
+            let allowed_keysalts = if let Some(allowed_keysalts) = &self.allowed_keysalts {
+                if let Some(allowed_keysalts) = allowed_keysalts {
+                    let raw_allowed_keysalts = allowed_keysalts.to_cstring()?;
+                    policy.allowed_keysalts = raw_allowed_keysalts.as_ptr().cast_mut();
+                    Some(raw_allowed_keysalts)
+                } else {
+                    policy.allowed_keysalts = null_mut();
+                    None
+                }
+            } else {
+                None
+            };
+            let tl_data = if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
+                let mut tl_data = self.tl_data.to_raw();
+                if let Some(ref mut tl_data) = &mut tl_data {
                     policy.n_tl_data = self.tl_data.entries.len() as i16;
                     policy.tl_data = &mut tl_data.raw;
                 } else {
                     policy.n_tl_data = 0;
                     policy.tl_data = null_mut();
                 }
-            }
+                tl_data
+            } else {
+                None
+            };
             Ok(PolicyEntryRaw {
                 raw: policy,
                 _raw_name: name,
+                _raw_allowed_keysalts: allowed_keysalts,
                 _raw_tl_data: tl_data,
             })
         }
@@ -451,5 +506,6 @@ impl PolicyModifier {
 pub(crate) struct PolicyEntryRaw {
     pub(crate) raw: _kadm5_policy_ent_t,
     _raw_name: CString,
+    _raw_allowed_keysalts: Option<CString>,
     _raw_tl_data: Option<TlDataRaw>,
 }

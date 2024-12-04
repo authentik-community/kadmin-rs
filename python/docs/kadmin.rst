@@ -3,13 +3,44 @@ kadmin
 
 .. py:module:: kadmin
 
+.. py:class:: KAdminApiVersion
+
+   kadm5 API version
+
+   MIT krb5 supports up to version 4. Heimdal supports up to version 2.
+
+   This changes which fields will be available in the Policy and Principal structs. If the version
+   is too low, some fields may not be populated. We try our best to document those in the fields
+   documentation themselves.
+
+   If no version is provided during the KAdmin initialization, it defaults to the most conservative
+   one, currently version 2.
+
+   .. py:attribute:: Version2
+
+      Version 2
+
+      :type: KAdminApiVersion
+
+   .. py:attribute:: Version3
+
+      Version 3
+
+      :type: KAdminApiVersion
+
+   .. py:attribute:: Version4
+
+      Version 4
+
+      :type: KAdminApiVersion
+
 .. py:class:: KAdmin
 
    Interface to kadm5
    
    This class has no constructor. Instead, use the `with_` methods
 
-   .. py:staticmethod:: with_password(client_name, password, params=None, db_args=None)
+   .. py:staticmethod:: with_password(client_name, password, params=None, db_args=None, api_version=None)
 
       Construct a KAdmin object using a password
       
@@ -21,6 +52,8 @@ kadmin
       :type params: Params | None
       :param db_args: additional database specific arguments
       :type db_args: DbArgs | None
+      :param api_version: kadm5 API version to use
+      :type api_version: KAdminApiVersion | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
       
@@ -42,6 +75,8 @@ kadmin
       :type params: Params | None
       :param db_args: additional database specific arguments
       :type db_args: DbArgs | None
+      :param api_version: kadm5 API version to use
+      :type api_version: KAdminApiVersion | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
@@ -59,6 +94,8 @@ kadmin
       :type params: Params | None
       :param db_args: additional database specific arguments
       :type db_args: DbArgs | None
+      :param api_version: kadm5 API version to use
+      :type api_version: KAdminApiVersion | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
@@ -215,6 +252,8 @@ kadmin
       attempts resets to 0 after a successful attempt to authenticate. A value of 0 disables
       lock‐out
 
+      Only available in :py:class:`version<KAdminApiVersion>` 3 and above
+
       :type: int
 
    .. py:attribute:: password_failcount_interval
@@ -222,6 +261,8 @@ kadmin
       Allowable time between authentication failures. If an authentication failure happens after
       this duration has elapsed since the previous failure, the number of authentication failures
       is reset to 1. A value of `None` means forever
+
+      Only available in :py:class:`version<KAdminApiVersion>` 3 and above
 
       :type: datetime.timedelta | None
 
@@ -231,11 +272,15 @@ kadmin
       failures occur without the specified failure count interval elapsing. A duration of `None`
       means the principal remains locked out until it is administratively unlocked
 
+      Only available in :py:class:`version<KAdminApiVersion>` 3 and above
+
       :type: datetime.timedelta | None
 
    .. py:attribute:: attributes
 
       Policy attributes
+
+      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: int
 
@@ -243,17 +288,31 @@ kadmin
 
       Maximum ticket life
 
+      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+
       :type: datetime.timedelta | None
 
    .. py:attribute:: max_renewable_life
 
       Maximum renewable ticket life
 
+      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+
       :type: datetime.timedelta | None
+
+   .. py:attribute:: allowed_keysalts
+
+      Allowed keysalts
+
+      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+
+      :type: KeySaltList | None
 
    .. py:attribute:: tl_data
 
       TL-data
+
+      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: TlData
 
@@ -319,6 +378,138 @@ kadmin
    .. code-block:: python
    
       db_args = DbArgs(host="ldap.example.org")
+
+.. py:class:: EncryptionType(enctype)
+
+   Kerberos encryption type
+
+   :param enctype: Encryption type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
+   :type enctype: int | str
+
+   .. py:attribute:: Des3CbcRaw
+
+      Triple DES cbc mode raw (weak, deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: Des3CbcSha1
+
+      Triple DES cbc mode with HMAC/sha1 (deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: ArcfourHmac
+
+      ArcFour with HMAC/md5 (deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: ArcfourHmacExp
+
+      Exportable ArcFour with HMAC/md5 (weak, deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes128CtsHmacSha196
+
+      AES-128 CTS mode with 96-bit SHA-1 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes256CtsHmacSha196
+
+      AES-256 CTS mode with 96-bit SHA-1 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Camellia128CtsCmac
+
+      Camellia-128 CTS mode with CMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Camellia256CtsCmac
+
+      Camellia-256 CTS mode with CMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes128CtsHmacSha256128
+
+      AES-128 CTS mode with 128-bit SHA-256 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes256CtsHmacSha384192
+
+      AES-256 CTS mode with 192-bit SHA-384 HMAC
+
+      :type: EncryptionType
+
+.. py:class:: SaltType(salttype)
+
+   Kerberos salt type
+
+   :param salttype: Salt type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
+   :type salttype: int | str | None
+
+   .. py:attribute:: Normal
+
+      Default for Kerberos Version 5
+
+      :type: SaltType
+
+   .. py:attribute:: NoRealm
+
+      Same as the default, without using realm information
+
+      :type: SaltType
+
+   .. py:attribute:: OnlyRealm
+
+      Uses only realm information as the salt
+
+      :type: SaltType
+
+   .. py:attribute:: Special
+
+      Generate a random salt
+
+      :type: SaltType
+
+.. py:class:: KeySalt(enctype, salttype)
+
+   Kerberos keysalt
+
+   :param enctype: Encryption type
+   :type enctype: EncryptionType
+   :param salttype: Salt type
+   :type salttype: SaltType
+
+   .. py:attribute:: enctype
+
+      Encryption type
+
+      :type: EncryptionType
+
+   .. py:attribute:: salttype
+
+      Salt type
+
+      :type: SaltType
+
+.. py:class:: KeySaltList(keysalts)
+
+   Kerberos keysalt list
+
+   :param keysalts: Keysalt list
+   :type keysalts: set[KeySalt]
+
+   .. py:attribute:: keysalts
+
+      Keysalt list
+
+      :type: set[KeySalt]
 
 .. py:class:: TlDataEntry(data_type, contents)
 

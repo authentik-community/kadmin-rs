@@ -1,6 +1,6 @@
 [package]
 name = "kadmin"
-version = "0.4.0"
+version = "0.4.1"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,19 +16,22 @@ categories = ["api-bindings", "authentication"]
 default = ["client"]
 client = ["kadmin-sys/client"]
 local = ["kadmin-sys/server"]
-python = ["dep:pyo3", "dep:indoc"]
+python = ["dep:pyo3", "dep:indoc", "dep:either"]
 
 [dependencies]
 bitflags = "2.6"
 chrono = "0.4"
+either = { version = "1.13", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
-kadmin-sys = { path = "../kadmin-sys", version = "0.2.0", default-features = false }
+kadmin-sys = { path = "../kadmin-sys", version = "0.2.1", default-features = false }
 pyo3 = { version = "0.23", features = [
   "extension-module",
   "chrono",
   "chrono-tz",
+  "either",
 ], optional = true }
+strum = { version = "0.26", features = ["derive"] }
 thiserror = "2"
 
 [dev-dependencies]

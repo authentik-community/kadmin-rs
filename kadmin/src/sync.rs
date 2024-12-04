@@ -21,7 +21,7 @@ use pyo3::prelude::*;
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::KAdminImpl,
+    kadmin::{KAdminApiVersion, KAdminImpl},
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::Principal,
@@ -193,6 +193,7 @@ impl KAdminImpl for KAdmin {
 pub struct KAdminBuilder {
     params: Option<Params>,
     db_args: Option<DbArgs>,
+    api_version: KAdminApiVersion,
 }
 
 impl KAdminBuilder {
@@ -210,6 +211,12 @@ impl KAdminBuilder {
         self
     }
 
+    /// Set the kadm5 API version to use. See [`KAdminApiVersion`] for details
+    pub fn api_version(mut self, api_version: KAdminApiVersion) -> Self {
+        self.api_version = api_version;
+        self
+    }
+
     /// Construct a [`crate::kadmin::KAdminBuilder`] object that isn't initialized yet from the
     /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
@@ -220,6 +227,7 @@ impl KAdminBuilder {
         if let Some(db_args) = self.db_args {
             builder = builder.db_args(db_args);
         }
+        builder = builder.api_version(self.api_version);
         Ok(builder)
     }
 

@@ -1,7 +1,13 @@
-from typing import List, final
+from typing import List, Self, final
 import datetime
 
 __version__: str
+
+@final
+class KAdminApiVersion:
+    Version2: Self
+    Version3: Self
+    Version4: Self
 
 @final
 class KAdmin:
@@ -19,7 +25,9 @@ class KAdmin:
     def list_policies(self, query: str | None = None) -> List[str]: ...
     @staticmethod
     def with_local(
-        params: Params | None = None, db_args: DbArgs | None = None
+        params: Params | None = None,
+        db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
 
 @final
@@ -37,6 +45,7 @@ class Policy:
     attributes: int
     max_life: datetime.timedelta | None
     max_renewable_life: datetime.timedelta | None
+    allowed_keysalts: KeySaltList | None
     tl_data: TlData
 
     def modify(self, kadmin: KAdmin, **kwargs) -> Policy: ...
@@ -80,6 +89,43 @@ class Params:
 @final
 class DbArgs:
     def __init__(self, /, *args: str, **kwargs: str | None): ...
+
+@final
+class EncryptionType:
+    Des3CbcRaw: Self
+    Des3CbcSha1: Self
+    ArcfourHmac: Self
+    ArcfourHmacExp: Self
+    Aes128CtsHmacSha196: Self
+    Aes256CtsHmacSha196: Self
+    Camellia128CtsCmac: Self
+    Camellia256CtsCmac: Self
+    Aes128CtsHmacSha256128: Self
+    Aes256CtsHmacSha384192: Self
+
+    def __init__(self, enctype: int | str): ...
+
+@final
+class SaltType:
+    Normal: Self
+    NoRealm: Self
+    OnlyRealm: Self
+    Special: Self
+
+    def __init__(self, enctype: int | str | None): ...
+
+@final
+class KeySalt:
+    enctype: EncryptionType
+    salttype: SaltType
+
+    def __init__(self, enctype: EncryptionType, salttype: SaltType | None): ...
+
+@final
+class KeySaltList:
+    keysalts: set[KeySalt]
+
+    def __init__(self, keysalts: set[KeySalt]): ...
 
 @final
 class TlDataEntry:
