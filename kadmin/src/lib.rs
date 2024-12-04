@@ -67,7 +67,7 @@ pub mod tl_data;
 pub use tl_data::{TlData, TlDataEntry};
 
 pub mod kadmin;
-pub use kadmin::{KAdmin, KAdminImpl};
+pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 
 pub mod sync;
 
