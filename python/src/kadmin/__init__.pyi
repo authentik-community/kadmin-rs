@@ -49,7 +49,9 @@ class KAdmin:
     ) -> KAdmin: ...
     @staticmethod
     def with_anonymous(
-        client_name: str, params: Params | None = None, db_args: DbArgs | None = None,
+        client_name: str,
+        params: Params | None = None,
+        db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
 

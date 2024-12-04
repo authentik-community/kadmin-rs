@@ -25,7 +25,8 @@ class KAdmin:
     def list_policies(self, query: str | None = None) -> List[str]: ...
     @staticmethod
     def with_local(
-        params: Params | None = None, db_args: DbArgs | None = None,
+        params: Params | None = None,
+        db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
     ) -> KAdmin: ...
 

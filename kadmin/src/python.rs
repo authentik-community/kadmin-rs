@@ -11,7 +11,7 @@ use pyo3::{
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminImpl, KAdminApiVersion},
+    kadmin::{KAdminApiVersion, KAdminImpl},
     keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
     params::Params,
     policy::Policy,
@@ -182,7 +182,11 @@ impl TlData {
 }
 
 impl KAdmin {
-    fn py_get_builder(params: Option<Params>, db_args: Option<DbArgs>, api_version: Option<KAdminApiVersion>) -> KAdminBuilder {
+    fn py_get_builder(
+        params: Option<Params>,
+        db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
+    ) -> KAdminBuilder {
         let mut builder = KAdminBuilder::default();
         if let Some(params) = params {
             builder = builder.params(params);
@@ -358,7 +362,11 @@ impl KAdmin {
     #[cfg(feature = "local")]
     #[staticmethod]
     #[pyo3(name = "with_local", signature = (params=None, db_args=None, api_version=None))]
-    fn py_with_local(params: Option<Params>, db_args: Option<DbArgs>, api_version: Option<KAdminApiVersion>) -> Result<Self> {
+    fn py_with_local(
+        params: Option<Params>,
+        db_args: Option<DbArgs>,
+        api_version: Option<KAdminApiVersion>,
+    ) -> Result<Self> {
         Self::py_get_builder(params, db_args, api_version).with_local()
     }
 }
@@ -443,8 +451,14 @@ mod exceptions {
         m.add("PyKAdminException", m.py().get_type::<PyKAdminException>())?;
         m.add("KAdminException", m.py().get_type::<KAdminException>())?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
-        m.add("EncryptionTypeConversion", m.py().get_type::<EncryptionTypeConversion>())?;
-        m.add("SaltTypeConversion", m.py().get_type::<SaltTypeConversion>())?;
+        m.add(
+            "EncryptionTypeConversion",
+            m.py().get_type::<EncryptionTypeConversion>(),
+        )?;
+        m.add(
+            "SaltTypeConversion",
+            m.py().get_type::<SaltTypeConversion>(),
+        )?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
         m.add(
             "NullPointerDereference",
