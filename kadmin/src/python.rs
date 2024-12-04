@@ -9,6 +9,7 @@ use crate::{
     db_args::DbArgs,
     error::Result,
     kadmin::KAdminImpl,
+    keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
     params::Params,
     policy::Policy,
     principal::Principal,
@@ -23,6 +24,10 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<DbArgs>()?;
     m.add_class::<TlDataEntry>()?;
     m.add_class::<TlData>()?;
+    m.add_class::<EncryptionType>()?;
+    m.add_class::<SaltType>()?;
+    m.add_class::<KeySalt>()?;
+    m.add_class::<KeySaltList>()?;
     m.add_class::<KAdmin>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
@@ -348,8 +353,11 @@ impl Policy {
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
             }
+            if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
+                modifier = modifier.allowed_keysalts(allowed_keysalts.extract()?);
+            }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                modifier = modifier.tl_data(tl_data.extract::<TlData>()?);
+                modifier = modifier.tl_data(tl_data.extract()?);
             }
             Ok(modifier.modify(kadmin)?)
         } else {
@@ -423,6 +431,18 @@ mod exceptions {
             "});
     create_exception!(
         exceptions,
+        EncryptionTypeConversion,
+        PyKAdminException,
+        "Failed to convert to encryption type"
+    );
+    create_exception!(
+        exceptions,
+        SaltTypeConversion,
+        PyKAdminException,
+        "Failed to convert to salt type"
+    );
+    create_exception!(
+        exceptions,
         NullPointerDereference,
         PyKAdminException,
         "Pointer was NULL when converting a `*c_char` to a `String`"
@@ -487,6 +507,10 @@ mod exceptions {
                     KAdminException::new_err(error.to_string()),
                     Some((*code, message)),
                 ),
+                Error::EncryptionTypeConversion => {
+                    (EncryptionTypeConversion::new_err(error.to_string()), None)
+                }
+                Error::SaltTypeConversion => (SaltTypeConversion::new_err(error.to_string()), None),
                 Error::NullPointerDereference => {
                     (NullPointerDereference::new_err(error.to_string()), None)
                 }

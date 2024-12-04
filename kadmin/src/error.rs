@@ -32,6 +32,14 @@ pub enum Error {
         message: String,
     },
 
+    /// Conversion to an encryption type failed
+    #[error("Conversion to encryption type failed")]
+    EncryptionTypeConversion,
+
+    /// Conversion to a salt type failed
+    #[error("Conversion to salt type failed")]
+    SaltTypeConversion,
+
     /// When converting a `*c_char` to a [`String`], if the provided pointer was `NULL`, this error
     /// is returned
     #[error("NULL pointer dereference error")]

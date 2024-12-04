@@ -421,7 +421,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                KADM5_API_VERSION_4,
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )
