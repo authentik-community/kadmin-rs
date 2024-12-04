@@ -251,6 +251,12 @@ kadmin
 
       :type: datetime.timedelta | None
 
+   .. py:attribute:: allowed_keysalts
+
+      Allowed keysalts
+
+      :type: KeySaltList | None
+
    .. py:attribute:: tl_data
 
       TL-data
@@ -319,6 +325,138 @@ kadmin
    .. code-block:: python
    
       db_args = DbArgs(host="ldap.example.org")
+
+.. py:class:: EncryptionType(enctype)
+
+   Kerberos encryption type
+
+   :param enctype: Encryption type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
+   :type enctype: int | str
+
+   .. py:attribute:: Des3CbcRaw
+
+      Triple DES cbc mode raw (weak, deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: Des3CbcSha1
+
+      Triple DES cbc mode with HMAC/sha1 (deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: ArcfourHmac
+
+      ArcFour with HMAC/md5 (deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: ArcfourHmacExp
+
+      Exportable ArcFour with HMAC/md5 (weak, deprecated)
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes128CtsHmacSha196
+
+      AES-128 CTS mode with 96-bit SHA-1 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes256CtsHmacSha196
+
+      AES-256 CTS mode with 96-bit SHA-1 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Camellia128CtsCmac
+
+      Camellia-128 CTS mode with CMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Camellia256CtsCmac
+
+      Camellia-256 CTS mode with CMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes128CtsHmacSha256128
+
+      AES-128 CTS mode with 128-bit SHA-256 HMAC
+
+      :type: EncryptionType
+
+   .. py:attribute:: Aes256CtsHmacSha384192
+
+      AES-256 CTS mode with 192-bit SHA-384 HMAC
+
+      :type: EncryptionType
+
+.. py:class:: SaltType(salttype)
+
+   Kerberos salt type
+
+   :param salttype: Salt type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
+   :type salttype: int | str | None
+
+   .. py:attribute:: Normal
+
+      Default for Kerberos Version 5
+
+      :type: SaltType
+
+   .. py:attribute:: NoRealm
+
+      Same as the default, without using realm information
+
+      :type: SaltType
+
+   .. py:attribute:: OnlyRealm
+
+      Uses only realm information as the salt
+
+      :type: SaltType
+
+   .. py:attribute:: Special
+
+      Generate a random salt
+
+      :type: SaltType
+
+.. py:class:: KeySalt(enctype, salttype)
+
+   Kerberos keysalt
+
+   :param enctype: Encryption type
+   :type enctype: EncryptionType
+   :param salttype: Salt type
+   :type salttype: SaltType
+
+   .. py:attribute:: enctype
+
+      Encryption type
+
+      :type: EncryptionType
+
+   .. py:attribute:: salttype
+
+      Salt type
+
+      :type: SaltType
+
+.. py:class:: KeySaltList(keysalts)
+
+   Kerberos keysalt list
+
+   :param keysalts: Keysalt list
+   :type keysalts: set[KeySalt]
+
+   .. py:attribute:: keysalts
+
+      Keysalt list
+
+      :type: set[KeySalt]
 
 .. py:class:: TlDataEntry(data_type, contents)
 
