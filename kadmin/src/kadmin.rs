@@ -10,6 +10,8 @@ use std::{
 };
 
 use kadmin_sys::*;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::{
     context::Context,
@@ -23,6 +25,41 @@ use crate::{
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
 static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
+
+/// kadm5 API version
+///
+/// MIT krb5 supports up to version 4. Heimdal supports up to version 2.
+///
+/// This changes which fields will be available in the [`Policy`] and [`Principal`] structs. If the
+/// version is too low, some fields may not be populated. We try our best to document those in the
+/// fields documentation themselves.
+///
+/// If no version is provided during the KAdmin initialization, it defaults to the most
+/// conservative one, currently version 2.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[allow(clippy::exhaustive_enums)]
+#[repr(u32)]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+pub enum KAdminApiVersion {
+    /// Version 2
+    Version2 = KADM5_API_VERSION_2,
+    /// Version 3
+    Version3 = KADM5_API_VERSION_3,
+    /// Version 4
+    Version4 = KADM5_API_VERSION_4,
+}
+
+impl From<KAdminApiVersion> for u32 {
+    fn from(api_version: KAdminApiVersion) -> Self {
+        api_version as Self
+    }
+}
+
+impl Default for KAdminApiVersion {
+    fn default() -> Self {
+        Self::Version2
+    }
+}
 
 /// Interface to kadm5
 ///
@@ -363,6 +400,7 @@ pub struct KAdminBuilder {
     context: Option<Context>,
     params: Option<Params>,
     db_args: Option<DbArgs>,
+    api_version: KAdminApiVersion,
 }
 
 impl KAdminBuilder {
@@ -384,16 +422,23 @@ impl KAdminBuilder {
         self
     }
 
+    /// Set the kadm5 API version to use. See [`KAdminApiVersion`] for details
+    pub fn api_version(mut self, api_version: KAdminApiVersion) -> Self {
+        self.api_version = api_version;
+        self
+    }
+
     /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
-    fn get_kadmin(self) -> Result<(KAdmin, Params, DbArgs)> {
+    fn get_kadmin(self) -> Result<(KAdmin, Params, DbArgs, KAdminApiVersion)> {
         let params = self.params.unwrap_or_default();
         let db_args = self.db_args.unwrap_or_default();
         let context = self.context.unwrap_or(Context::new()?);
+        let api_version = self.api_version;
         let kadmin = KAdmin {
             context,
             server_handle: null_mut(),
         };
-        Ok((kadmin, params, db_args))
+        Ok((kadmin, params, db_args, api_version))
     }
 
     /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
@@ -405,7 +450,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut kadmin, params, db_args) = self.get_kadmin()?;
+        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
         let client_name = CString::new(client_name)?;
         let password = CString::new(password)?;
@@ -421,7 +466,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                api_version.into(),
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )
@@ -447,7 +492,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut kadmin, params, db_args) = self.get_kadmin()?;
+        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
         let client_name = if let Some(client_name) = client_name {
             CString::new(client_name)?
@@ -494,7 +539,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                api_version.into(),
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )
@@ -525,7 +570,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut kadmin, params, db_args) = self.get_kadmin()?;
+        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
         let ccache = {
             let mut ccache: MaybeUninit<krb5_ccache> = MaybeUninit::zeroed();
@@ -579,7 +624,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                api_version.into(),
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )
@@ -604,7 +649,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut _kadmin, _params, _db_args) = self.get_kadmin()?;
+        let (mut _kadmin, _params, _db_args, _api_version) = self.get_kadmin()?;
 
         unimplemented!();
     }
@@ -617,7 +662,7 @@ impl KAdminBuilder {
             .lock()
             .expect("Failed to lock context initialization.");
 
-        let (mut kadmin, params, db_args) = self.get_kadmin()?;
+        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
         let client_name = if let Some(default_realm) = &kadmin.context.default_realm {
             let mut concat = CString::new("root/admin@")?.into_bytes();
@@ -638,7 +683,7 @@ impl KAdminBuilder {
                 service_name.as_ptr().cast_mut(),
                 &mut params.params,
                 KADM5_STRUCT_VERSION,
-                KADM5_API_VERSION_2,
+                api_version.into(),
                 db_args.db_args,
                 &mut kadmin.server_handle,
             )

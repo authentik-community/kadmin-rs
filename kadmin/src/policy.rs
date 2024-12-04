@@ -40,25 +40,41 @@ pub struct Policy {
     /// are only tracked for principals which require preauthentication. The counter of failed
     /// attempts resets to 0 after a successful attempt to authenticate. A value of 0 disables
     /// lock‐out
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_max_fail: u32,
     /// Allowable time between authentication failures. If an authentication failure happens after
     /// this duration has elapsed since the previous failure, the number of authentication failures
     /// is reset to 1. A value of `None` means forever
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_failcount_interval: Option<Duration>,
     /// Duration for which the principal is locked from authenticating if too many authentication
     /// failures occur without the specified failure count interval elapsing. A duration of `None`
     /// means the principal remains locked out until it is administratively unlocked
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
     password_lockout_duration: Option<Duration>,
     /// Policy attributes
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     attributes: i32,
     /// Maximum ticket life
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_life: Option<Duration>,
     /// Maximum renewable ticket life
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_renewable_life: Option<Duration>,
     /// Allowed keysalts
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     #[getset(skip)]
     allowed_keysalts: Option<KeySaltList>,
     /// TL-data
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     #[getset(skip)]
     tl_data: TlData,
 }

@@ -11,7 +11,7 @@ The only difference with the :py:mod:`kadmin` module is the `KAdmin.with_` metho
    
    This class has no constructor. Instead, use the `with_` methods
 
-   .. py:staticmethod:: with_local(params=None, db_args=None)
+   .. py:staticmethod:: with_local(params=None, db_args=None, api_version=None)
 
       Construct a :py:class:`KAdmin` object for local database manipulation.
       
@@ -19,5 +19,7 @@ The only difference with the :py:mod:`kadmin` module is the `KAdmin.with_` metho
       :type params: :py:class:`Params<kadmin.Params>` | None
       :param db_args: additional database specific arguments
       :type db_args: :py:class:`DbArgs<kadmin.DbArgs>` | None
+      :param api_version: kadm5 API version to use
+      :type api_version: :py:class:`KAdminApiVersion<kadmin.KAdminApiVersion>` | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
