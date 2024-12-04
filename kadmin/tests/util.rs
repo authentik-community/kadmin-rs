@@ -1,3 +1,4 @@
+//! Test utils
 use rand::{Rng, distributions::Alphanumeric};
 
 #[allow(dead_code)]

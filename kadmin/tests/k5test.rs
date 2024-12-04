@@ -1,3 +1,4 @@
+//! Utility to run a krb5 KDC
 use std::ffi::CStr;
 
 use anyhow::Result;
