@@ -435,8 +435,14 @@ mod exceptions {
         m.add("PyKAdminException", m.py().get_type::<PyKAdminException>())?;
         m.add("KAdminException", m.py().get_type::<KAdminException>())?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
-        m.add("EncryptionTypeConversion", m.py().get_type::<EncryptionTypeConversion>())?;
-        m.add("SaltTypeConversion", m.py().get_type::<SaltTypeConversion>())?;
+        m.add(
+            "EncryptionTypeConversion",
+            m.py().get_type::<EncryptionTypeConversion>(),
+        )?;
+        m.add(
+            "SaltTypeConversion",
+            m.py().get_type::<SaltTypeConversion>(),
+        )?;
         m.add("KerberosException", m.py().get_type::<KerberosException>())?;
         m.add(
             "NullPointerDereference",
