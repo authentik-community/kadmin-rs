@@ -284,6 +284,7 @@ dependencies = [
  "getset",
  "indoc",
  "kadmin-sys",
+ "libc",
  "pyo3",
  "rand",
  "serial_test",

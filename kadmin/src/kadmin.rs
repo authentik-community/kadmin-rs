@@ -10,12 +10,13 @@ use std::{
 };
 
 use kadmin_sys::*;
+use libc::EINVAL;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 use crate::{
     context::Context,
-    conv::{c_string_to_string, dt_to_ts, dur_to_delta},
+    conv::{c_string_to_string, parse_name},
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     params::Params,
@@ -77,27 +78,21 @@ pub struct KAdmin {
 pub trait KAdminImpl {
     /// Create a principal. Not yet implemented
     #[doc(alias("ank", "addprinc"))]
-    fn add_principal(&self, _builder: &PrincipalBuilder) -> Result<()> {
-        unimplemented!();
-    }
-
-    /// Delete a principal. Not yet implemented
-    #[doc(alias = "delprinc")]
-    fn delete_principal() {
-        unimplemented!();
-    }
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()>;
 
     /// Modify a principal. Not yet implemented
     #[doc(alias = "modprinc")]
-    fn modify_principal(&self, _modifier: &PrincipalModifier) -> Result<()> {
-        unimplemented!();
-    }
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
 
     /// Rename a principal. Not yet implemented
     #[doc(alias = "renprinc")]
     fn rename_principal() {
         unimplemented!();
     }
+
+    /// Delete a principal. Not yet implemented
+    #[doc(alias = "delprinc")]
+    fn delete_principal(&self, name: &str) -> Result<()>;
 
     /// Retrieve a principal
     ///
@@ -134,6 +129,12 @@ pub trait KAdminImpl {
     /// Don't use this method directly. Instead, use [`Principal::change_password`]
     #[doc(alias = "cpw")]
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
+
+    /// Not yet implemented
+    // TODO: keysalts
+    // TODO: add returning newly created keys
+    #[doc(alias = "randkey")]
+    fn principal_randkey(&self, _name: &str, _keepold: Option<bool>) -> Result<()>;
 
     /// List principals
     ///
@@ -232,34 +233,13 @@ impl KAdmin {
 
 impl KAdminImpl for KAdmin {
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
-        let mut entry = _kadm5_principal_ent_t::default();
+        let mut entry = builder.make_entry(&self.context)?;
         let mut mask = builder.mask;
 
-        let name = CString::new(builder.name.clone())?;
-        let code = unsafe {
-            krb5_parse_name(
-                self.context.context,
-                name.as_ptr().cast_mut(),
-                &mut entry.principal,
-            )
-        };
-        krb5_error_code_escape_hatch(&self.context, code)?;
-
-        if let Some(expire_time) = builder.expire_time {
-            entry.princ_expire_time = dt_to_ts(expire_time)?;
-        }
-        if let Some(password_expiration) = builder.password_expiration {
-            entry.pw_expiration = dt_to_ts(password_expiration)?;
-        }
-        if let Some(max_life) = builder.max_life {
-            entry.max_life = dur_to_delta(max_life)?;
-        }
-        if let Some(attributes) = builder.attributes {
-            entry.attributes = attributes.bits();
-        }
-        // TODO: policy
-        if let Some(max_renewable_life) = builder.max_renewable_life {
-            entry.max_renewable_life = dur_to_delta(max_renewable_life)?;
+        if let Some(policy) = &builder.policy {
+            if policy.is_none() {
+                mask &= !(KADM5_POLICY_CLR as i64);
+            }
         }
 
         let prepare_dummy_pass = || {
@@ -270,6 +250,8 @@ impl KAdminImpl for KAdmin {
             }
             CString::new(dummy_pass)
         };
+
+        let mut old_style_randkey = false;
 
         let pass = match &builder.key {
             PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
@@ -287,8 +269,50 @@ impl KAdminImpl for KAdmin {
             null_mut()
         };
 
+        if builder.key == PrincipalBuilderKey::OldStyleRandKey {
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
+            mask |= KADM5_ATTRIBUTES as i64;
+            old_style_randkey = true;
+        }
+
+        mask |= KADM5_PRINCIPAL as i64;
         let code =
-            unsafe { kadm5_create_principal(self.server_handle, &mut entry, mask, raw_pass) };
+            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) };
+        let code = if code == EINVAL.into() && builder.key == PrincipalBuilderKey::RandKey {
+            let pass = prepare_dummy_pass()?;
+            let raw_pass = pass.as_ptr().cast_mut();
+            // The server doesn't support randkey creation. Create the principal with a dummy
+            // password and disallow tickets.
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
+            mask |= KADM5_ATTRIBUTES as i64;
+            old_style_randkey = true;
+            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+        } else {
+            code
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        if old_style_randkey {
+            self.principal_randkey(&builder.name, None)?;
+            entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as i32);
+            mask = KADM5_ATTRIBUTES as i64;
+            let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, mask) };
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
+        }
+
+        Ok(())
+    }
+
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
+        let mut entry = modifier.make_entry(&self.context)?;
+        let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, modifier.mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn delete_principal(&self, name: &str) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let code = unsafe { kadm5_delete_principal(self.server_handle, princ.raw) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
@@ -302,6 +326,11 @@ impl KAdminImpl for KAdmin {
                 name.as_ptr().cast_mut(),
                 &mut temp_princ,
             )
+        };
+        krb5_error_code_escape_hatch(&self.context, code)?;
+        let mut canon = null_mut();
+        let code = unsafe {
+            krb5_unparse_name(self.context.context, temp_princ, &mut canon)
         };
         krb5_error_code_escape_hatch(&self.context, code)?;
         let mut principal_ent = _kadm5_principal_ent_t::default();
@@ -327,23 +356,31 @@ impl KAdminImpl for KAdmin {
     }
 
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
-        let mut temp_princ = null_mut();
-        let name = CString::new(name)?;
         let password = CString::new(password)?;
+        let princ = parse_name(&self.context, name)?;
         let code = unsafe {
-            krb5_parse_name(
-                self.context.context,
-                name.as_ptr().cast_mut(),
-                &mut temp_princ,
-            )
+            kadm5_chpass_principal(self.server_handle, princ.raw, password.as_ptr().cast_mut())
         };
-        krb5_error_code_escape_hatch(&self.context, code)?;
-        let code = unsafe {
-            kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut())
-        };
-        unsafe {
-            krb5_free_principal(self.context.context, temp_princ);
-        }
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn principal_randkey(&self, name: &str, keepold: Option<bool>) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let keepold = keepold.unwrap_or(false);
+
+        let code = unsafe { kadm5_randkey_principal_3(
+            self.server_handle, 
+            princ.raw,
+            keepold as u32,
+            0, null_mut(), null_mut(), null_mut(),
+        ) };
+
+        // TODO: keysalts
+        let code = if code == KADM5_RPC_ERROR as i64 && !keepold {
+            unsafe { kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut()) }
+        } else { code };
+
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }

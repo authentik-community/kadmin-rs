@@ -24,15 +24,23 @@ use crate::{
     kadmin::{KAdminApiVersion, KAdminImpl},
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
-    principal::Principal,
+    principal::{Principal, PrincipalBuilder, PrincipalModifier},
 };
 
 /// Operations from [`KAdminImpl`]
 enum KAdminOperation {
+    /// See [`KAdminImpl::add_principal`]
+    AddPrincipal(PrincipalBuilder, Sender<Result<()>>),
+    /// See [`KAdminImpl::modify_principal`]
+    ModifyPrincipal(PrincipalModifier, Sender<Result<()>>),
+    /// See [`KAdminImpl::modify_principal`]
+    DeletePrincipal(String, Sender<Result<()>>),
     /// See [`KAdminImpl::get_principal`]
     GetPrincipal(String, Sender<Result<Option<Principal>>>),
     /// See [`KAdminImpl::principal_change_password`]
     PrincipalChangePassword(String, String, Sender<Result<()>>),
+    /// See [`KAdminImpl::principal_randkey`]
+    PrincipalRandkey(String, Option<bool>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
     /// See [`KAdminImpl::add_policy`]
@@ -53,11 +61,23 @@ impl KAdminOperation {
     fn handle(&self, kadmin: &crate::kadmin::KAdmin) {
         match self {
             Self::Exit => (),
+            Self::AddPrincipal(builder, sender) => {
+                let _ = sender.send(kadmin.add_principal(builder));
+            }
+            Self::ModifyPrincipal(modifier, sender) => {
+                let _ = sender.send(kadmin.modify_principal(modifier));
+            }
+            Self::DeletePrincipal(name, sender) => {
+                let _ = sender.send(kadmin.delete_principal(name));
+            }
             Self::GetPrincipal(name, sender) => {
                 let _ = sender.send(kadmin.get_principal(name));
             }
             Self::PrincipalChangePassword(name, password, sender) => {
                 let _ = sender.send(kadmin.principal_change_password(name, password));
+            }
+            Self::PrincipalRandkey(name, keepold, sender) => {
+                let _ = sender.send(kadmin.principal_randkey(name, *keepold));
             }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
@@ -117,6 +137,26 @@ impl KAdmin {
 }
 
 impl KAdminImpl for KAdmin {
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner.op_sender.send(KAdminOperation::AddPrincipal(builder.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner.op_sender.send(KAdminOperation::ModifyPrincipal(modifier.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn delete_principal(&self, name: &str) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::DeletePrincipal(name.to_owned(), sender))?;
+        receiver.recv()?
+    }
+
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let (sender, receiver) = channel();
         self.inner
@@ -132,6 +172,18 @@ impl KAdminImpl for KAdmin {
             .send(KAdminOperation::PrincipalChangePassword(
                 name.to_owned(),
                 password.to_owned(),
+                sender,
+            ))?;
+        receiver.recv()?
+    }
+
+    fn principal_randkey(&self, name: &str, keepold: Option<bool>) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::PrincipalRandkey(
+                name.to_owned(),
+                keepold,
                 sender,
             ))?;
         receiver.recv()?

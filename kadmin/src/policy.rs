@@ -393,7 +393,7 @@ macro_rules! policy_doer_impl {
                 None
             };
             let tl_data = if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
-                // We store the raw data in PolicyEntryRaw
+                //  We store the raw data in PolicyEntryRaw
                 let mut tl_data = unsafe { self.tl_data.to_raw() };
                 if let Some(ref mut tl_data) = &mut tl_data {
                     policy.n_tl_data = self.tl_data.entries.len() as i16;

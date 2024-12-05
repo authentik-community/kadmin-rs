@@ -25,6 +25,7 @@ either = { version = "1.13", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
 kadmin-sys = { path = "../kadmin-sys", version = "0.2.1", default-features = false }
+libc = "0.2"
 pyo3 = { version = "0.23", features = [
   "extension-module",
   "chrono",

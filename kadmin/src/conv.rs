@@ -1,6 +1,6 @@
 //! Conversion utilities
 
-use std::{ffi::CStr, os::raw::c_char, ptr::null_mut, time::Duration};
+use std::{ffi::{CString, CStr}, os::raw::c_char, ptr::null_mut, time::Duration};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
@@ -71,4 +71,39 @@ pub(crate) fn unparse_name(context: &Context, principal: krb5_principal) -> Resu
         krb5_free_unparsed_name(context.context, raw_name);
     }
     Ok(Some(name))
+}
+
+pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedName<'a>> {
+    let name = CString::new(name)?;
+    let mut parsed_name = ParsedName {
+        raw: null_mut(),
+        context,
+    };
+
+    let code = unsafe {
+        krb5_parse_name(
+            context.context,
+            name.as_ptr().cast_mut(),
+            &mut parsed_name.raw,
+        )
+    };
+    krb5_error_code_escape_hatch(context, code)?;
+    let mut canon = null_mut();
+    let code = unsafe {
+        krb5_unparse_name(context.context, parsed_name.raw, &mut canon)
+    };
+    krb5_error_code_escape_hatch(context, code)?;
+    Ok(parsed_name)
+}
+
+pub(crate) struct ParsedName<'a> {
+    pub(crate) raw: krb5_principal,
+    context: &'a Context,
+}
+
+impl Drop for ParsedName<'_> {
+    fn drop(&mut self) {
+        if self.raw.is_null() { return; }
+        unsafe { krb5_free_principal(self.context.context, self.raw) }
+    }
 }
