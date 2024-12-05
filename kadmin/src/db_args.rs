@@ -5,7 +5,10 @@ use std::{ffi::CString, os::raw::c_char, ptr::null_mut};
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
-use crate::error::Result;
+use crate::{
+    error::Result,
+    tl_data::{TlData, TlDataEntry},
+};
 
 /// Database specific arguments
 ///
@@ -69,6 +72,21 @@ impl Default for DbArgs {
     /// Construct an empty [`DbArgs`]
     fn default() -> Self {
         Self::builder().build().unwrap()
+    }
+}
+
+impl From<&DbArgs> for TlData {
+    fn from(db_args: &DbArgs) -> Self {
+        Self {
+            entries: db_args
+                ._origin_args
+                .iter()
+                .map(|arg| TlDataEntry {
+                    data_type: 0,
+                    contents: arg.to_bytes_with_nul().to_vec(),
+                })
+                .collect(),
+        }
     }
 }
 

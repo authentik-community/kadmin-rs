@@ -245,7 +245,10 @@ impl KAdmin {
                 builder = builder.keysalts(&keysalts.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                builder = builder.tl_data(tl_data.extract::<TlData>()?);
+                builder = builder.tl_data(tl_data.extract()?);
+            }
+            if let Some(db_args) = kwargs.get_item("db_args")? {
+                builder = builder.db_args(db_args.extract()?);
             }
         }
         Ok(builder.create(self)?)
@@ -341,7 +344,7 @@ impl KAdmin {
                 builder = builder.allowed_keysalts(allowed_keysalts.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                builder = builder.tl_data(tl_data.extract::<TlData>()?);
+                builder = builder.tl_data(tl_data.extract()?);
             }
         }
         Ok(builder.create(self)?)
@@ -462,6 +465,9 @@ impl Principal {
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 modifier = modifier.tl_data(tl_data.extract()?);
+            }
+            if let Some(db_args) = kwargs.get_item("db_args")? {
+                modifier = modifier.db_args(db_args.extract()?);
             }
             Ok(modifier.modify(kadmin)?)
         } else {

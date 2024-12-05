@@ -12,6 +12,7 @@ use pyo3::prelude::*;
 use crate::{
     context::Context,
     conv::{c_string_to_string, delta_to_dur, dt_to_ts, dur_to_delta, ts_to_dt, unparse_name},
+    db_args::DbArgs,
     error::{Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
     keysalt::KeySalts,
@@ -276,6 +277,7 @@ macro_rules! principal_doer_struct {
             pub(crate) max_renewable_life: Option<Option<Duration>>,
             pub(crate) fail_auth_count: Option<u32>,
             pub(crate) tl_data: Option<TlData>,
+            pub(crate) db_args: Option<DbArgs>,
             $($manual_fields)*
         }
     }
@@ -361,6 +363,13 @@ macro_rules! principal_doer_impl {
             self
         }
 
+        /// Database specific arguments
+        pub fn db_args(mut self, db_args: DbArgs) -> Self {
+            self.db_args = Some(db_args);
+            self.mask |= KADM5_TL_DATA as i64;
+            self
+        }
+
         /// Create a [`_kadm5_principal_ent_t`] from this builder
         pub(crate) fn make_entry<'a>(&self, context: &'a Context) -> Result<PrincipalEntryRaw<'a>> {
             let mut entry = _kadm5_principal_ent_t::default();
@@ -395,7 +404,16 @@ macro_rules! principal_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 entry.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
-            let tl_data = if let Some(tl_data) = &self.tl_data {
+            let tl_data = if let Some(db_args) = &self.db_args {
+                let mut tl_data: TlData = db_args.into();
+                if let Some(entry_tl_data) = &self.tl_data {
+                    tl_data.entries.extend_from_slice(&entry_tl_data.entries);
+                }
+                &Some(tl_data)
+            } else {
+                &self.tl_data
+            };
+            let tl_data = if let Some(tl_data) = tl_data {
                 //  We store the raw data in PolicyEntryRaw
                 let mut raw_tl_data = tl_data.to_raw();
                 if let Some(ref mut raw_tl_data) = &mut raw_tl_data {
@@ -487,7 +505,6 @@ impl PrincipalBuilder {
     }
 
     /// Create the principal
-    // TODO: add db_args
     pub fn create<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
         kadmin.add_principal(self)?;
         Ok(kadmin.get_principal(&self.name)?.unwrap())
@@ -527,7 +544,6 @@ impl PrincipalModifier {
     /// Modify the principal
     ///
     /// A new up-to-date instance of [`Principal`] is returned, but the old one is still available
-    // TODO: add db_args
     pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
         kadmin.modify_principal(self)?;
         Ok(kadmin.get_principal(&self.name)?.unwrap())
