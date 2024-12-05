@@ -271,10 +271,7 @@ macro_rules! principal_doer_impl {
         }
 
         /// Create a [`_kadm5_principal_ent_t`] from this builder
-        pub(crate) fn make_entry<'a>(
-            &self,
-            context: &'a Context,
-        ) -> Result<PrincipalEntryRaw<'a>> {
+        pub(crate) fn make_entry<'a>(&self, context: &'a Context) -> Result<PrincipalEntryRaw<'a>> {
             let mut entry = _kadm5_principal_ent_t::default();
 
             if let Some(expire_time) = self.expire_time {

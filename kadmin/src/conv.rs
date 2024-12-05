@@ -1,6 +1,11 @@
 //! Conversion utilities
 
-use std::{ffi::{CString, CStr}, os::raw::c_char, ptr::null_mut, time::Duration};
+use std::{
+    ffi::{CStr, CString},
+    os::raw::c_char,
+    ptr::null_mut,
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
@@ -89,9 +94,7 @@ pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedN
     };
     krb5_error_code_escape_hatch(context, code)?;
     let mut canon = null_mut();
-    let code = unsafe {
-        krb5_unparse_name(context.context, parsed_name.raw, &mut canon)
-    };
+    let code = unsafe { krb5_unparse_name(context.context, parsed_name.raw, &mut canon) };
     krb5_error_code_escape_hatch(context, code)?;
     Ok(parsed_name)
 }
@@ -103,7 +106,9 @@ pub(crate) struct ParsedName<'a> {
 
 impl Drop for ParsedName<'_> {
     fn drop(&mut self) {
-        if self.raw.is_null() { return; }
+        if self.raw.is_null() {
+            return;
+        }
         unsafe { krb5_free_principal(self.context.context, self.raw) }
     }
 }

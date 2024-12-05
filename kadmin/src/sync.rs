@@ -33,7 +33,9 @@ enum KAdminOperation {
     AddPrincipal(PrincipalBuilder, Sender<Result<()>>),
     /// See [`KAdminImpl::modify_principal`]
     ModifyPrincipal(PrincipalModifier, Sender<Result<()>>),
-    /// See [`KAdminImpl::modify_principal`]
+    /// See [`KAdminImpl::rename_principal`]
+    RenamePrincipal(String, String, Sender<Result<()>>),
+    /// See [`KAdminImpl::delete_principal`]
     DeletePrincipal(String, Sender<Result<()>>),
     /// See [`KAdminImpl::get_principal`]
     GetPrincipal(String, Sender<Result<Option<Principal>>>),
@@ -66,6 +68,9 @@ impl KAdminOperation {
             }
             Self::ModifyPrincipal(modifier, sender) => {
                 let _ = sender.send(kadmin.modify_principal(modifier));
+            }
+            Self::RenamePrincipal(old_name, new_name, sender) => {
+                let _ = sender.send(kadmin.rename_principal(old_name, new_name));
             }
             Self::DeletePrincipal(name, sender) => {
                 let _ = sender.send(kadmin.delete_principal(name));
@@ -139,13 +144,27 @@ impl KAdmin {
 impl KAdminImpl for KAdmin {
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
         let (sender, receiver) = channel();
-        self.inner.op_sender.send(KAdminOperation::AddPrincipal(builder.clone(), sender))?;
+        self.inner
+            .op_sender
+            .send(KAdminOperation::AddPrincipal(builder.clone(), sender))?;
         receiver.recv()?
     }
 
     fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
         let (sender, receiver) = channel();
-        self.inner.op_sender.send(KAdminOperation::ModifyPrincipal(modifier.clone(), sender))?;
+        self.inner
+            .op_sender
+            .send(KAdminOperation::ModifyPrincipal(modifier.clone(), sender))?;
+        receiver.recv()?
+    }
+
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner.op_sender.send(KAdminOperation::RenamePrincipal(
+            old_name.to_owned(),
+            new_name.to_owned(),
+            sender,
+        ))?;
         receiver.recv()?
     }
 

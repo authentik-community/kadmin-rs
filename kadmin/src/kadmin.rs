@@ -86,9 +86,7 @@ pub trait KAdminImpl {
 
     /// Rename a principal. Not yet implemented
     #[doc(alias = "renprinc")]
-    fn rename_principal() {
-        unimplemented!();
-    }
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
 
     /// Delete a principal. Not yet implemented
     #[doc(alias = "delprinc")]
@@ -305,7 +303,17 @@ impl KAdminImpl for KAdmin {
 
     fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
         let mut entry = modifier.make_entry(&self.context)?;
-        let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, modifier.mask) };
+        let code =
+            unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, modifier.mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        let old_princ = parse_name(&self.context, old_name)?;
+        let new_princ = parse_name(&self.context, new_name)?;
+        let code =
+            unsafe { kadm5_rename_principal(self.server_handle, old_princ.raw, new_princ.raw) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
@@ -329,9 +337,7 @@ impl KAdminImpl for KAdmin {
         };
         krb5_error_code_escape_hatch(&self.context, code)?;
         let mut canon = null_mut();
-        let code = unsafe {
-            krb5_unparse_name(self.context.context, temp_princ, &mut canon)
-        };
+        let code = unsafe { krb5_unparse_name(self.context.context, temp_princ, &mut canon) };
         krb5_error_code_escape_hatch(&self.context, code)?;
         let mut principal_ent = _kadm5_principal_ent_t::default();
         let code = unsafe {
@@ -369,17 +375,26 @@ impl KAdminImpl for KAdmin {
         let princ = parse_name(&self.context, name)?;
         let keepold = keepold.unwrap_or(false);
 
-        let code = unsafe { kadm5_randkey_principal_3(
-            self.server_handle, 
-            princ.raw,
-            keepold as u32,
-            0, null_mut(), null_mut(), null_mut(),
-        ) };
+        let code = unsafe {
+            kadm5_randkey_principal_3(
+                self.server_handle,
+                princ.raw,
+                keepold as u32,
+                0,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+            )
+        };
 
         // TODO: keysalts
         let code = if code == KADM5_RPC_ERROR as i64 && !keepold {
-            unsafe { kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut()) }
-        } else { code };
+            unsafe {
+                kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut())
+            }
+        } else {
+            code
+        };
 
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
