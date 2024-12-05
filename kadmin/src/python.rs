@@ -238,6 +238,9 @@ impl KAdmin {
                 let key = key.extract::<PyPrincipalBuilderKey>()?;
                 builder = builder.key(&key.into());
             }
+            if let Some(keysalts) = kwargs.get_item("keysalts")? {
+                builder = builder.keysalts(&keysalts.extract()?);
+            }
         }
         Ok(builder.create(self)?)
     }
@@ -262,9 +265,9 @@ impl KAdmin {
         self.principal_exists(name)
     }
 
-    #[pyo3(name = "principal_change_password")]
-    fn py_principal_change_password(&self, name: &str, password: &str) -> Result<()> {
-        self.principal_change_password(name, password)
+    #[pyo3(name = "principal_change_password", signature = (name, password, keepold = None, keysalts = None))]
+    fn py_principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        self.principal_change_password(name, password, keepold, keysalts)
     }
 
     #[pyo3(name = "principal_randkey", signature = (name, keepold = None, keysalts = None))]
@@ -448,9 +451,9 @@ impl Principal {
         self.delete(kadmin)
     }
 
-    #[pyo3(name = "change_password")]
-    fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
-        self.change_password(kadmin, password)
+    #[pyo3(name = "change_password", signature = (kadmin, password, keepold = None, keysalts = None))]
+    fn py_change_password(&self, kadmin: &KAdmin, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        self.change_password(kadmin, password, keepold, keysalts)
     }
 
     #[pyo3(name = "randkey", signature = (kadmin, keepold = None, keysalts = None))]

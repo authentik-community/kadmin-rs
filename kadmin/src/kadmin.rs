@@ -127,7 +127,7 @@ pub trait KAdminImpl {
     ///
     /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
     #[doc(alias = "cpw")]
-    fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
+    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()>;
 
     /// Not yet implemented
     // TODO: add returning newly created keys
@@ -278,9 +278,17 @@ impl KAdminImpl for KAdmin {
             old_style_randkey = true;
         }
 
+        let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else { (0, null_mut() )};
+
         mask |= KADM5_PRINCIPAL as i64;
-        let code =
-            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) };
+        let code = if keysalts.is_none() {
+            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+        } else {
+            unsafe { kadm5_create_principal_3(self.server_handle, &mut entry.raw, mask, n_ks_tuple, ks_tuple, raw_pass) }
+        };
         let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
             let pass = prepare_dummy_pass()?;
             let raw_pass = pass.as_ptr().cast_mut();
@@ -289,15 +297,18 @@ impl KAdminImpl for KAdmin {
             entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
             mask |= KADM5_ATTRIBUTES as i64;
             old_style_randkey = true;
-            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+            if keysalts.is_none() {
+                unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+            } else {
+                unsafe { kadm5_create_principal_3(self.server_handle, &mut entry.raw, mask, n_ks_tuple, ks_tuple, raw_pass) }
+            }
         } else {
             code
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
 
         if old_style_randkey {
-            // TODO: keysalts
-            self.principal_randkey(&builder.name, None, None)?;
+            self.principal_randkey(&builder.name, None, builder.keysalts.as_ref())?;
             entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as i32);
             mask = KADM5_ATTRIBUTES as i64;
             let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, mask) };
@@ -367,13 +378,27 @@ impl KAdminImpl for KAdmin {
         Ok(Some(principal))
     }
 
-    fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
+    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
         let password = CString::new(password)?;
         let princ = parse_name(&self.context, name)?;
-        let code = unsafe {
-            kadm5_chpass_principal(self.server_handle, princ.raw, password.as_ptr().cast_mut())
+
+        let keepold = keepold.unwrap_or(false);
+        let mut keysalts = keysalts.map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else { (0, null_mut() )};
+
+        let code = if keepold || keysalts.is_some() {
+            unsafe {
+                kadm5_chpass_principal_3(self.server_handle, princ.raw, keepold as krb5_boolean, n_ks_tuple, ks_tuple, password.as_ptr().cast_mut())
+            }
+        } else {
+            unsafe {
+                kadm5_chpass_principal(self.server_handle, princ.raw, password.as_ptr().cast_mut())
+            }
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
+
         Ok(())
     }
 
@@ -390,7 +415,7 @@ impl KAdminImpl for KAdmin {
             kadm5_randkey_principal_3(
                 self.server_handle,
                 princ.raw,
-                keepold as u32,
+                keepold as krb5_boolean,
                 n_ks_tuple,
                 ks_tuple,
                 null_mut(),

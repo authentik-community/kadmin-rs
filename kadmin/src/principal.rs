@@ -173,9 +173,8 @@ impl Principal {
     }
 
     /// Change the password of the principal
-    // TODO: add keysalt
-    pub fn change_password<K: KAdminImpl>(&self, kadmin: &K, password: &str) -> Result<()> {
-        kadmin.principal_change_password(&self.name, password)
+    pub fn change_password<K: KAdminImpl>(&self, kadmin: &K, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        kadmin.principal_change_password(&self.name, password, keepold, keysalts)
     }
 
     /// Set the key of the principal to a random value
@@ -332,6 +331,7 @@ principal_doer_struct!(
     #[derive(Clone, Debug, Default)]
     PrincipalBuilder {
         pub(crate) key: PrincipalBuilderKey,
+        pub(crate) keysalts: Option<KeySalts>,
     }
 );
 
@@ -357,6 +357,12 @@ impl PrincipalBuilder {
     /// See [`PrincipalBuilderKey`] for the default value
     pub fn key(mut self, key: &PrincipalBuilderKey) -> Self {
         self.key = key.clone();
+        self
+    }
+
+    /// Use the specified keysalt list for setting the keys of the principal
+    pub fn keysalts(mut self, keysalts: &KeySalts) -> Self {
+        self.keysalts = Some(keysalts.clone());
         self
     }
 

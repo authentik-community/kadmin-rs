@@ -41,7 +41,7 @@ enum KAdminOperation {
     /// See [`KAdminImpl::get_principal`]
     GetPrincipal(String, Sender<Result<Option<Principal>>>),
     /// See [`KAdminImpl::principal_change_password`]
-    PrincipalChangePassword(String, String, Sender<Result<()>>),
+    PrincipalChangePassword(String, String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
     /// See [`KAdminImpl::principal_randkey`]
     PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
@@ -79,8 +79,8 @@ impl KAdminOperation {
             Self::GetPrincipal(name, sender) => {
                 let _ = sender.send(kadmin.get_principal(name));
             }
-            Self::PrincipalChangePassword(name, password, sender) => {
-                let _ = sender.send(kadmin.principal_change_password(name, password));
+            Self::PrincipalChangePassword(name, password, keepold, keysalts, sender) => {
+                let _ = sender.send(kadmin.principal_change_password(name, password, *keepold, keysalts.as_ref()));
             }
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
@@ -185,13 +185,15 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
+    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
             .send(KAdminOperation::PrincipalChangePassword(
                 name.to_owned(),
                 password.to_owned(),
+                keepold,
+                keysalts.cloned(),
                 sender,
             ))?;
         receiver.recv()?
