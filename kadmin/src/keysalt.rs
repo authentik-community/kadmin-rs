@@ -217,14 +217,14 @@ pub struct KeySalts {
     pub keysalts: HashSet<KeySalt>,
 }
 
-impl TryFrom<KeySalts> for String {
+impl TryFrom<&KeySalts> for String {
     type Error = Error;
 
-    fn try_from(ksl: KeySalts) -> Result<Self> {
+    fn try_from(ksl: &KeySalts) -> Result<Self> {
         Ok(ksl
             .keysalts
-            .into_iter()
-            .map(|ks| ks.try_into())
+            .iter()
+            .map(|ks| (*ks).try_into())
             .collect::<Result<Vec<String>>>()?
             .join(","))
     }
@@ -245,8 +245,8 @@ impl KeySalts {
         Ok(Self { keysalts })
     }
 
-    // TODO: impl
     pub(crate) fn to_cstring(&self) -> Result<CString> {
-        Ok(CString::new("")?)
+        let s: String = self.try_into()?;
+        Ok(CString::new(s)?)
     }
 }
