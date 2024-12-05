@@ -15,6 +15,7 @@ use crate::{
     error::{Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
     keysalt::KeySalts,
+    tl_data::{TlData, TlDataEntry, TlDataRaw},
 };
 
 bitflags! {
@@ -106,8 +107,10 @@ pub struct Principal {
     last_failed: Option<DateTime<Utc>>,
     /// Number of failed authentication attempts
     fail_auth_count: u32,
+    /// TL-data
+    #[getset(skip)]
+    tl_data: TlData,
     // TODO: key_data
-    // TODO: tl_data
 }
 
 impl Principal {
@@ -134,6 +137,7 @@ impl Principal {
             last_success: ts_to_dt(entry.last_success)?,
             last_failed: ts_to_dt(entry.last_failed)?,
             fail_auth_count: entry.fail_auth_count,
+            tl_data: TlData::from_raw(entry.n_tl_data, entry.tl_data),
         })
     }
 
@@ -150,6 +154,11 @@ impl Principal {
     /// Associated policy
     pub fn policy(&self) -> Option<&str> {
         self.policy.as_deref()
+    }
+
+    /// TL-data
+    pub fn tl_data(&self) -> &TlData {
+        &self.tl_data
     }
 
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`
@@ -202,6 +211,8 @@ impl Principal {
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
     ///   except perhaps for krbtgt principals. Defaults to false
     /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// Note that principal data will have changed after this, so you may need to refresh it
     pub fn change_password<K: KAdminImpl>(
         &self,
         kadmin: &K,
@@ -217,6 +228,8 @@ impl Principal {
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
     ///   except perhaps for krbtgt principals. Defaults to false
     /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// Note that principal data will have changed after this, so you may need to refresh it
     pub fn randkey<K: KAdminImpl>(
         &self,
         kadmin: &K,
@@ -224,6 +237,24 @@ impl Principal {
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         kadmin.principal_randkey(&self.name, keepold, keysalts)
+    }
+
+    /// Unlocks a locked principal (one which has received too many failed authentication attempts
+    /// without enough time between them according to its password policy) so that it can
+    /// successfully authenticate
+    ///
+    /// Note that principal data will have changed after this, so you may need to refresh it
+    pub fn unlock<K: KAdminImpl>(&self, kadmin: &K) -> Result<()> {
+        self.modifier()
+            .fail_auth_count(0)
+            .tl_data(TlData {
+                entries: vec![TlDataEntry {
+                    data_type: KRB5_TL_LAST_ADMIN_UNLOCK as i16,
+                    contents: dt_to_ts(Some(Utc::now()))?.to_le_bytes().to_vec(),
+                }],
+            })
+            .modify(kadmin)?;
+        Ok(())
     }
 }
 
@@ -243,6 +274,8 @@ macro_rules! principal_doer_struct {
             pub(crate) policy: Option<Option<String>>,
             pub(crate) aux_attributes: Option<i64>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
+            pub(crate) fail_auth_count: Option<u32>,
+            pub(crate) tl_data: Option<TlData>,
             $($manual_fields)*
         }
     }
@@ -314,6 +347,20 @@ macro_rules! principal_doer_impl {
             self
         }
 
+        /// Set the number of failed authentication attempts
+        pub fn fail_auth_count(mut self, fail_auth_count: u32) -> Self {
+            self.fail_auth_count = Some(fail_auth_count);
+            self.mask |= KADM5_FAIL_AUTH_COUNT as i64;
+            self
+        }
+
+        /// Add new TL-data
+        pub fn tl_data(mut self, tl_data: TlData) -> Self {
+            self.tl_data = Some(tl_data);
+            self.mask |= KADM5_TL_DATA as i64;
+            self
+        }
+
         /// Create a [`_kadm5_principal_ent_t`] from this builder
         pub(crate) fn make_entry<'a>(&self, context: &'a Context) -> Result<PrincipalEntryRaw<'a>> {
             let mut entry = _kadm5_principal_ent_t::default();
@@ -348,6 +395,20 @@ macro_rules! principal_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 entry.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
+            let tl_data = if let Some(tl_data) = &self.tl_data {
+                //  We store the raw data in PolicyEntryRaw
+                let mut raw_tl_data = tl_data.to_raw();
+                if let Some(ref mut raw_tl_data) = &mut raw_tl_data {
+                    entry.n_tl_data = tl_data.entries.len() as i16;
+                    entry.tl_data = &mut raw_tl_data.raw;
+                } else {
+                    entry.n_tl_data = 0;
+                    entry.tl_data = null_mut();
+                }
+                raw_tl_data
+            } else {
+                None
+            };
 
             // This is done at the end so we don't leak memory if anything else fails
             let name = CString::new(self.name.clone())?;
@@ -364,6 +425,7 @@ macro_rules! principal_doer_impl {
                 raw: entry,
                 context,
                 _raw_policy: policy,
+                _raw_tl_data: tl_data,
             })
         }
     };
@@ -458,12 +520,13 @@ impl PrincipalModifier {
         Self {
             name: principal.name.to_owned(),
             attributes: Some(principal.attributes),
-            // TODO: tl_data
             ..Default::default()
         }
     }
 
     /// Modify the principal
+    ///
+    /// A new up-to-date instance of [`Principal`] is returned, but the old one is still available
     // TODO: add db_args
     pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Principal> {
         kadmin.modify_principal(self)?;
@@ -502,6 +565,7 @@ pub(crate) struct PrincipalEntryRaw<'a> {
     pub(crate) raw: _kadm5_principal_ent_t,
     context: &'a Context,
     _raw_policy: Option<CString>,
+    _raw_tl_data: Option<TlDataRaw>,
 }
 
 impl Drop for PrincipalEntryRaw<'_> {

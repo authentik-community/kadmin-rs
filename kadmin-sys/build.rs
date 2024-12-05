@@ -32,6 +32,7 @@ fn main() {
         .allowlist_var("KRB5_OK")
         .allowlist_var("ENCTYPE_.*")
         .allowlist_var("KRB5_KDB_SALTTYPE_.*")
+        .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
         .allowlist_function("krb5_init_context")
         .allowlist_function("krb5_free_context")
         .allowlist_function("krb5_get_error_message")

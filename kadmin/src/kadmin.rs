@@ -418,7 +418,7 @@ impl KAdminImpl for KAdmin {
                 self.server_handle,
                 temp_princ,
                 &mut principal_ent,
-                KADM5_PRINCIPAL_NORMAL_MASK as i64,
+                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA | KADM5_TL_DATA) as i64,
             )
         };
         unsafe {

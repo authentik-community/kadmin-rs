@@ -234,12 +234,18 @@ impl KAdmin {
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 builder = builder.max_renewable_life(max_renewable_life.extract()?);
             }
+            if let Some(fail_auth_count) = kwargs.get_item("fail_auth_count")? {
+                builder = builder.fail_auth_count(fail_auth_count.extract()?);
+            }
             if let Some(key) = kwargs.get_item("key")? {
                 let key = key.extract::<PyPrincipalBuilderKey>()?;
                 builder = builder.key(&key.into());
             }
             if let Some(keysalts) = kwargs.get_item("keysalts")? {
                 builder = builder.keysalts(&keysalts.extract()?);
+            }
+            if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                builder = builder.tl_data(tl_data.extract::<TlData>()?);
             }
         }
         Ok(builder.create(self)?)
@@ -451,6 +457,12 @@ impl Principal {
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
             }
+            if let Some(fail_auth_count) = kwargs.get_item("fail_auth_count")? {
+                modifier = modifier.fail_auth_count(fail_auth_count.extract()?);
+            }
+            if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                modifier = modifier.tl_data(tl_data.extract()?);
+            }
             Ok(modifier.modify(kadmin)?)
         } else {
             Ok(self.clone())
@@ -481,6 +493,11 @@ impl Principal {
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         self.randkey(kadmin, keepold, keysalts)
+    }
+
+    #[pyo3(name = "unlock")]
+    fn py_unlock(&self, kadmin: &KAdmin) -> Result<()> {
+        self.unlock(kadmin)
     }
 }
 

@@ -18,7 +18,7 @@ pub struct TlDataEntry {
 }
 
 /// TL-data entries
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 #[allow(clippy::exhaustive_structs)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlData {
@@ -52,12 +52,7 @@ impl TlData {
     /// Create a [`_krb5_tl_data`] from [`TlData`]
     ///
     /// Returns None if there are not TL-data.
-    ///
-    /// # Safety
-    ///
-    /// The element in the second position of the returned tuple needs to live as long as
-    /// [`_krb5_tl_data`] lives
-    pub(crate) unsafe fn to_raw(&self) -> Option<TlDataRaw> {
+    pub(crate) fn to_raw(&self) -> Option<TlDataRaw> {
         if self.entries.is_empty() {
             return None;
         }
