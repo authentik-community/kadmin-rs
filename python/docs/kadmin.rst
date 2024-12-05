@@ -306,7 +306,7 @@ kadmin
 
       Only available in :py:class:`version<KAdminApiVersion>` 4 and above
 
-      :type: KeySaltList | None
+      :type: KeySalts | None
 
    .. py:attribute:: tl_data
 
@@ -498,7 +498,7 @@ kadmin
 
       :type: SaltType
 
-.. py:class:: KeySaltList(keysalts)
+.. py:class:: KeySalts(keysalts)
 
    Kerberos keysalt list
 

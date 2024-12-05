@@ -70,7 +70,7 @@ class Policy:
     attributes: int
     max_life: datetime.timedelta | None
     max_renewable_life: datetime.timedelta | None
-    allowed_keysalts: KeySaltList | None
+    allowed_keysalts: KeySalts | None
     tl_data: TlData
 
     def modify(self, kadmin: KAdmin, **kwargs) -> Policy: ...
@@ -147,7 +147,7 @@ class KeySalt:
     def __init__(self, enctype: EncryptionType, salttype: SaltType | None): ...
 
 @final
-class KeySaltList:
+class KeySalts:
     keysalts: set[KeySalt]
 
     def __init__(self, keysalts: set[KeySalt]): ...

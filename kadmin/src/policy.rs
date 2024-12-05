@@ -10,7 +10,7 @@ use crate::{
     conv::{c_string_to_string, delta_to_dur, dur_to_delta},
     error::Result,
     kadmin::KAdminImpl,
-    keysalt_list::KeySaltList,
+    keysalt::KeySalts,
     tl_data::{TlData, TlDataEntry, TlDataRaw},
 };
 
@@ -71,7 +71,7 @@ pub struct Policy {
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     #[getset(skip)]
-    allowed_keysalts: Option<KeySaltList>,
+    allowed_keysalts: Option<KeySalts>,
     /// TL-data
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
@@ -97,7 +97,7 @@ impl Policy {
             max_life: delta_to_dur(entry.max_life.into()),
             max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
             allowed_keysalts: if !entry.allowed_keysalts.is_null() {
-                Some(KeySaltList::from_str(&c_string_to_string(
+                Some(KeySalts::from_str(&c_string_to_string(
                     entry.allowed_keysalts,
                 )?)?)
             } else {
@@ -113,7 +113,7 @@ impl Policy {
     }
 
     /// Allowed keysalts
-    pub fn allowed_keysalts(&self) -> Option<&KeySaltList> {
+    pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
         self.allowed_keysalts.as_ref()
     }
 
@@ -194,7 +194,7 @@ macro_rules! policy_doer_struct {
             pub(crate) attributes: Option<i32>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
-            pub(crate) allowed_keysalts: Option<Option<KeySaltList>>,
+            pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
             pub(crate) tl_data: TlData,
             $($manual_fields)*
         }
@@ -315,7 +315,7 @@ macro_rules! policy_doer_impl {
         /// Set the allowed keysalts
         ///
         /// Pass `None` to clear it. Defaults to not set
-        pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySaltList>) -> Self {
+        pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
             self.allowed_keysalts = Some(allowed_keysalts);
             self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as i64;
             self

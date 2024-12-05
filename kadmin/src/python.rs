@@ -12,7 +12,7 @@ use crate::{
     db_args::DbArgs,
     error::Result,
     kadmin::{KAdminApiVersion, KAdminImpl},
-    keysalt_list::{EncryptionType, KeySalt, KeySaltList, SaltType},
+    keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
     policy::Policy,
     principal::Principal,
@@ -31,7 +31,7 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EncryptionType>()?;
     m.add_class::<SaltType>()?;
     m.add_class::<KeySalt>()?;
-    m.add_class::<KeySaltList>()?;
+    m.add_class::<KeySalts>()?;
     m.add_class::<KAdmin>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
@@ -155,7 +155,7 @@ impl KeySalt {
 }
 
 #[pymethods]
-impl KeySaltList {
+impl KeySalts {
     #[new]
     fn py_new(keysalts: HashSet<KeySalt>) -> Self {
         Self { keysalts }

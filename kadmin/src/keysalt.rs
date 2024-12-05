@@ -212,15 +212,15 @@ impl TryFrom<KeySalt> for String {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(clippy::exhaustive_structs)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
-pub struct KeySaltList {
+pub struct KeySalts {
     /// Keysalt list
     pub keysalts: HashSet<KeySalt>,
 }
 
-impl TryFrom<KeySaltList> for String {
+impl TryFrom<KeySalts> for String {
     type Error = Error;
 
-    fn try_from(ksl: KeySaltList) -> Result<Self> {
+    fn try_from(ksl: KeySalts) -> Result<Self> {
         Ok(ksl
             .keysalts
             .into_iter()
@@ -230,7 +230,7 @@ impl TryFrom<KeySaltList> for String {
     }
 }
 
-impl KeySaltList {
+impl KeySalts {
     pub(crate) fn from_str(s: &str) -> Result<Self> {
         let mut keysalts = HashSet::new();
         for ks in s.split([',', ' ', '\t']) {
@@ -245,6 +245,7 @@ impl KeySaltList {
         Ok(Self { keysalts })
     }
 
+    // TODO: impl
     pub(crate) fn to_cstring(&self) -> Result<CString> {
         Ok(CString::new("")?)
     }
