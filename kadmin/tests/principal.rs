@@ -71,10 +71,10 @@ macro_rules! gen_tests {
             let kadmin = KAdmin::builder()
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
-            princ.change_password(&kadmin, "new_password")?;
+            princ.change_password(&kadmin, "new_password", None, None)?;
             realm.kinit(&realm.user_princ()?, "new_password")?;
             // Restore password
-            princ.change_password(&kadmin, &realm.password("user")?)?;
+            princ.change_password(&kadmin, &realm.password("user")?, None, None)?;
             Ok(())
         }
     };

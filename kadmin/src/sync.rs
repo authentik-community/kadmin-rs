@@ -22,8 +22,8 @@ use crate::{
     db_args::DbArgs,
     error::Result,
     kadmin::{KAdminApiVersion, KAdminImpl},
-    params::Params,
     keysalt::KeySalts,
+    params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::{Principal, PrincipalBuilder, PrincipalModifier},
 };
@@ -41,7 +41,13 @@ enum KAdminOperation {
     /// See [`KAdminImpl::get_principal`]
     GetPrincipal(String, Sender<Result<Option<Principal>>>),
     /// See [`KAdminImpl::principal_change_password`]
-    PrincipalChangePassword(String, String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
+    PrincipalChangePassword(
+        String,
+        String,
+        Option<bool>,
+        Option<KeySalts>,
+        Sender<Result<()>>,
+    ),
     /// See [`KAdminImpl::principal_randkey`]
     PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
@@ -80,7 +86,12 @@ impl KAdminOperation {
                 let _ = sender.send(kadmin.get_principal(name));
             }
             Self::PrincipalChangePassword(name, password, keepold, keysalts, sender) => {
-                let _ = sender.send(kadmin.principal_change_password(name, password, *keepold, keysalts.as_ref()));
+                let _ = sender.send(kadmin.principal_change_password(
+                    name,
+                    password,
+                    *keepold,
+                    keysalts.as_ref(),
+                ));
             }
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
@@ -185,7 +196,13 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
@@ -199,7 +216,12 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    fn principal_randkey(&self, name: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender

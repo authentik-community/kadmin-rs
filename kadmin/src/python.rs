@@ -266,12 +266,23 @@ impl KAdmin {
     }
 
     #[pyo3(name = "principal_change_password", signature = (name, password, keepold = None, keysalts = None))]
-    fn py_principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn py_principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         self.principal_change_password(name, password, keepold, keysalts)
     }
 
     #[pyo3(name = "principal_randkey", signature = (name, keepold = None, keysalts = None))]
-    fn py_principal_randkey(&self, name: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn py_principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         self.principal_randkey(name, keepold, keysalts)
     }
 
@@ -452,12 +463,23 @@ impl Principal {
     }
 
     #[pyo3(name = "change_password", signature = (kadmin, password, keepold = None, keysalts = None))]
-    fn py_change_password(&self, kadmin: &KAdmin, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn py_change_password(
+        &self,
+        kadmin: &KAdmin,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         self.change_password(kadmin, password, keepold, keysalts)
     }
 
     #[pyo3(name = "randkey", signature = (kadmin, keepold = None, keysalts = None))]
-    fn py_randkey(&self, kadmin: &KAdmin, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn py_randkey(
+        &self,
+        kadmin: &KAdmin,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         self.randkey(kadmin, keepold, keysalts)
     }
 }

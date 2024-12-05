@@ -153,13 +153,38 @@ impl Principal {
     }
 
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`
-    // TODO: doc example
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = "myuser";
+    /// let policy = Some("default");
+    /// let princ = Principal::builder(princname)
+    ///     .policy(policy)
+    ///     .create(&kadm)
+    ///     .unwrap();
+    /// assert_eq!(princ.policy(), policy);
+    /// # }
+    /// ```
     pub fn builder(name: &str) -> PrincipalBuilder {
         PrincipalBuilder::new(name)
     }
 
     /// Construct a new [`PrincipalModifier`] from this principal
-    // TODO: doc example
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = "myuser";
+    /// let princ = kadm.get_principal(&princname).unwrap().unwrap();
+    /// let princ = princ.modifier().policy(None).modify(&kadm).unwrap();
+    /// assert_eq!(princ.policy(), None);
+    /// # }
+    /// ```
     pub fn modifier(&self) -> PrincipalModifier {
         PrincipalModifier::from_principal(self)
     }
@@ -173,12 +198,31 @@ impl Principal {
     }
 
     /// Change the password of the principal
-    pub fn change_password<K: KAdminImpl>(&self, kadmin: &K, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    pub fn change_password<K: KAdminImpl>(
+        &self,
+        kadmin: &K,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         kadmin.principal_change_password(&self.name, password, keepold, keysalts)
     }
 
-    /// Set the key of the principal to a random value
-    pub fn randkey<K: KAdminImpl>(&self, kadmin: &K, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    /// Sets the key of the principal to a random value
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    pub fn randkey<K: KAdminImpl>(
+        &self,
+        kadmin: &K,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         kadmin.principal_randkey(&self.name, keepold, keysalts)
     }
 }

@@ -77,19 +77,37 @@ pub struct KAdmin {
 
 /// Common methods for `KAdmin` implementations
 pub trait KAdminImpl {
-    /// Create a principal. Not yet implemented
+    /// Create a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalBuilder`], via
+    /// [`Principal::builder`]
     #[doc(alias("ank", "addprinc"))]
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()>;
 
-    /// Modify a principal. Not yet implemented
+    /// Modify a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalModifier`], via
+    /// [`Principal::modifier`]
     #[doc(alias = "modprinc")]
     fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
 
-    /// Rename a principal. Not yet implemented
+    /// Rename a principal
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// kadm.rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
+    ///     .unwrap();
+    /// # }
+    /// ```
     #[doc(alias = "renprinc")]
     fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
 
-    /// Delete a principal. Not yet implemented
+    /// Delete a principal
+    ///
+    /// [`Principal::delete`] is also available
     #[doc(alias = "delprinc")]
     fn delete_principal(&self, name: &str) -> Result<()>;
 
@@ -125,11 +143,27 @@ pub trait KAdminImpl {
 
     /// Change a principal password
     ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
     /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
     #[doc(alias = "cpw")]
-    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()>;
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
 
-    /// Not yet implemented
+    /// Sets the key of the principal to a random value
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// [`Principal::randkey`] is also available
     // TODO: add returning newly created keys
     #[doc(alias = "randkey")]
     fn principal_randkey(
@@ -281,13 +315,24 @@ impl KAdminImpl for KAdmin {
         let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
             (keysalts.len() as i32, keysalts.as_mut_ptr())
-        } else { (0, null_mut() )};
+        } else {
+            (0, null_mut())
+        };
 
         mask |= KADM5_PRINCIPAL as i64;
         let code = if keysalts.is_none() {
             unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
         } else {
-            unsafe { kadm5_create_principal_3(self.server_handle, &mut entry.raw, mask, n_ks_tuple, ks_tuple, raw_pass) }
+            unsafe {
+                kadm5_create_principal_3(
+                    self.server_handle,
+                    &mut entry.raw,
+                    mask,
+                    n_ks_tuple,
+                    ks_tuple,
+                    raw_pass,
+                )
+            }
         };
         let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
             let pass = prepare_dummy_pass()?;
@@ -298,9 +343,20 @@ impl KAdminImpl for KAdmin {
             mask |= KADM5_ATTRIBUTES as i64;
             old_style_randkey = true;
             if keysalts.is_none() {
-                unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+                unsafe {
+                    kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass)
+                }
             } else {
-                unsafe { kadm5_create_principal_3(self.server_handle, &mut entry.raw, mask, n_ks_tuple, ks_tuple, raw_pass) }
+                unsafe {
+                    kadm5_create_principal_3(
+                        self.server_handle,
+                        &mut entry.raw,
+                        mask,
+                        n_ks_tuple,
+                        ks_tuple,
+                        raw_pass,
+                    )
+                }
             }
         } else {
             code
@@ -378,7 +434,13 @@ impl KAdminImpl for KAdmin {
         Ok(Some(principal))
     }
 
-    fn principal_change_password(&self, name: &str, password: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         let password = CString::new(password)?;
         let princ = parse_name(&self.context, name)?;
 
@@ -386,11 +448,20 @@ impl KAdminImpl for KAdmin {
         let mut keysalts = keysalts.map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
             (keysalts.len() as i32, keysalts.as_mut_ptr())
-        } else { (0, null_mut() )};
+        } else {
+            (0, null_mut())
+        };
 
         let code = if keepold || keysalts.is_some() {
             unsafe {
-                kadm5_chpass_principal_3(self.server_handle, princ.raw, keepold as krb5_boolean, n_ks_tuple, ks_tuple, password.as_ptr().cast_mut())
+                kadm5_chpass_principal_3(
+                    self.server_handle,
+                    princ.raw,
+                    keepold as krb5_boolean,
+                    n_ks_tuple,
+                    ks_tuple,
+                    password.as_ptr().cast_mut(),
+                )
             }
         } else {
             unsafe {
@@ -402,14 +473,21 @@ impl KAdminImpl for KAdmin {
         Ok(())
     }
 
-    fn principal_randkey(&self, name: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         let princ = parse_name(&self.context, name)?;
         let keepold = keepold.unwrap_or(false);
 
         let mut keysalts = keysalts.map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
             (keysalts.len() as i32, keysalts.as_mut_ptr())
-        } else { (0, null_mut() )};
+        } else {
+            (0, null_mut())
+        };
 
         let code = unsafe {
             kadm5_randkey_principal_3(
