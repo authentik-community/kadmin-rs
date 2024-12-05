@@ -371,7 +371,21 @@ macro_rules! principal_doer_impl {
 
 principal_doer_struct!(
     /// Utility to create a principal
-    // TODO: doc example
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = "myuser";
+    /// let policy = Some("default");
+    /// let princ = Principal::builder(princname)
+    ///     .policy(policy)
+    ///     .create(&kadm)
+    ///     .unwrap();
+    /// assert_eq!(princ.policy(), policy);
+    /// # }
+    /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalBuilder {
         pub(crate) key: PrincipalBuilderKey,
@@ -420,7 +434,18 @@ impl PrincipalBuilder {
 
 principal_doer_struct!(
     /// Utility to modify a principal
-    // TODO: doc example
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = "myuser";
+    /// let princ = kadm.get_principal(&princname).unwrap().unwrap();
+    /// let princ = princ.modifier().policy(None).modify(&kadm).unwrap();
+    /// assert_eq!(princ.policy(), None);
+    /// # }
+    /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalModifier {}
 );
