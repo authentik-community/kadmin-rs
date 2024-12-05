@@ -206,7 +206,11 @@ impl KAdmin {
 #[pymethods]
 impl KAdmin {
     #[pyo3(name = "add_principal", signature = (name, **kwargs))]
-    fn py_add_principal(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Principal> {
+    fn py_add_principal(
+        &self,
+        name: &str,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Principal> {
         let mut builder = Principal::builder(name);
         if let Some(kwargs) = kwargs {
             if let Some(expire_time) = kwargs.get_item("expire_time")? {
