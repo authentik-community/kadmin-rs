@@ -15,7 +15,7 @@ use crate::{
     keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
     policy::Policy,
-    principal::{Principal, PrincipalAttributes},
+    principal::{Principal, PrincipalAttributes, PrincipalBuilderKey},
     sync::{KAdmin, KAdminBuilder},
     tl_data::{TlData, TlDataEntry},
 };
@@ -34,6 +34,7 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<KeySalts>()?;
     m.add_class::<KAdmin>()?;
     m.add_class::<PrincipalAttributes>()?;
+    m.add_class::<PyPrincipalBuilderKey>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
     exceptions::init(m)?;
@@ -204,24 +205,47 @@ impl KAdmin {
 
 #[pymethods]
 impl KAdmin {
-    #[pyo3(name = "add_principal")]
-    fn py_add_principal(&self) {
-        unimplemented!();
-    }
-
-    #[pyo3(name = "delete_principal")]
-    fn py_delete_principal(&self) {
-        unimplemented!();
-    }
-
-    #[pyo3(name = "modify_principal")]
-    fn py_modify_principal(&self) {
-        unimplemented!();
+    #[pyo3(name = "add_principal", signature = (name, **kwargs))]
+    fn py_add_principal(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Principal> {
+        let mut builder = Principal::builder(name);
+        if let Some(kwargs) = kwargs {
+            if let Some(expire_time) = kwargs.get_item("expire_time")? {
+                builder = builder.expire_time(expire_time.extract()?);
+            }
+            if let Some(password_expiration) = kwargs.get_item("password_expiration")? {
+                builder = builder.password_expiration(password_expiration.extract()?);
+            }
+            if let Some(max_life) = kwargs.get_item("max_life")? {
+                builder = builder.max_life(max_life.extract()?);
+            }
+            if let Some(attributes) = kwargs.get_item("attributes")? {
+                builder = builder.attributes(attributes.extract()?);
+            }
+            if let Some(policy) = kwargs.get_item("policy")? {
+                builder = builder.policy(policy.extract::<Option<String>>()?.as_deref());
+            }
+            if let Some(aux_attributes) = kwargs.get_item("aux_attributes")? {
+                builder = builder.aux_attributes(aux_attributes.extract()?);
+            }
+            if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
+                builder = builder.max_renewable_life(max_renewable_life.extract()?);
+            }
+            if let Some(key) = kwargs.get_item("key")? {
+                let key = key.extract::<PyPrincipalBuilderKey>()?;
+                builder = builder.key(&key.into());
+            }
+        }
+        Ok(builder.create(self)?)
     }
 
     #[pyo3(name = "rename_principal")]
-    fn py_rename_principal(&self) {
-        unimplemented!();
+    fn py_rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        self.rename_principal(old_name, new_name)
+    }
+
+    #[pyo3(name = "delete_principal")]
+    fn py_delete_principal(&self, name: &str) -> Result<()> {
+        self.delete_principal(name)
     }
 
     #[pyo3(name = "get_principal")]
@@ -374,9 +398,74 @@ impl KAdmin {
 
 #[pymethods]
 impl Principal {
+    #[pyo3(name = "modify", signature = (kadmin, **kwargs))]
+    fn py_modify(&self, kadmin: &KAdmin, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+        if let Some(kwargs) = kwargs {
+            let mut modifier = self.modifier();
+            if let Some(expire_time) = kwargs.get_item("expire_time")? {
+                modifier = modifier.expire_time(expire_time.extract()?);
+            }
+            if let Some(password_expiration) = kwargs.get_item("password_expiration")? {
+                modifier = modifier.password_expiration(password_expiration.extract()?);
+            }
+            if let Some(max_life) = kwargs.get_item("max_life")? {
+                modifier = modifier.max_life(max_life.extract()?);
+            }
+            if let Some(attributes) = kwargs.get_item("attributes")? {
+                modifier = modifier.attributes(attributes.extract()?);
+            }
+            if let Some(policy) = kwargs.get_item("policy")? {
+                modifier = modifier.policy(policy.extract::<Option<String>>()?.as_deref());
+            }
+            if let Some(aux_attributes) = kwargs.get_item("aux_attributes")? {
+                modifier = modifier.aux_attributes(aux_attributes.extract()?);
+            }
+            if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
+                modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
+            }
+            Ok(modifier.modify(kadmin)?)
+        } else {
+            Ok(self.clone())
+        }
+    }
+
+    #[pyo3(name = "delete")]
+    fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
+        self.delete(kadmin)
+    }
+
     #[pyo3(name = "change_password")]
     fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
         self.change_password(kadmin, password)
+    }
+
+    #[pyo3(name = "randkey", signature = (kadmin, keepold = None))]
+    fn py_randkey(&self, kadmin: &KAdmin, keepold: Option<bool>) -> Result<()> {
+        self.randkey(kadmin, keepold)
+    }
+}
+
+// Copy of PrincipalBuilderKey due to pyo3 limitations
+// See https://pyo3.rs/v0.23.3/class.html?highlight=enum#complex-enums
+#[pyclass(name = "NewPrincipalKey")]
+#[derive(Clone, Debug, PartialEq)]
+enum PyPrincipalBuilderKey {
+    Password(String),
+    NoKey(),
+    RandKey(),
+    ServerRandKey(),
+    OldStyleRandKey(),
+}
+
+impl From<PyPrincipalBuilderKey> for PrincipalBuilderKey {
+    fn from(key: PyPrincipalBuilderKey) -> Self {
+        match key {
+            PyPrincipalBuilderKey::Password(s) => Self::Password(s.clone()),
+            PyPrincipalBuilderKey::NoKey() => Self::NoKey,
+            PyPrincipalBuilderKey::RandKey() => Self::RandKey,
+            PyPrincipalBuilderKey::ServerRandKey() => Self::ServerRandKey,
+            PyPrincipalBuilderKey::OldStyleRandKey() => Self::OldStyleRandKey,
+        }
     }
 }
 

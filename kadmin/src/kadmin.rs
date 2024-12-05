@@ -124,7 +124,7 @@ pub trait KAdminImpl {
 
     /// Change a principal password
     ///
-    /// Don't use this method directly. Instead, use [`Principal::change_password`]
+    /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
     #[doc(alias = "cpw")]
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
 
@@ -156,7 +156,7 @@ pub trait KAdminImpl {
 
     /// Add a policy
     ///
-    /// Don't use this method directly. Instead, use a [`PolicyBuilder`]
+    /// Don't use this method directly. Instead, use a [`PolicyBuilder`], via [`Policy::builder`]
     #[doc(alias = "addpol")]
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
 
@@ -276,7 +276,7 @@ impl KAdminImpl for KAdmin {
         mask |= KADM5_PRINCIPAL as i64;
         let code =
             unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) };
-        let code = if code == EINVAL.into() && builder.key == PrincipalBuilderKey::RandKey {
+        let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
             let pass = prepare_dummy_pass()?;
             let raw_pass = pass.as_ptr().cast_mut();
             // The server doesn't support randkey creation. Create the principal with a dummy
