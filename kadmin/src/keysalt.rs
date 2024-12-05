@@ -208,6 +208,15 @@ impl TryFrom<KeySalt> for String {
     }
 }
 
+impl From<KeySalt> for krb5_key_salt_tuple {
+    fn from(ks: KeySalt) -> Self {
+        Self {
+            ks_enctype: ks.enctype.into(),
+            ks_salttype: ks.salttype.into(),
+        }
+    }
+}
+
 /// Kerberos keysalt list
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(clippy::exhaustive_structs)]
@@ -248,5 +257,9 @@ impl KeySalts {
     pub(crate) fn to_cstring(&self) -> Result<CString> {
         let s: String = self.try_into()?;
         Ok(CString::new(s)?)
+    }
+
+    pub(crate) fn to_raw(&self) -> Vec<krb5_key_salt_tuple> {
+        self.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }

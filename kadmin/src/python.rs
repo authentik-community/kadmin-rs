@@ -262,6 +262,16 @@ impl KAdmin {
         self.principal_exists(name)
     }
 
+    #[pyo3(name = "principal_change_password")]
+    fn py_principal_change_password(&self, name: &str, password: &str) -> Result<()> {
+        self.principal_change_password(name, password)
+    }
+
+    #[pyo3(name = "principal_randkey", signature = (name, keepold = None, keysalts = None))]
+    fn py_principal_randkey(&self, name: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        self.principal_randkey(name, keepold, keysalts)
+    }
+
     #[pyo3(name = "list_principals", signature = (query=None))]
     fn py_list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         self.list_principals(query)
@@ -443,9 +453,9 @@ impl Principal {
         self.change_password(kadmin, password)
     }
 
-    #[pyo3(name = "randkey", signature = (kadmin, keepold = None))]
-    fn py_randkey(&self, kadmin: &KAdmin, keepold: Option<bool>) -> Result<()> {
-        self.randkey(kadmin, keepold)
+    #[pyo3(name = "randkey", signature = (kadmin, keepold = None, keysalts = None))]
+    fn py_randkey(&self, kadmin: &KAdmin, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        self.randkey(kadmin, keepold, keysalts)
     }
 }
 

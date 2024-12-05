@@ -19,6 +19,7 @@ use crate::{
     conv::{c_string_to_string, parse_name},
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
+    keysalt::KeySalts,
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
@@ -129,10 +130,14 @@ pub trait KAdminImpl {
     fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
 
     /// Not yet implemented
-    // TODO: keysalts
     // TODO: add returning newly created keys
     #[doc(alias = "randkey")]
-    fn principal_randkey(&self, _name: &str, _keepold: Option<bool>) -> Result<()>;
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
 
     /// List principals
     ///
@@ -291,7 +296,8 @@ impl KAdminImpl for KAdmin {
         kadm5_ret_t_escape_hatch(&self.context, code)?;
 
         if old_style_randkey {
-            self.principal_randkey(&builder.name, None)?;
+            // TODO: keysalts
+            self.principal_randkey(&builder.name, None, None)?;
             entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as i32);
             mask = KADM5_ATTRIBUTES as i64;
             let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, mask) };
@@ -371,24 +377,28 @@ impl KAdminImpl for KAdmin {
         Ok(())
     }
 
-    fn principal_randkey(&self, name: &str, keepold: Option<bool>) -> Result<()> {
+    fn principal_randkey(&self, name: &str, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
         let princ = parse_name(&self.context, name)?;
         let keepold = keepold.unwrap_or(false);
+
+        let mut keysalts = keysalts.map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else { (0, null_mut() )};
 
         let code = unsafe {
             kadm5_randkey_principal_3(
                 self.server_handle,
                 princ.raw,
                 keepold as u32,
-                0,
-                null_mut(),
+                n_ks_tuple,
+                ks_tuple,
                 null_mut(),
                 null_mut(),
             )
         };
 
-        // TODO: keysalts
-        let code = if code == KADM5_RPC_ERROR as i64 && !keepold {
+        let code = if code == KADM5_RPC_ERROR as i64 && !keepold && keysalts.is_none() {
             unsafe {
                 kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut())
             }

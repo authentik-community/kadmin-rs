@@ -14,6 +14,7 @@ use crate::{
     conv::{c_string_to_string, delta_to_dur, dt_to_ts, dur_to_delta, ts_to_dt, unparse_name},
     error::{Result, krb5_error_code_escape_hatch},
     kadmin::{KAdmin, KAdminImpl},
+    keysalt::KeySalts,
 };
 
 bitflags! {
@@ -178,8 +179,8 @@ impl Principal {
     }
 
     /// Set the key of the principal to a random value
-    pub fn randkey<K: KAdminImpl>(&self, kadmin: &K, keepold: Option<bool>) -> Result<()> {
-        kadmin.principal_randkey(&self.name, keepold)
+    pub fn randkey<K: KAdminImpl>(&self, kadmin: &K, keepold: Option<bool>, keysalts: Option<&KeySalts>) -> Result<()> {
+        kadmin.principal_randkey(&self.name, keepold, keysalts)
     }
 }
 
