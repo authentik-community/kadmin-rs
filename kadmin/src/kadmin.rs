@@ -272,6 +272,9 @@ impl KAdminImpl for KAdmin {
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
         let mut entry = builder.make_entry(&self.context)?;
         let mut mask = builder.mask;
+        if let Some(kvno) = builder.kvno {
+            entry.raw.kvno = kvno;
+        }
 
         if let Some(policy) = &builder.policy {
             if policy.is_none() {

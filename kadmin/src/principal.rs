@@ -468,6 +468,7 @@ principal_doer_struct!(
     /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalBuilder {
+        pub(crate) kvno: Option<u32>,
         pub(crate) key: PrincipalBuilderKey,
         pub(crate) keysalts: Option<KeySalts>,
     }
@@ -487,6 +488,13 @@ impl PrincipalBuilder {
     /// Set the name of the principal
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_owned();
+        self
+    }
+
+    /// Set the initial key version number
+    pub fn kvno(mut self, kvno: u32) -> Self {
+        self.kvno = Some(kvno);
+        self.mask |= KADM5_KVNO as i64;
         self
     }
 

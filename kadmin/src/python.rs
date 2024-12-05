@@ -237,18 +237,21 @@ impl KAdmin {
             if let Some(fail_auth_count) = kwargs.get_item("fail_auth_count")? {
                 builder = builder.fail_auth_count(fail_auth_count.extract()?);
             }
+            if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                builder = builder.tl_data(tl_data.extract()?);
+            }
+            if let Some(db_args) = kwargs.get_item("db_args")? {
+                builder = builder.db_args(db_args.extract()?);
+            }
+            if let Some(kvno) = kwargs.get_item("kvno")? {
+                builder = builder.kvno(kvno.extract()?);
+            }
             if let Some(key) = kwargs.get_item("key")? {
                 let key = key.extract::<PyPrincipalBuilderKey>()?;
                 builder = builder.key(&key.into());
             }
             if let Some(keysalts) = kwargs.get_item("keysalts")? {
                 builder = builder.keysalts(&keysalts.extract()?);
-            }
-            if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                builder = builder.tl_data(tl_data.extract()?);
-            }
-            if let Some(db_args) = kwargs.get_item("db_args")? {
-                builder = builder.db_args(db_args.extract()?);
             }
         }
         Ok(builder.create(self)?)
