@@ -1,7 +1,7 @@
 //! Kerberos keysalt lists
 use std::{
     collections::HashSet,
-    ffi::{CStr, CString},
+    ffi::{CStr, CString, c_char},
     str::FromStr,
 };
 
@@ -84,7 +84,7 @@ impl TryFrom<EncryptionType> for String {
     fn try_from(enctype: EncryptionType) -> Result<Self> {
         let buffer = [0_u8; 100];
         let code = unsafe {
-            let mut b: [i8; 100] = std::mem::transmute(buffer);
+            let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(enctype.into(), b.as_mut_ptr(), 100)
         };
         if code != KRB5_OK {
@@ -176,7 +176,7 @@ impl TryFrom<SaltType> for String {
     fn try_from(salttype: SaltType) -> Result<Self> {
         let buffer = [0_u8; 100];
         let code = unsafe {
-            let mut b: [i8; 100] = std::mem::transmute(buffer);
+            let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(salttype.into(), b.as_mut_ptr(), 100)
         };
         if code != KRB5_OK {
@@ -212,25 +212,25 @@ impl TryFrom<KeySalt> for String {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(clippy::exhaustive_structs)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
-pub struct KeySaltList {
+pub struct KeySalts {
     /// Keysalt list
     pub keysalts: HashSet<KeySalt>,
 }
 
-impl TryFrom<KeySaltList> for String {
+impl TryFrom<&KeySalts> for String {
     type Error = Error;
 
-    fn try_from(ksl: KeySaltList) -> Result<Self> {
+    fn try_from(ksl: &KeySalts) -> Result<Self> {
         Ok(ksl
             .keysalts
-            .into_iter()
-            .map(|ks| ks.try_into())
+            .iter()
+            .map(|ks| (*ks).try_into())
             .collect::<Result<Vec<String>>>()?
             .join(","))
     }
 }
 
-impl KeySaltList {
+impl KeySalts {
     pub(crate) fn from_str(s: &str) -> Result<Self> {
         let mut keysalts = HashSet::new();
         for ks in s.split([',', ' ', '\t']) {
@@ -246,6 +246,7 @@ impl KeySaltList {
     }
 
     pub(crate) fn to_cstring(&self) -> Result<CString> {
-        Ok(CString::new("")?)
+        let s: String = self.try_into()?;
+        Ok(CString::new(s)?)
     }
 }
