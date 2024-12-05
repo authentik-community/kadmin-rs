@@ -1,7 +1,7 @@
 //! Kerberos keysalt lists
 use std::{
     collections::HashSet,
-    ffi::{CStr, CString},
+    ffi::{CStr, CString, c_char},
     str::FromStr,
 };
 
@@ -84,7 +84,7 @@ impl TryFrom<EncryptionType> for String {
     fn try_from(enctype: EncryptionType) -> Result<Self> {
         let buffer = [0_u8; 100];
         let code = unsafe {
-            let mut b: [i8; 100] = std::mem::transmute(buffer);
+            let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(enctype.into(), b.as_mut_ptr(), 100)
         };
         if code != KRB5_OK {
@@ -176,7 +176,7 @@ impl TryFrom<SaltType> for String {
     fn try_from(salttype: SaltType) -> Result<Self> {
         let buffer = [0_u8; 100];
         let code = unsafe {
-            let mut b: [i8; 100] = std::mem::transmute(buffer);
+            let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(salttype.into(), b.as_mut_ptr(), 100)
         };
         if code != KRB5_OK {
