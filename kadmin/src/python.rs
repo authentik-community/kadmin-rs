@@ -1,7 +1,7 @@
 //! Python bindings to libkadm5
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     ops::{BitAndAssign, BitOrAssign, BitXorAssign},
     str::FromStr,
 };
@@ -407,6 +407,16 @@ impl KAdmin {
         self.principal_randkey(name, keepold, keysalts)
     }
 
+    #[pyo3(name = "principal_get_strings")]
+    fn py_principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
+        self.principal_get_strings(name)
+    }
+
+    #[pyo3(name = "principal_set_string", signature = (name, key, value))]
+    fn py_principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
+        self.principal_set_string(name, key, value)
+    }
+
     #[pyo3(name = "list_principals", signature = (query=None))]
     fn py_list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         self.list_principals(query)
@@ -616,6 +626,16 @@ impl Principal {
     #[pyo3(name = "unlock")]
     fn py_unlock(&self, kadmin: &KAdmin) -> Result<()> {
         self.unlock(kadmin)
+    }
+
+    #[pyo3(name = "get_strings")]
+    fn py_get_strings(&self, kadmin: &KAdmin) -> Result<HashMap<String, String>> {
+        self.get_strings(kadmin)
+    }
+
+    #[pyo3(name = "set_string", signature = (kadmin, key, value))]
+    fn py_set_string(&self, kadmin: &KAdmin, key: &str, value: Option<&str>) -> Result<()> {
+        self.set_string(kadmin, key, value)
     }
 }
 

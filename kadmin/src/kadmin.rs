@@ -1,13 +1,14 @@
 //! [`KAdmin`] interface to kadm5
 
-#[cfg(feature = "client")]
-use std::{ffi::CStr, mem::MaybeUninit};
 use std::{
+    collections::HashMap,
     ffi::CString,
     os::raw::{c_char, c_void},
     ptr::null_mut,
     sync::Mutex,
 };
+#[cfg(feature = "client")]
+use std::{ffi::CStr, mem::MaybeUninit};
 
 use kadmin_sys::*;
 use libc::EINVAL;
@@ -172,6 +173,18 @@ pub trait KAdminImpl {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()>;
+
+    /// Retrieve string attributes on a principal
+    ///
+    /// [`Principal::get_strings`] is also available
+    fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>>;
+
+    /// Set string attribute on a principal
+    ///
+    /// Set `value` to None to remove the string
+    ///
+    /// [`Principal::set_string`] is also available
+    fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()>;
 
     /// List principals
     ///
@@ -512,6 +525,51 @@ impl KAdminImpl for KAdmin {
             code
         };
 
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
+        let princ = parse_name(&self.context, name)?;
+
+        let mut count = 0;
+        let mut raw_strings = null_mut();
+
+        let code = unsafe {
+            kadm5_get_strings(self.server_handle, princ.raw, &mut raw_strings, &mut count)
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        let mut strings = HashMap::with_capacity(count as usize);
+
+        if raw_strings.is_null() {
+            return Ok(strings);
+        }
+
+        for raw in unsafe { std::slice::from_raw_parts(raw_strings, count as usize) }.iter() {
+            strings.insert(c_string_to_string(raw.key)?, c_string_to_string(raw.value)?);
+        }
+
+        Ok(strings)
+    }
+
+    fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let key = CString::new(key)?;
+        let value = value.map(CString::new).transpose()?;
+
+        let code = unsafe {
+            kadm5_set_string(
+                self.server_handle,
+                princ.raw,
+                key.as_ptr().cast_mut(),
+                if let Some(value) = value {
+                    value.as_ptr().cast_mut()
+                } else {
+                    null_mut()
+                },
+            )
+        };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
