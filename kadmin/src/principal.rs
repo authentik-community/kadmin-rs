@@ -19,16 +19,18 @@ use crate::{
     tl_data::{TlData, TlDataEntry, TlDataRaw},
 };
 
+/// Attributes set on a principal
+///
+/// See `man kadmin(1)`, under the `add_principal` section for an explanation
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[cfg_attr(feature = "python", pyclass(eq))]
+pub struct PrincipalAttributes(i32);
+
 bitflags! {
-    /// Attributes set on a principal
-    ///
-    /// See `man kadmin(1)`, under the `add_principal` section for an explanation
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[cfg_attr(feature = "python", pyclass)]
-    pub struct PrincipalAttributes: i32 {
+    impl PrincipalAttributes: i32 {
         /// Prohibits the principal from obtaining postdated tickets
-        const DisallowPostated = KRB5_KDB_DISALLOW_POSTDATED as i32;
+        const DisallowPostdated = KRB5_KDB_DISALLOW_POSTDATED as i32;
         /// Prohibits the principal from obtaining forwardable tickets
         const DisallowForwardable = KRB5_KDB_DISALLOW_FORWARDABLE as i32;
         /// Specifies that a Ticket-Granting Service (TGS) request for a service ticket for the principal is not permitted

@@ -11,12 +11,21 @@ class KAdminApiVersion:
 
 @final
 class KAdmin:
-    def add_principal(self): ...
-    def delete_principal(self): ...
-    def modify_principal(self): ...
-    def rename_principal(self): ...
+    def add_principal(self, name, **kwargs) -> Principal: ...
+    def rename_principal(self, old_name, new_name): ...
+    def delete_principal(self, name): ...
     def get_principal(self, name: str) -> Principal | None: ...
     def principal_exists(self, name: str) -> bool: ...
+    def principal_change_password(
+        self,
+        name: str,
+        password: str,
+        keepold: bool | None = None,
+        keysalts: KeySalts | None = None,
+    ): ...
+    def principal_randkey(
+        self, name: str, keepold: bool | None = None, keysalts: KeySalts | None = None
+    ): ...
     def list_principals(self, query: str | None = None) -> List[str]: ...
     def add_policy(self, name: str, **kwargs) -> Policy: ...
     def delete_policy(self, name: str) -> None: ...
@@ -69,8 +78,74 @@ class Principal:
     last_success: datetime.datetime | None
     last_failed: datetime.datetime | None
     fail_auth_count: int
+    tl_data: TlData
 
-    def change_password(self, kadmin: KAdmin, password: str): ...
+    def modify(self, kadmin: KAdmin, **kwargs) -> Policy: ...
+    def delete(self, kadmin: KAdmin): ...
+    def change_password(
+        self,
+        kadmin: KAdmin,
+        password: str,
+        keepold: bool | None = None,
+        keysalts: KeySalts | None = None,
+    ): ...
+    def randkey(
+        self,
+        kadmin: KAdmin,
+        keepold: bool | None = None,
+        keysalts: KeySalts | None = None,
+    ): ...
+    def unlock(self, kadmin: KAdmin): ...
+
+@final
+class PrincipalAttributes:
+    DisallowPostdated: Self
+    DisallowForwardable: Self
+    DisallowTgtBased: Self
+    DisallowRenewable: Self
+    DisallowProxiable: Self
+    DisallowDupSkey: Self
+    DisallowAllTix: Self
+    RequiresPreAuth: Self
+    RequiresHwAuth: Self
+    RequiresPwChange: Self
+    DisallowSvr: Self
+    PwChangeService: Self
+    SupportDesMd5: Self
+    NewPrinc: Self
+    OkAsDelegate: Self
+    OkToAuthAsDelegate: Self
+    NoAuthDataRequired: Self
+    LockdownKeys: Self
+
+    def __init__(self, bits: int): ...
+    def bits(self) -> int: ...
+
+class NewPrincipalKey:
+    @final
+    class Password(NewPrincipalKey):
+        __match_args__: tuple
+        def __init__(self, password: str): ...
+
+    @final
+    class NoKey(NewPrincipalKey):
+        __match_args__: tuple
+        def __init__(self, *args, **kwargs): ...
+
+    @final
+    class RandKey(NewPrincipalKey):
+        __match_args__: tuple
+        def __init__(self, *args, **kwargs): ...
+
+    @final
+    class ServerRandKey(NewPrincipalKey):
+        __match_args__: tuple
+        def __init__(self, *args, **kwargs): ...
+
+    @final
+    class OldStyleRandKey(NewPrincipalKey):
+        __match_args__: tuple
+        def __init__(self, *args, **kwargs): ...
 
 @final
 class Params:

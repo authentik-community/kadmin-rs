@@ -1,6 +1,10 @@
 //! Python bindings to libkadm5
 
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::HashSet,
+    ops::{BitAndAssign, BitOrAssign, BitXorAssign},
+    str::FromStr,
+};
 
 use either::Either;
 use pyo3::{
@@ -180,6 +184,111 @@ impl TlData {
     #[new]
     fn py_new(entries: Vec<TlDataEntry>) -> Self {
         Self { entries }
+    }
+}
+
+#[pymethods]
+#[allow(non_upper_case_globals)]
+impl PrincipalAttributes {
+    #[classattr]
+    #[pyo3(name = "DisallowAllTix")]
+    const PyDisallowAllTix: Self = Self::DisallowAllTix;
+    #[classattr]
+    #[pyo3(name = "DisallowDupSkey")]
+    const PyDisallowDupSkey: Self = Self::DisallowDupSkey;
+    #[classattr]
+    #[pyo3(name = "DisallowForwardable")]
+    const PyDisallowForwardable: Self = Self::DisallowForwardable;
+    #[classattr]
+    #[pyo3(name = "DisallowPostdated")]
+    const PyDisallowPostdated: Self = Self::DisallowPostdated;
+    #[classattr]
+    #[pyo3(name = "DisallowProxiable")]
+    const PyDisallowProxiable: Self = Self::DisallowProxiable;
+    #[classattr]
+    #[pyo3(name = "DisallowRenewable")]
+    const PyDisallowRenewable: Self = Self::DisallowRenewable;
+    #[classattr]
+    #[pyo3(name = "DisallowSvr")]
+    const PyDisallowSvr: Self = Self::DisallowSvr;
+    #[classattr]
+    #[pyo3(name = "DisallowTgtBased")]
+    const PyDisallowTgtBased: Self = Self::DisallowTgtBased;
+    #[classattr]
+    #[pyo3(name = "LockdownKeys")]
+    const PyLockdownKeys: Self = Self::LockdownKeys;
+    #[classattr]
+    #[pyo3(name = "NewPrinc")]
+    const PyNewPrinc: Self = Self::NewPrinc;
+    #[classattr]
+    #[pyo3(name = "NoAuthDataRequired")]
+    const PyNoAuthDataRequired: Self = Self::NoAuthDataRequired;
+    #[classattr]
+    #[pyo3(name = "OkAsDelegate")]
+    const PyOkAsDelegate: Self = Self::OkAsDelegate;
+    #[classattr]
+    #[pyo3(name = "OkToAuthAsDelegate")]
+    const PyOkToAuthAsDelegate: Self = Self::OkToAuthAsDelegate;
+    #[classattr]
+    #[pyo3(name = "PwChangeService")]
+    const PyPwChangeService: Self = Self::PwChangeService;
+    #[classattr]
+    #[pyo3(name = "RequiresHwAuth")]
+    const PyRequiresHwAuth: Self = Self::RequiresHwAuth;
+    #[classattr]
+    #[pyo3(name = "RequiresPreAuth")]
+    const PyRequiresPreAuth: Self = Self::RequiresPreAuth;
+    #[classattr]
+    #[pyo3(name = "RequiresPwChange")]
+    const PyRequiresPwChange: Self = Self::RequiresPwChange;
+    #[classattr]
+    #[pyo3(name = "SupportDesMd5")]
+    const PySupportDesMd5: Self = Self::SupportDesMd5;
+
+    #[new]
+    fn py_new(bits: i32) -> Self {
+        Self::from_bits_retain(bits)
+    }
+
+    #[pyo3(name = "bits")]
+    fn py_bits(&self) -> i32 {
+        self.bits()
+    }
+
+    fn __contains__(&self, other: Self) -> bool {
+        self.contains(other)
+    }
+
+    fn __and__(&self, other: Self) -> Self {
+        *self & other
+    }
+
+    fn __iand__(&mut self, other: Self) {
+        Self::bitand_assign(self, other);
+    }
+
+    fn __xor__(&self, other: Self) -> Self {
+        *self ^ other
+    }
+
+    fn __ixor__(&mut self, other: Self) {
+        Self::bitxor_assign(self, other);
+    }
+
+    fn __or__(&self, other: Self) -> Self {
+        *self | other
+    }
+
+    fn __ior__(&mut self, other: Self) {
+        Self::bitor_assign(self, other);
+    }
+
+    fn __invert__(&self) -> Self {
+        self.complement()
+    }
+
+    fn __int__(&self) -> i32 {
+        self.bits()
     }
 }
 
