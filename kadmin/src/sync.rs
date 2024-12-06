@@ -7,6 +7,7 @@
 //! The APIs between this wrapper and the underlying [`crate::kadmin::KAdmin`] are the same, and
 //! wrapped and the [`KAdminImpl`] trait.
 use std::{
+    collections::HashMap,
     panic::resume_unwind,
     sync::{
         Arc,
@@ -50,6 +51,10 @@ enum KAdminOperation {
     ),
     /// See [`KAdminImpl::principal_randkey`]
     PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
+    /// See [`KAdminImpl::principal_get_strings`]
+    PrincipalGetStrings(String, Sender<Result<HashMap<String, String>>>),
+    /// See [`KAdminImpl::principal_set_string`]
+    PrincipalSetString(String, String, Option<String>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
     /// See [`KAdminImpl::add_policy`]
@@ -95,6 +100,12 @@ impl KAdminOperation {
             }
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
+            }
+            Self::PrincipalGetStrings(name, sender) => {
+                let _ = sender.send(kadmin.principal_get_strings(name));
+            }
+            Self::PrincipalSetString(name, key, value, sender) => {
+                let _ = sender.send(kadmin.principal_set_string(name, key, value.as_deref()));
             }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
@@ -231,6 +242,18 @@ impl KAdminImpl for KAdmin {
                 keysalts.cloned(),
                 sender,
             ))?;
+        receiver.recv()?
+    }
+
+    fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
+        let (sender, receiver) = channel();
+        self.inner.op_sender.send(KAdminOperation::PrincipalGetStrings(name.to_owned(), sender))?;
+        receiver.recv()?
+    }
+
+    fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
+        let (sender, receiver) = channel();
+        self.inner.op_sender.send(KAdminOperation::PrincipalSetString(name.to_owned(), key.to_owned(), value.map(String::from), sender))?;
         receiver.recv()?
     }
 

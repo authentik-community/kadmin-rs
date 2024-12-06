@@ -190,6 +190,26 @@ kadmin
       :param keysalts: Uses the specified keysalt list for setting the keys of the principal
       :type keysalts: KeySalts | None
 
+   .. py:method:: principal_get_strings(name)
+
+      Retrieve string attributes on this principal
+
+      :param name: name of the principal to randomize the key of
+      :type name: str
+      :return: a dictionary containing the string attributes set on this principal
+      :rtype: dict[str, str]
+
+   .. py:method:: principal_set_string(name, key, value)
+
+      Set string attribute on this principal
+
+      :param name: name of the principal to randomize the key of
+      :type name: str
+      :param key: The string key
+      :type key: str
+      :param value: The string value. Set to None to remove the attribute
+      :type value: str | None
+
    .. py:method:: list_principals(query=None)
 
       List principals
@@ -432,6 +452,26 @@ kadmin
       
       :param kadmin: A :py:class:`KAdmin` instance
       :type kadmin: KAdmin
+
+   .. py:method:: get_strings(kadmin)
+
+      Retrieve string attributes on this principal
+
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+      :return: a dictionary containing the string attributes set on this principal
+      :rtype: dict[str, str]
+
+   .. py:method:: set_string(kadmin, key, value)
+
+      Set string attribute on this principal
+
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+      :param key: The string key
+      :type key: str
+      :param value: The string value. Set to None to remove the attribute
+      :type value: str | None
 
 .. py:class:: PrincipalAttributes(bits)
 
