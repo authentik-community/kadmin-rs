@@ -383,16 +383,10 @@ macro_rules! policy_doer_impl {
                 None
             };
             let tl_data = if let Some(tl_data) = &self.tl_data {
-                //  We store the raw data in PolicyEntryRaw
-                let mut raw_tl_data = tl_data.to_raw();
-                if let Some(ref mut raw_tl_data) = &mut raw_tl_data {
-                    policy.n_tl_data = tl_data.entries.len() as i16;
-                    policy.tl_data = &mut raw_tl_data.raw;
-                } else {
-                    policy.n_tl_data = 0;
-                    policy.tl_data = null_mut();
-                }
-                raw_tl_data
+                let raw_tl_data = tl_data.to_raw();
+                policy.n_tl_data = tl_data.entries.len() as i16;
+                policy.tl_data = raw_tl_data.raw;
+                Some(raw_tl_data)
             } else {
                 None
             };
