@@ -1,6 +1,10 @@
 //! Python bindings to libkadm5
 
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::HashSet,
+    ops::{BitAndAssign, BitOrAssign, BitXorAssign},
+    str::FromStr,
+};
 
 use either::Either;
 use pyo3::{
@@ -15,7 +19,7 @@ use crate::{
     keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
     policy::Policy,
-    principal::Principal,
+    principal::{Principal, PrincipalAttributes, PrincipalBuilderKey},
     sync::{KAdmin, KAdminBuilder},
     tl_data::{TlData, TlDataEntry},
 };
@@ -33,6 +37,8 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<KeySalt>()?;
     m.add_class::<KeySalts>()?;
     m.add_class::<KAdmin>()?;
+    m.add_class::<PrincipalAttributes>()?;
+    m.add_class::<PyPrincipalBuilderKey>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
     exceptions::init(m)?;
@@ -181,6 +187,111 @@ impl TlData {
     }
 }
 
+#[pymethods]
+#[allow(non_upper_case_globals)]
+impl PrincipalAttributes {
+    #[classattr]
+    #[pyo3(name = "DisallowAllTix")]
+    const PyDisallowAllTix: Self = Self::DisallowAllTix;
+    #[classattr]
+    #[pyo3(name = "DisallowDupSkey")]
+    const PyDisallowDupSkey: Self = Self::DisallowDupSkey;
+    #[classattr]
+    #[pyo3(name = "DisallowForwardable")]
+    const PyDisallowForwardable: Self = Self::DisallowForwardable;
+    #[classattr]
+    #[pyo3(name = "DisallowPostdated")]
+    const PyDisallowPostdated: Self = Self::DisallowPostdated;
+    #[classattr]
+    #[pyo3(name = "DisallowProxiable")]
+    const PyDisallowProxiable: Self = Self::DisallowProxiable;
+    #[classattr]
+    #[pyo3(name = "DisallowRenewable")]
+    const PyDisallowRenewable: Self = Self::DisallowRenewable;
+    #[classattr]
+    #[pyo3(name = "DisallowSvr")]
+    const PyDisallowSvr: Self = Self::DisallowSvr;
+    #[classattr]
+    #[pyo3(name = "DisallowTgtBased")]
+    const PyDisallowTgtBased: Self = Self::DisallowTgtBased;
+    #[classattr]
+    #[pyo3(name = "LockdownKeys")]
+    const PyLockdownKeys: Self = Self::LockdownKeys;
+    #[classattr]
+    #[pyo3(name = "NewPrinc")]
+    const PyNewPrinc: Self = Self::NewPrinc;
+    #[classattr]
+    #[pyo3(name = "NoAuthDataRequired")]
+    const PyNoAuthDataRequired: Self = Self::NoAuthDataRequired;
+    #[classattr]
+    #[pyo3(name = "OkAsDelegate")]
+    const PyOkAsDelegate: Self = Self::OkAsDelegate;
+    #[classattr]
+    #[pyo3(name = "OkToAuthAsDelegate")]
+    const PyOkToAuthAsDelegate: Self = Self::OkToAuthAsDelegate;
+    #[classattr]
+    #[pyo3(name = "PwChangeService")]
+    const PyPwChangeService: Self = Self::PwChangeService;
+    #[classattr]
+    #[pyo3(name = "RequiresHwAuth")]
+    const PyRequiresHwAuth: Self = Self::RequiresHwAuth;
+    #[classattr]
+    #[pyo3(name = "RequiresPreAuth")]
+    const PyRequiresPreAuth: Self = Self::RequiresPreAuth;
+    #[classattr]
+    #[pyo3(name = "RequiresPwChange")]
+    const PyRequiresPwChange: Self = Self::RequiresPwChange;
+    #[classattr]
+    #[pyo3(name = "SupportDesMd5")]
+    const PySupportDesMd5: Self = Self::SupportDesMd5;
+
+    #[new]
+    fn py_new(bits: i32) -> Self {
+        Self::from_bits_retain(bits)
+    }
+
+    #[pyo3(name = "bits")]
+    fn py_bits(&self) -> i32 {
+        self.bits()
+    }
+
+    fn __contains__(&self, other: Self) -> bool {
+        self.contains(other)
+    }
+
+    fn __and__(&self, other: Self) -> Self {
+        *self & other
+    }
+
+    fn __iand__(&mut self, other: Self) {
+        Self::bitand_assign(self, other);
+    }
+
+    fn __xor__(&self, other: Self) -> Self {
+        *self ^ other
+    }
+
+    fn __ixor__(&mut self, other: Self) {
+        Self::bitxor_assign(self, other);
+    }
+
+    fn __or__(&self, other: Self) -> Self {
+        *self | other
+    }
+
+    fn __ior__(&mut self, other: Self) {
+        Self::bitor_assign(self, other);
+    }
+
+    fn __invert__(&self) -> Self {
+        self.complement()
+    }
+
+    fn __int__(&self) -> i32 {
+        self.bits()
+    }
+}
+
 impl KAdmin {
     fn py_get_builder(
         params: Option<Params>,
@@ -203,24 +314,66 @@ impl KAdmin {
 
 #[pymethods]
 impl KAdmin {
-    #[pyo3(name = "add_principal")]
-    fn py_add_principal(&self) {
-        unimplemented!();
-    }
-
-    #[pyo3(name = "delete_principal")]
-    fn py_delete_principal(&self) {
-        unimplemented!();
-    }
-
-    #[pyo3(name = "modify_principal")]
-    fn py_modify_principal(&self) {
-        unimplemented!();
+    #[pyo3(name = "add_principal", signature = (name, **kwargs))]
+    fn py_add_principal(
+        &self,
+        name: &str,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Principal> {
+        let mut builder = Principal::builder(name);
+        if let Some(kwargs) = kwargs {
+            if let Some(expire_time) = kwargs.get_item("expire_time")? {
+                builder = builder.expire_time(expire_time.extract()?);
+            }
+            if let Some(password_expiration) = kwargs.get_item("password_expiration")? {
+                builder = builder.password_expiration(password_expiration.extract()?);
+            }
+            if let Some(max_life) = kwargs.get_item("max_life")? {
+                builder = builder.max_life(max_life.extract()?);
+            }
+            if let Some(attributes) = kwargs.get_item("attributes")? {
+                builder = builder.attributes(attributes.extract()?);
+            }
+            if let Some(policy) = kwargs.get_item("policy")? {
+                builder = builder.policy(policy.extract::<Option<String>>()?.as_deref());
+            }
+            if let Some(aux_attributes) = kwargs.get_item("aux_attributes")? {
+                builder = builder.aux_attributes(aux_attributes.extract()?);
+            }
+            if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
+                builder = builder.max_renewable_life(max_renewable_life.extract()?);
+            }
+            if let Some(fail_auth_count) = kwargs.get_item("fail_auth_count")? {
+                builder = builder.fail_auth_count(fail_auth_count.extract()?);
+            }
+            if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                builder = builder.tl_data(tl_data.extract()?);
+            }
+            if let Some(db_args) = kwargs.get_item("db_args")? {
+                builder = builder.db_args(db_args.extract()?);
+            }
+            if let Some(kvno) = kwargs.get_item("kvno")? {
+                builder = builder.kvno(kvno.extract()?);
+            }
+            if let Some(key) = kwargs.get_item("key")? {
+                let key = key.extract::<PyPrincipalBuilderKey>()?;
+                builder = builder.key(&key.into());
+            }
+            if let Some(keysalts) = kwargs.get_item("keysalts")? {
+                builder = builder.keysalts(&keysalts.extract()?);
+            }
+        }
+        Ok(builder.create(self)?)
     }
 
     #[pyo3(name = "rename_principal")]
-    fn py_rename_principal(&self) {
-        unimplemented!();
+    fn py_rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        self.rename_principal(old_name, new_name)
+    }
+
+    #[pyo3(name = "delete_principal")]
+    fn py_delete_principal(&self, name: &str) -> Result<()> {
+        self.delete_principal(name)
     }
 
     #[pyo3(name = "get_principal")]
@@ -231,6 +384,27 @@ impl KAdmin {
     #[pyo3(name = "principal_exists")]
     fn py_principal_exists(&self, name: &str) -> Result<bool> {
         self.principal_exists(name)
+    }
+
+    #[pyo3(name = "principal_change_password", signature = (name, password, keepold = None, keysalts = None))]
+    fn py_principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        self.principal_change_password(name, password, keepold, keysalts)
+    }
+
+    #[pyo3(name = "principal_randkey", signature = (name, keepold = None, keysalts = None))]
+    fn py_principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        self.principal_randkey(name, keepold, keysalts)
     }
 
     #[pyo3(name = "list_principals", signature = (query=None))]
@@ -282,7 +456,7 @@ impl KAdmin {
                 builder = builder.allowed_keysalts(allowed_keysalts.extract()?);
             }
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
-                builder = builder.tl_data(tl_data.extract::<TlData>()?);
+                builder = builder.tl_data(tl_data.extract()?);
             }
         }
         Ok(builder.create(self)?)
@@ -373,9 +547,99 @@ impl KAdmin {
 
 #[pymethods]
 impl Principal {
-    #[pyo3(name = "change_password")]
-    fn py_change_password(&self, kadmin: &KAdmin, password: &str) -> Result<()> {
-        self.change_password(kadmin, password)
+    #[pyo3(name = "modify", signature = (kadmin, **kwargs))]
+    fn py_modify(&self, kadmin: &KAdmin, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+        if let Some(kwargs) = kwargs {
+            let mut modifier = self.modifier();
+            if let Some(expire_time) = kwargs.get_item("expire_time")? {
+                modifier = modifier.expire_time(expire_time.extract()?);
+            }
+            if let Some(password_expiration) = kwargs.get_item("password_expiration")? {
+                modifier = modifier.password_expiration(password_expiration.extract()?);
+            }
+            if let Some(max_life) = kwargs.get_item("max_life")? {
+                modifier = modifier.max_life(max_life.extract()?);
+            }
+            if let Some(attributes) = kwargs.get_item("attributes")? {
+                modifier = modifier.attributes(attributes.extract()?);
+            }
+            if let Some(policy) = kwargs.get_item("policy")? {
+                modifier = modifier.policy(policy.extract::<Option<String>>()?.as_deref());
+            }
+            if let Some(aux_attributes) = kwargs.get_item("aux_attributes")? {
+                modifier = modifier.aux_attributes(aux_attributes.extract()?);
+            }
+            if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
+                modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
+            }
+            if let Some(fail_auth_count) = kwargs.get_item("fail_auth_count")? {
+                modifier = modifier.fail_auth_count(fail_auth_count.extract()?);
+            }
+            if let Some(tl_data) = kwargs.get_item("tl_data")? {
+                modifier = modifier.tl_data(tl_data.extract()?);
+            }
+            if let Some(db_args) = kwargs.get_item("db_args")? {
+                modifier = modifier.db_args(db_args.extract()?);
+            }
+            Ok(modifier.modify(kadmin)?)
+        } else {
+            Ok(self.clone())
+        }
+    }
+
+    #[pyo3(name = "delete")]
+    fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
+        self.delete(kadmin)
+    }
+
+    #[pyo3(name = "change_password", signature = (kadmin, password, keepold = None, keysalts = None))]
+    fn py_change_password(
+        &self,
+        kadmin: &KAdmin,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        self.change_password(kadmin, password, keepold, keysalts)
+    }
+
+    #[pyo3(name = "randkey", signature = (kadmin, keepold = None, keysalts = None))]
+    fn py_randkey(
+        &self,
+        kadmin: &KAdmin,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        self.randkey(kadmin, keepold, keysalts)
+    }
+
+    #[pyo3(name = "unlock")]
+    fn py_unlock(&self, kadmin: &KAdmin) -> Result<()> {
+        self.unlock(kadmin)
+    }
+}
+
+// Copy of PrincipalBuilderKey due to pyo3 limitations
+// See https://pyo3.rs/v0.23.3/class.html?highlight=enum#complex-enums
+#[pyclass(name = "NewPrincipalKey")]
+#[derive(Clone, Debug, PartialEq)]
+enum PyPrincipalBuilderKey {
+    Password(String),
+    NoKey(),
+    RandKey(),
+    ServerRandKey(),
+    OldStyleRandKey(),
+}
+
+impl From<PyPrincipalBuilderKey> for PrincipalBuilderKey {
+    fn from(key: PyPrincipalBuilderKey) -> Self {
+        match key {
+            PyPrincipalBuilderKey::Password(s) => Self::Password(s.clone()),
+            PyPrincipalBuilderKey::NoKey() => Self::NoKey,
+            PyPrincipalBuilderKey::RandKey() => Self::RandKey,
+            PyPrincipalBuilderKey::ServerRandKey() => Self::ServerRandKey,
+            PyPrincipalBuilderKey::OldStyleRandKey() => Self::OldStyleRandKey,
+        }
     }
 }
 

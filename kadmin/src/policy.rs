@@ -11,7 +11,7 @@ use crate::{
     error::Result,
     kadmin::KAdminImpl,
     keysalt::KeySalts,
-    tl_data::{TlData, TlDataEntry, TlDataRaw},
+    tl_data::{TlData, TlDataRaw},
 };
 
 /// A kadm5 policy
@@ -113,11 +113,15 @@ impl Policy {
     }
 
     /// Allowed keysalts
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
         self.allowed_keysalts.as_ref()
     }
 
     /// TL-data
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     pub fn tl_data(&self) -> &TlData {
         &self.tl_data
     }
@@ -195,7 +199,7 @@ macro_rules! policy_doer_struct {
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
             pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
-            pub(crate) tl_data: TlData,
+            pub(crate) tl_data: Option<TlData>,
             $($manual_fields)*
         }
     }
@@ -321,34 +325,15 @@ macro_rules! policy_doer_impl {
             self
         }
 
-        /// Override existing TL-data completely
+        /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
-            self.tl_data = tl_data;
-            self.mask |= KADM5_POLICY_TL_DATA as i64;
-            self
-        }
-
-        /// Add a TL-data entry
-        pub fn tl_data_push(mut self, entry: TlDataEntry) -> Self {
-            self.tl_data.entries.push(entry);
-            self.mask |= KADM5_POLICY_TL_DATA as i64;
-            self
-        }
-
-        /// Remove the TL-data at `index`
-        pub fn tl_data_remove(mut self, index: usize) -> Self {
-            self.tl_data.entries.remove(index);
+            self.tl_data = Some(tl_data);
             self.mask |= KADM5_POLICY_TL_DATA as i64;
             self
         }
 
         /// Create a [`_kadm5_policy_ent_t`] from this builder
-        ///
-        /// # Safety
-        ///
-        /// The element in the second position of the returned tuple needs to live as long as
-        /// [`_krb5_tl_data`] lives
-        pub(crate) unsafe fn make_entry(&self) -> Result<PolicyEntryRaw> {
+        pub(crate) fn make_entry(&self) -> Result<PolicyEntryRaw> {
             let mut policy = _kadm5_policy_ent_t::default();
             let name = CString::new(self.name.clone())?;
             policy.policy = name.as_ptr().cast_mut();
@@ -397,16 +382,11 @@ macro_rules! policy_doer_impl {
             } else {
                 None
             };
-            let tl_data = if self.mask & (KADM5_POLICY_TL_DATA as i64) != 0 {
-                let mut tl_data = self.tl_data.to_raw();
-                if let Some(ref mut tl_data) = &mut tl_data {
-                    policy.n_tl_data = self.tl_data.entries.len() as i16;
-                    policy.tl_data = &mut tl_data.raw;
-                } else {
-                    policy.n_tl_data = 0;
-                    policy.tl_data = null_mut();
-                }
-                tl_data
+            let tl_data = if let Some(tl_data) = &self.tl_data {
+                let raw_tl_data = tl_data.to_raw();
+                policy.n_tl_data = tl_data.entries.len() as i16;
+                policy.tl_data = raw_tl_data.raw;
+                Some(raw_tl_data)
             } else {
                 None
             };
@@ -497,6 +477,8 @@ impl PolicyModifier {
     }
 
     /// Modify the policy
+    ///
+    /// A new up-to-date instance of [`Policy`] is returned, but the old one is still available
     pub fn modify<K: KAdminImpl>(&self, kadmin: &K) -> Result<Policy> {
         kadmin.modify_policy(self)?;
         Ok(kadmin.get_policy(&self.name)?.unwrap())

@@ -18,7 +18,7 @@ pub struct TlDataEntry {
 }
 
 /// TL-data entries
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 #[allow(clippy::exhaustive_structs)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlData {
@@ -52,14 +52,13 @@ impl TlData {
     /// Create a [`_krb5_tl_data`] from [`TlData`]
     ///
     /// Returns None if there are not TL-data.
-    ///
-    /// # Safety
-    ///
-    /// The element in the second position of the returned tuple needs to live as long as
-    /// [`_krb5_tl_data`] lives
-    pub(crate) unsafe fn to_raw(&self) -> Option<TlDataRaw> {
+    pub(crate) fn to_raw(&self) -> TlDataRaw {
         if self.entries.is_empty() {
-            return None;
+            return TlDataRaw {
+                raw: null_mut(),
+                _raw_entries: vec![],
+                _raw_contents: vec![],
+            };
         }
 
         let mut raw_contents = Vec::new();
@@ -83,16 +82,17 @@ impl TlData {
             raw_entries[i - 1].tl_data_next = &mut raw_entries[i];
         }
 
-        Some(TlDataRaw {
-            raw: raw_entries[0],
+        TlDataRaw {
+            raw: raw_entries.as_mut_ptr(),
             _raw_entries: raw_entries,
             _raw_contents: raw_contents,
-        })
+        }
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct TlDataRaw {
-    pub(crate) raw: _krb5_tl_data,
+    pub(crate) raw: *mut krb5_tl_data,
     pub(crate) _raw_entries: Vec<_krb5_tl_data>,
     pub(crate) _raw_contents: Vec<Vec<u8>>,
 }

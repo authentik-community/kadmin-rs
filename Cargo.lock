@@ -278,11 +278,13 @@ name = "kadmin"
 version = "0.4.2"
 dependencies = [
  "anyhow",
+ "bitflags",
  "chrono",
  "either",
  "getset",
  "indoc",
  "kadmin-sys",
+ "libc",
  "pyo3",
  "rand",
  "serial_test",

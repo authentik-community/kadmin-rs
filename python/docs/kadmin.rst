@@ -103,6 +103,45 @@ kadmin
 
       Not implemented
 
+   .. py:method:: add_principal(name, **kwargs)
+
+      Create a principal
+
+      :param name: the name of the principal to create
+      :type name: str
+      :param kwargs: Extra args for the creation. The name of those arguments must match the
+          attributes name of the :py:class:`Principal` class that are not marked as read-only.
+          Same goes for their types.
+      :return: the newly created :py:class:`Principal`
+      :rtype: Principal
+
+      In addition, the following arguments are available
+
+      :param db_args: database specific arguments
+      :type db_args: DbArgs
+      :param key: how to set the principal key
+      :type key: NewPrincipalKey
+      :param keysalts: Use the specified keysalt list for setting the keys of the principal
+      :type keysalts: KeySalts
+
+   .. py:method:: rename_principal(old_name, new_name)
+
+      Rename a principal
+
+      :param old_name: the current name of the principal
+      :type old_name: str
+      :param new_name: the new name of the principal
+      :type old_name: str
+
+   .. py:method:: delete_principal(name)
+
+      Delete a principal
+      
+      :py:meth:`Principal.delete` is also available
+      
+      :param name: name of the principal to delete
+      :type name: str
+
    .. py:method:: get_principal(name)
 
       Retrieve a principal
@@ -120,6 +159,36 @@ kadmin
       :type name: str
       :return: `True` if the principal exists, `False` otherwise
       :rtype: bool
+
+   .. py:method:: principal_change_password(name, password, keepold=None, keysalts=None)
+
+      Change the password of a principal
+      
+      :py:meth:`Principal.change_password` is also available
+      
+      :param name: name of the principal to change the password of
+      :type name: str
+      :param password: the new password
+      :type password: str
+      :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
+         perhaps for krbtgt principals. Defaults to false
+      :type keepold: bool | None
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :type keysalts: KeySalts | None
+
+   .. py:method:: principal_randkey(name, keepold=None, keysalts=None)
+
+      Sets the key of the principal to a random value
+      
+      :py:meth:`Principal.randkey` is also available
+      
+      :param name: name of the principal to randomize the key of
+      :type name: str
+      :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
+         perhaps for krbtgt principals. Defaults to false
+      :type keepold: bool | None
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :type keysalts: KeySalts | None
 
    .. py:method:: list_principals(query=None)
 
@@ -141,8 +210,7 @@ kadmin
       :param name: the name of the policy to create
       :type name: str
       :param kwargs: Extra args for the creation. The name of those arguments must match the
-          attributes name of the :py:class:`Policy` class. Same goes for their types. The
-          `name` attribute is ignored.
+          attributes name of the :py:class:`Policy` class. Same goes for their types.
       :return: the newly created :py:class:`Policy`
       :rtype: Policy
 
@@ -192,12 +260,323 @@ kadmin
 
       :type: str
 
-   .. py:method:: change_password(password)
+   .. py:attribute:: expire_time
+
+      When the principal expires
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: last_password_change
+
+      When the password was last changed
+
+      Read-only
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: password_expiration
+
+      When the password expires
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: max_life
+
+      Maximum ticket life
+
+      :type: datetime.timedelta | None
+
+   .. py:attribute:: modified_by
+
+      Last principal to modify this principal
+
+      Read-only
+
+      :type: str
+
+   .. py:attribute:: modified_at
+
+      When the principal was last modified
+
+      Read-only
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: attributes
+
+      See :py:class:`PrincipalAttributes`
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: kvno
+
+      Current key version number
+
+      Read-only, but can be set on principal creation
+
+      :type: int
+
+   .. py:attribute:: mkvno
+
+      Master key version number
+
+      Read-only
+
+      :type: int
+
+   .. py:attribute:: policy
+
+      Associated policy
+
+      :type: str | None
+
+   .. py:attribute:: aux_attributes
+
+      Extra attributes
+
+      :type: int
+
+   .. py:attribute:: max_renewable_life
+
+      Maximum renewable ticket life
+
+      :type: datetime.timedelta | None
+
+   .. py:attribute:: last_success
+
+      When the last successful authentication occurred
+
+      Read-only
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: last_failed
+
+      When the last failed authentication occurred
+
+      Read-only
+
+      :type: datetime.datetime | None
+
+   .. py:attribute:: fail_auth_count
+
+      Number of failed authentication attempts
+
+      :type: int
+
+   .. py:attribute:: tl_dats
+
+      TL-data
+
+      :type: TlData
+
+   .. py:method:: modify(kadmin, **kwargs)
+
+      Change this principal
+      
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+      :param kwargs: Attributes to change. The name of those arguments must match the
+          attributes name of the :py:class:`Principal` class that are not marked as read-only.
+          Same goes for their types
+      :return: a new :py:class:`Principal` object with the modifications made to it. The old
+         object is still available, but will not be up-to-date
+      :rtype: Principal
+
+   .. py:method:: delete(kadmin)
+
+      Delete this principal
+      
+      The object will still be available, but shouldn’t be used for modifying, as the policy
+      may not exist anymore
+
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+
+   .. py:method:: change_password(kadmin, password, keepold=None, keysalts=None)
 
       Change the password of the principal
+
+      Note that principal data will have changed after this, so you may need to refresh it
       
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
       :param password: the new password
       :type password: str
+      :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
+         perhaps for krbtgt principals. Defaults to false
+      :type keepold: bool | None
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :type keysalts: KeySalts | None
+
+   .. py:method:: randkey(kadmin, keepold=None, keysalts=None)
+
+      Sets the key of the principal to a random value
+
+      Note that principal data will have changed after this, so you may need to refresh it
+      
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+      :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
+         perhaps for krbtgt principals. Defaults to false
+      :type keepold: bool | None
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :type keysalts: KeySalts | None
+
+   .. py:method:: unlock(kadmin)
+
+      Unlocks a locked principal (one which has received too many failed authentication attempts without
+      enough time between them according to its password policy) so that it can successfully authenticate
+
+      Note that principal data will have changed after this, so you may need to refresh it
+      
+      :param kadmin: A :py:class:`KAdmin` instance
+      :type kadmin: KAdmin
+
+.. py:class:: PrincipalAttributes(bits)
+
+   Attributes set on a principal
+
+   See `man kadmin(1)`, under the `add_principal` section for an explanation
+
+   :param bits: Attributes bits
+   :type bits: int
+
+   .. py:attribute:: DisallowPostdated
+
+      Prohibits the principal from obtaining postdated tickets
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowForwardable
+
+      Prohibits the principal from obtaining forwardable tickets
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowTgtBased
+
+      Specifies that a Ticket-Granting Service (TGS) request for a service ticket for the principal is not permitted
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowRenewable
+
+      Prohibits the principal from obtaining renewable tickets
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowProxiable
+
+      Prohibits the principal from obtaining proxiable tickets
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowDupSkey
+
+      Disables user-to-user authentication for the principal by prohibiting this principal from obtaining a session key for another user
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowAllTix
+
+      Forbids the issuance of any tickets for the principal
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: RequiresPreAuth
+
+      Requires the principal to preauthenticate before being allowed to kinit
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: RequiresHwAuth
+
+      Requires the principal to preauthenticate using a hardware device before being allowed to kinit
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: RequiresPwChange
+
+      Force a password change
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: DisallowSvr
+
+      Prohibits the issuance of service tickets for the principal
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: PwChangeService
+
+      Marks the principal as a password change service principal
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: SupportDesMd5
+
+      An AS_REQ for a principal with this bit set and an encrytion type of ENCTYPE_DES_CBC_CRC causes the encryption type ENCTYPE_DES_CBC_MD5 to be used instead
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: NewPrinc
+
+      Allow kadmin administrators with `add` acls to modify the principal until this bit is cleared
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: OkAsDelegate
+
+      Sets the OK-AS-DELEGATE flag on tickets issued for use with the principal as the service, which clients may use as a hint that credentials can and should be delegated when authenticating to the service
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: OkToAuthAsDelegate
+
+      Sets the service to allow the use of S4U2Self
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: NoAuthDataRequired
+
+      Prevents PAC or AD-SIGNEDPATH data from being added to service tickets for the principal
+
+      :type: PrincipalAttributes
+
+   .. py:attribute:: LockdownKeys
+
+      Prevents keys for the principal from being extracted or set to a known value by the kadmin protocol
+
+      :type: PrincipalAttributes
+
+.. py:class:: NewPrincipalKey
+
+   Method to use to set the principal key when creating it
+
+   Passing the class itself is not enough. An object should be created from those subclasses.
+
+   .. py:class:: Password(password)
+
+      Provide a password to use
+
+      :type password: str
+
+   .. py:class:: NoKey()
+
+      No key should be set on the principal
+
+   .. py:class:: RandKey()
+
+      A random key should be generated for the principal. Tries `ServerRandKey` and falls back to `OldStyleRandKey`
+
+   .. py:class:: ServerRandKey()
+
+      A random key should be generated for the principal by the server
+
+   .. py:class:: OldStyleRandKey()
+
+      Old-style random key. Creates the principal with KRB5_KDB_DISALLOW_ALL_TIX and a generated dummy key, then calls randkey on the principal and finally removes KRB5_KDB_DISALLOW_ALL_TIX
 
 .. py:class:: Policy
 

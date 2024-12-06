@@ -1,11 +1,19 @@
 //! Conversion utilities
 
-use std::{ffi::CStr, os::raw::c_char, time::Duration};
+use std::{
+    ffi::{CStr, CString},
+    os::raw::c_char,
+    ptr::null_mut,
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
 use kadmin_sys::*;
 
-use crate::error::{Error, Result};
+use crate::{
+    context::Context,
+    error::{Error, Result, krb5_error_code_escape_hatch},
+};
 
 /// Convert a `*const c_char` to a [`String`]
 pub(crate) fn c_string_to_string(c_string: *const c_char) -> Result<String> {
@@ -29,6 +37,15 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
         .ok_or(Error::TimestampConversion)
 }
 
+/// Convert a [`DateTime<Utc>`] to a [`krb5_timestamp`]
+pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
+    if let Some(dt) = dt {
+        dt.timestamp().try_into().map_err(Error::DateTimeConversion)
+    } else {
+        Ok(0)
+    }
+}
+
 /// Convert a [`krb5_deltat`] to a [`Duration`]
 pub(crate) fn delta_to_dur(delta: i64) -> Option<Duration> {
     if delta == 0 {
@@ -43,5 +60,55 @@ pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<krb5_deltat> {
         dur.as_secs().try_into().map_err(Error::DateTimeConversion)
     } else {
         Ok(0)
+    }
+}
+
+/// Convert a [`krb5_principal`] to a [`String`]
+pub(crate) fn unparse_name(context: &Context, principal: krb5_principal) -> Result<Option<String>> {
+    if principal.is_null() {
+        return Ok(None);
+    }
+    let mut raw_name: *mut c_char = null_mut();
+    let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
+    krb5_error_code_escape_hatch(context, code)?;
+    let name = c_string_to_string(raw_name)?;
+    unsafe {
+        krb5_free_unparsed_name(context.context, raw_name);
+    }
+    Ok(Some(name))
+}
+
+pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedName<'a>> {
+    let name = CString::new(name)?;
+    let mut parsed_name = ParsedName {
+        raw: null_mut(),
+        context,
+    };
+
+    let code = unsafe {
+        krb5_parse_name(
+            context.context,
+            name.as_ptr().cast_mut(),
+            &mut parsed_name.raw,
+        )
+    };
+    krb5_error_code_escape_hatch(context, code)?;
+    let mut canon = null_mut();
+    let code = unsafe { krb5_unparse_name(context.context, parsed_name.raw, &mut canon) };
+    krb5_error_code_escape_hatch(context, code)?;
+    Ok(parsed_name)
+}
+
+pub(crate) struct ParsedName<'a> {
+    pub(crate) raw: krb5_principal,
+    context: &'a Context,
+}
+
+impl Drop for ParsedName<'_> {
+    fn drop(&mut self) {
+        if self.raw.is_null() {
+            return;
+        }
+        unsafe { krb5_free_principal(self.context.context, self.raw) }
     }
 }

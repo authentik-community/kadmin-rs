@@ -10,17 +10,19 @@ use std::{
 };
 
 use kadmin_sys::*;
+use libc::EINVAL;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 use crate::{
     context::Context,
-    conv::c_string_to_string,
+    conv::{c_string_to_string, parse_name},
     db_args::DbArgs,
     error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
+    keysalt::KeySalts,
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
-    principal::Principal,
+    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -75,29 +77,39 @@ pub struct KAdmin {
 
 /// Common methods for `KAdmin` implementations
 pub trait KAdminImpl {
-    /// Create a principal. Not yet implemented
+    /// Create a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalBuilder`], via
+    /// [`Principal::builder`]
     #[doc(alias("ank", "addprinc"))]
-    fn add_principal() {
-        unimplemented!();
-    }
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()>;
 
-    /// Delete a principal. Not yet implemented
-    #[doc(alias = "delprinc")]
-    fn delete_principal() {
-        unimplemented!();
-    }
-
-    /// Modify a principal. Not yet implemented
+    /// Modify a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalModifier`], via
+    /// [`Principal::modifier`]
     #[doc(alias = "modprinc")]
-    fn modify_principal() {
-        unimplemented!();
-    }
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
 
-    /// Rename a principal. Not yet implemented
+    /// Rename a principal
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # #[cfg(feature = "client")]
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// kadm.rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
+    ///     .unwrap();
+    /// # }
+    /// ```
     #[doc(alias = "renprinc")]
-    fn rename_principal() {
-        unimplemented!();
-    }
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
+
+    /// Delete a principal
+    ///
+    /// [`Principal::delete`] is also available
+    #[doc(alias = "delprinc")]
+    fn delete_principal(&self, name: &str) -> Result<()>;
 
     /// Retrieve a principal
     ///
@@ -131,9 +143,35 @@ pub trait KAdminImpl {
 
     /// Change a principal password
     ///
-    /// Don't use this method directly. Instead, use [`Principal::change_password`]
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
     #[doc(alias = "cpw")]
-    fn principal_change_password(&self, name: &str, password: &str) -> Result<()>;
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
+
+    /// Sets the key of the principal to a random value
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// [`Principal::randkey`] is also available
+    // TODO: add returning newly created keys
+    #[doc(alias = "randkey")]
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
 
     /// List principals
     ///
@@ -157,7 +195,7 @@ pub trait KAdminImpl {
 
     /// Add a policy
     ///
-    /// Don't use this method directly. Instead, use a [`PolicyBuilder`]
+    /// Don't use this method directly. Instead, use a [`PolicyBuilder`], via [`Policy::builder`]
     #[doc(alias = "addpol")]
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
 
@@ -231,6 +269,138 @@ impl KAdmin {
 }
 
 impl KAdminImpl for KAdmin {
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
+        let mut entry = builder.make_entry(&self.context)?;
+        let mut mask = builder.mask;
+        if let Some(kvno) = builder.kvno {
+            entry.raw.kvno = kvno;
+        }
+
+        if let Some(policy) = &builder.policy {
+            if policy.is_none() {
+                mask &= !(KADM5_POLICY_CLR as i64);
+            }
+        }
+
+        let prepare_dummy_pass = || {
+            let mut dummy_pass = String::with_capacity(256);
+            dummy_pass.push_str("6F a[");
+            for i in dummy_pass.len()..=256 {
+                dummy_pass.push((b'a' + ((i % 26) as u8)) as char);
+            }
+            CString::new(dummy_pass)
+        };
+
+        let mut old_style_randkey = false;
+
+        let pass = match &builder.key {
+            PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
+            PrincipalBuilderKey::NoKey => {
+                mask |= KADM5_KEY_DATA as i64;
+                None
+            }
+            PrincipalBuilderKey::RandKey => None,
+            PrincipalBuilderKey::ServerRandKey => None,
+            PrincipalBuilderKey::OldStyleRandKey => Some(prepare_dummy_pass()?),
+        };
+        let raw_pass = if let Some(pass) = pass {
+            pass.as_ptr().cast_mut()
+        } else {
+            null_mut()
+        };
+
+        if builder.key == PrincipalBuilderKey::OldStyleRandKey {
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
+            mask |= KADM5_ATTRIBUTES as i64;
+            old_style_randkey = true;
+        }
+
+        let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else {
+            (0, null_mut())
+        };
+
+        mask |= KADM5_PRINCIPAL as i64;
+        let code = if keysalts.is_none() {
+            unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
+        } else {
+            unsafe {
+                kadm5_create_principal_3(
+                    self.server_handle,
+                    &mut entry.raw,
+                    mask,
+                    n_ks_tuple,
+                    ks_tuple,
+                    raw_pass,
+                )
+            }
+        };
+        let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
+            let pass = prepare_dummy_pass()?;
+            let raw_pass = pass.as_ptr().cast_mut();
+            // The server doesn't support randkey creation. Create the principal with a dummy
+            // password and disallow tickets.
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
+            mask |= KADM5_ATTRIBUTES as i64;
+            old_style_randkey = true;
+            if keysalts.is_none() {
+                unsafe {
+                    kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass)
+                }
+            } else {
+                unsafe {
+                    kadm5_create_principal_3(
+                        self.server_handle,
+                        &mut entry.raw,
+                        mask,
+                        n_ks_tuple,
+                        ks_tuple,
+                        raw_pass,
+                    )
+                }
+            }
+        } else {
+            code
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        if old_style_randkey {
+            self.principal_randkey(&builder.name, None, builder.keysalts.as_ref())?;
+            entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as i32);
+            mask = KADM5_ATTRIBUTES as i64;
+            let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, mask) };
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
+        }
+
+        Ok(())
+    }
+
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
+        let mut entry = modifier.make_entry(&self.context)?;
+        let code =
+            unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, modifier.mask) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        let old_princ = parse_name(&self.context, old_name)?;
+        let new_princ = parse_name(&self.context, new_name)?;
+        let code =
+            unsafe { kadm5_rename_principal(self.server_handle, old_princ.raw, new_princ.raw) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn delete_principal(&self, name: &str) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let code = unsafe { kadm5_delete_principal(self.server_handle, princ.raw) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
         let mut temp_princ = null_mut();
         let name = CString::new(name)?;
@@ -242,13 +412,16 @@ impl KAdminImpl for KAdmin {
             )
         };
         krb5_error_code_escape_hatch(&self.context, code)?;
+        let mut canon = null_mut();
+        let code = unsafe { krb5_unparse_name(self.context.context, temp_princ, &mut canon) };
+        krb5_error_code_escape_hatch(&self.context, code)?;
         let mut principal_ent = _kadm5_principal_ent_t::default();
         let code = unsafe {
             kadm5_get_principal(
                 self.server_handle,
                 temp_princ,
                 &mut principal_ent,
-                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA) as i64,
+                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA | KADM5_TL_DATA) as i64,
             )
         };
         unsafe {
@@ -264,24 +437,81 @@ impl KAdminImpl for KAdmin {
         Ok(Some(principal))
     }
 
-    fn principal_change_password(&self, name: &str, password: &str) -> Result<()> {
-        let mut temp_princ = null_mut();
-        let name = CString::new(name)?;
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
         let password = CString::new(password)?;
+        let princ = parse_name(&self.context, name)?;
+
+        let keepold = keepold.unwrap_or(false);
+        let mut keysalts = keysalts.map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else {
+            (0, null_mut())
+        };
+
+        let code = if keepold || keysalts.is_some() {
+            unsafe {
+                kadm5_chpass_principal_3(
+                    self.server_handle,
+                    princ.raw,
+                    keepold as krb5_boolean,
+                    n_ks_tuple,
+                    ks_tuple,
+                    password.as_ptr().cast_mut(),
+                )
+            }
+        } else {
+            unsafe {
+                kadm5_chpass_principal(self.server_handle, princ.raw, password.as_ptr().cast_mut())
+            }
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        Ok(())
+    }
+
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let keepold = keepold.unwrap_or(false);
+
+        let mut keysalts = keysalts.map(|ks| ks.to_raw());
+        let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+            (keysalts.len() as i32, keysalts.as_mut_ptr())
+        } else {
+            (0, null_mut())
+        };
+
         let code = unsafe {
-            krb5_parse_name(
-                self.context.context,
-                name.as_ptr().cast_mut(),
-                &mut temp_princ,
+            kadm5_randkey_principal_3(
+                self.server_handle,
+                princ.raw,
+                keepold as krb5_boolean,
+                n_ks_tuple,
+                ks_tuple,
+                null_mut(),
+                null_mut(),
             )
         };
-        krb5_error_code_escape_hatch(&self.context, code)?;
-        let code = unsafe {
-            kadm5_chpass_principal(self.server_handle, temp_princ, password.as_ptr().cast_mut())
+
+        let code = if code == KADM5_RPC_ERROR as i64 && !keepold && keysalts.is_none() {
+            unsafe {
+                kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut())
+            }
+        } else {
+            code
         };
-        unsafe {
-            krb5_free_principal(self.context.context, temp_princ);
-        }
+
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
@@ -313,7 +543,7 @@ impl KAdminImpl for KAdmin {
     }
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
-        let mut entry = unsafe { builder.make_entry() }?;
+        let mut entry = builder.make_entry()?;
         let mask = builder.mask | KADM5_POLICY as i64;
         let code = unsafe { kadm5_create_policy(self.server_handle, &mut entry.raw, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
@@ -321,7 +551,7 @@ impl KAdminImpl for KAdmin {
     }
 
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
-        let mut entry = unsafe { modifier.make_entry() }?;
+        let mut entry = modifier.make_entry()?;
         let code =
             unsafe { kadm5_modify_policy(self.server_handle, &mut entry.raw, modifier.mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
