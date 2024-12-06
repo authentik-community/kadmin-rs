@@ -79,7 +79,10 @@ macro_rules! gen_tests {
             let princname = random_string(16);
             let princ = Principal::builder(&princname).create(&kadmin)?;
             assert_eq!(princ.name(), format!("{princname}@KRBTEST.COM"));
-            assert_eq!(princ.max_life(), Some(std::time::Duration::from_secs(86400)));
+            assert_eq!(
+                princ.max_life(),
+                Some(std::time::Duration::from_secs(86400))
+            );
             assert_eq!(princ.attributes(), PrincipalAttributes::from_bits_retain(0));
             Ok(())
         }
@@ -108,7 +111,10 @@ macro_rules! gen_tests {
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let princname = random_string(16);
             let princ = Principal::builder(&princname).create(&kadmin)?;
-            let princ = princ.modifier().attributes(PrincipalAttributes::RequiresPreAuth).modify(&kadmin)?;
+            let princ = princ
+                .modifier()
+                .attributes(PrincipalAttributes::RequiresPreAuth)
+                .modify(&kadmin)?;
             assert_eq!(princ.attributes(), PrincipalAttributes::RequiresPreAuth);
             let princ = kadmin.get_principal(&princname)?.unwrap();
             assert_eq!(princ.attributes(), PrincipalAttributes::RequiresPreAuth);
@@ -168,11 +174,11 @@ mod sync {
     use kadmin::{KAdmin, KAdminImpl, Principal, PrincipalAttributes};
     #[cfg(feature = "client")]
     use serial_test::serial;
-    #[cfg(feature = "client")]
-    use crate::random_string;
 
     #[cfg(feature = "client")]
     use crate::K5Test;
+    #[cfg(feature = "client")]
+    use crate::random_string;
 
     gen_tests!();
 }
