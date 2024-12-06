@@ -247,13 +247,25 @@ impl KAdminImpl for KAdmin {
 
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
         let (sender, receiver) = channel();
-        self.inner.op_sender.send(KAdminOperation::PrincipalGetStrings(name.to_owned(), sender))?;
+        self.inner
+            .op_sender
+            .send(KAdminOperation::PrincipalGetStrings(
+                name.to_owned(),
+                sender,
+            ))?;
         receiver.recv()?
     }
 
     fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
         let (sender, receiver) = channel();
-        self.inner.op_sender.send(KAdminOperation::PrincipalSetString(name.to_owned(), key.to_owned(), value.map(String::from), sender))?;
+        self.inner
+            .op_sender
+            .send(KAdminOperation::PrincipalSetString(
+                name.to_owned(),
+                key.to_owned(),
+                value.map(String::from),
+                sender,
+            ))?;
         receiver.recv()?
     }
 

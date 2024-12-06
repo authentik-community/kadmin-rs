@@ -1,7 +1,6 @@
 //! kadm5 principal
 
-use std::{ffi::CString, ptr::null_mut, time::Duration};
-use std::collections::HashMap;
+use std::{collections::HashMap, ffi::CString, ptr::null_mut, time::Duration};
 
 use bitflags::bitflags;
 use chrono::{DateTime, Utc};
@@ -269,7 +268,12 @@ impl Principal {
     /// Set string attribute on this principal
     ///
     /// Set `value` to None to remove the string
-    pub fn set_string<K: KAdminImpl>(&self, kadmin: &K, key: &str, value: Option<&str>) -> Result<()> {
+    pub fn set_string<K: KAdminImpl>(
+        &self,
+        kadmin: &K,
+        key: &str,
+        value: Option<&str>,
+    ) -> Result<()> {
         kadmin.principal_set_string(&self.name, key, value)
     }
 }

@@ -1,14 +1,14 @@
 //! [`KAdmin`] interface to kadm5
 
-#[cfg(feature = "client")]
-use std::{ffi::CStr, mem::MaybeUninit};
 use std::{
+    collections::HashMap,
     ffi::CString,
     os::raw::{c_char, c_void},
     ptr::null_mut,
     sync::Mutex,
-    collections::HashMap,
 };
+#[cfg(feature = "client")]
+use std::{ffi::CStr, mem::MaybeUninit};
 
 use kadmin_sys::*;
 use libc::EINVAL;
@@ -535,7 +535,9 @@ impl KAdminImpl for KAdmin {
         let mut count = 0;
         let mut raw_strings = null_mut();
 
-        let code = unsafe { kadm5_get_strings(self.server_handle, princ.raw, &mut raw_strings, &mut count) };
+        let code = unsafe {
+            kadm5_get_strings(self.server_handle, princ.raw, &mut raw_strings, &mut count)
+        };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
 
         let mut strings = HashMap::with_capacity(count as usize);
@@ -556,7 +558,18 @@ impl KAdminImpl for KAdmin {
         let key = CString::new(key)?;
         let value = value.map(CString::new).transpose()?;
 
-        let code = unsafe { kadm5_set_string(self.server_handle, princ.raw, key.as_ptr().cast_mut(), if let Some(value) = value { value.as_ptr().cast_mut() } else { null_mut () } ) };
+        let code = unsafe {
+            kadm5_set_string(
+                self.server_handle,
+                princ.raw,
+                key.as_ptr().cast_mut(),
+                if let Some(value) = value {
+                    value.as_ptr().cast_mut()
+                } else {
+                    null_mut()
+                },
+            )
+        };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }

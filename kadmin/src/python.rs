@@ -1,7 +1,7 @@
 //! Python bindings to libkadm5
 
 use std::{
-    collections::{HashSet, HashMap},
+    collections::{HashMap, HashSet},
     ops::{BitAndAssign, BitOrAssign, BitXorAssign},
     str::FromStr,
 };
