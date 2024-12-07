@@ -1,6 +1,6 @@
 [project]
 name = "python-kadmin-rs"
-version = "0.5.0"
+version = "0.5.1"
 description = "Python interface to the Kerberos administration interface (kadm5)"
 requires-python = ">=3.9,<3.14"
 readme = "README.md"
