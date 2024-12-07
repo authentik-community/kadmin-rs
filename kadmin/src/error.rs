@@ -185,6 +185,6 @@ pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> 
     if message != "Unknown error" {
         Err(Error::KAdmin { code, message })
     } else {
-        krb5_error_code_escape_hatch(context, code as i32)
+        krb5_error_code_escape_hatch(context, code as krb5_error_code)
     }
 }

@@ -12,9 +12,9 @@ use pyo3::prelude::*;
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlDataEntry {
     /// TL-data type
-    pub data_type: i16,
+    pub data_type: krb5_int16,
     /// Entry contents
-    pub contents: Vec<u8>,
+    pub contents: Vec<krb5_octet>,
 }
 
 /// TL-data entries
@@ -28,7 +28,7 @@ pub struct TlData {
 
 impl TlData {
     /// Create a [`TlData`] from [`_krb5_tl_data`]
-    pub(crate) fn from_raw(n_tl_data: i16, mut tl_data: *mut _krb5_tl_data) -> Self {
+    pub(crate) fn from_raw(n_tl_data: krb5_int16, mut tl_data: *mut _krb5_tl_data) -> Self {
         let mut entries = Vec::with_capacity(n_tl_data as usize);
 
         while !tl_data.is_null() {
@@ -69,7 +69,7 @@ impl TlData {
                 let contents = entry.contents.clone();
                 let data = _krb5_tl_data {
                     tl_data_type: entry.data_type,
-                    tl_data_length: entry.contents.len() as u16,
+                    tl_data_length: entry.contents.len() as krb5_ui_2,
                     tl_data_contents: contents.as_ptr().cast_mut(),
                     tl_data_next: null_mut(),
                 };
@@ -94,5 +94,5 @@ impl TlData {
 pub(crate) struct TlDataRaw {
     pub(crate) raw: *mut krb5_tl_data,
     pub(crate) _raw_entries: Vec<_krb5_tl_data>,
-    pub(crate) _raw_contents: Vec<Vec<u8>>,
+    pub(crate) _raw_contents: Vec<Vec<krb5_octet>>,
 }

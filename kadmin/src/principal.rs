@@ -1,6 +1,11 @@
 //! kadm5 principal
 
-use std::{collections::HashMap, ffi::CString, ptr::null_mut, time::Duration};
+use std::{
+    collections::HashMap,
+    ffi::{CString, c_long, c_uint},
+    ptr::null_mut,
+    time::Duration,
+};
 
 use bitflags::bitflags;
 use chrono::{DateTime, Utc};
@@ -25,46 +30,46 @@ use crate::{
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 #[cfg_attr(feature = "python", pyclass(eq))]
-pub struct PrincipalAttributes(i32);
+pub struct PrincipalAttributes(krb5_flags);
 
 bitflags! {
-    impl PrincipalAttributes: i32 {
+    impl PrincipalAttributes: krb5_flags {
         /// Prohibits the principal from obtaining postdated tickets
-        const DisallowPostdated = KRB5_KDB_DISALLOW_POSTDATED as i32;
+        const DisallowPostdated = KRB5_KDB_DISALLOW_POSTDATED as krb5_flags;
         /// Prohibits the principal from obtaining forwardable tickets
-        const DisallowForwardable = KRB5_KDB_DISALLOW_FORWARDABLE as i32;
+        const DisallowForwardable = KRB5_KDB_DISALLOW_FORWARDABLE as krb5_flags;
         /// Specifies that a Ticket-Granting Service (TGS) request for a service ticket for the principal is not permitted
-        const DisallowTgtBased = KRB5_KDB_DISALLOW_TGT_BASED as i32;
+        const DisallowTgtBased = KRB5_KDB_DISALLOW_TGT_BASED as krb5_flags;
         /// Prohibits the principal from obtaining renewable tickets
-        const DisallowRenewable = KRB5_KDB_DISALLOW_RENEWABLE as i32;
+        const DisallowRenewable = KRB5_KDB_DISALLOW_RENEWABLE as krb5_flags;
         /// Prohibits the principal from obtaining proxiable tickets
-        const DisallowProxiable = KRB5_KDB_DISALLOW_PROXIABLE as i32;
+        const DisallowProxiable = KRB5_KDB_DISALLOW_PROXIABLE as krb5_flags;
         /// Disables user-to-user authentication for the principal by prohibiting this principal from obtaining a session key for another user
-        const DisallowDupSkey = KRB5_KDB_DISALLOW_DUP_SKEY as i32;
+        const DisallowDupSkey = KRB5_KDB_DISALLOW_DUP_SKEY as krb5_flags;
         /// Forbids the issuance of any tickets for the principal
-        const DisallowAllTix = KRB5_KDB_DISALLOW_ALL_TIX as i32;
+        const DisallowAllTix = KRB5_KDB_DISALLOW_ALL_TIX as krb5_flags;
         /// Requires the principal to preauthenticate before being allowed to kinit
-        const RequiresPreAuth = KRB5_KDB_REQUIRES_PRE_AUTH as i32;
+        const RequiresPreAuth = KRB5_KDB_REQUIRES_PRE_AUTH as krb5_flags;
         /// Requires the principal to preauthenticate using a hardware device before being allowed to kinit
-        const RequiresHwAuth = KRB5_KDB_REQUIRES_HW_AUTH as i32;
+        const RequiresHwAuth = KRB5_KDB_REQUIRES_HW_AUTH as krb5_flags;
         /// Force a password change
-        const RequiresPwChange = KRB5_KDB_REQUIRES_PWCHANGE as i32;
+        const RequiresPwChange = KRB5_KDB_REQUIRES_PWCHANGE as krb5_flags;
         /// Prohibits the issuance of service tickets for the principal
-        const DisallowSvr = KRB5_KDB_DISALLOW_SVR as i32;
+        const DisallowSvr = KRB5_KDB_DISALLOW_SVR as krb5_flags;
         /// Marks the principal as a password change service principal
-        const PwChangeService = KRB5_KDB_PWCHANGE_SERVICE as i32;
+        const PwChangeService = KRB5_KDB_PWCHANGE_SERVICE as krb5_flags;
         /// An AS_REQ for a principal with this bit set and an encrytion type of ENCTYPE_DES_CBC_CRC causes the encryption type ENCTYPE_DES_CBC_MD5 to be used instead
-        const SupportDesMd5 = KRB5_KDB_SUPPORT_DESMD5 as i32;
+        const SupportDesMd5 = KRB5_KDB_SUPPORT_DESMD5 as krb5_flags;
         /// Allow kadmin administrators with `add` acls to modify the principal until this bit is cleared
-        const NewPrinc = KRB5_KDB_NEW_PRINC as i32;
+        const NewPrinc = KRB5_KDB_NEW_PRINC as krb5_flags;
         /// Sets the OK-AS-DELEGATE flag on tickets issued for use with the principal as the service, which clients may use as a hint that credentials can and should be delegated when authenticating to the service
-        const OkAsDelegate = KRB5_KDB_OK_AS_DELEGATE as i32;
+        const OkAsDelegate = KRB5_KDB_OK_AS_DELEGATE as krb5_flags;
         /// Sets the service to allow the use of S4U2Self
-        const OkToAuthAsDelegate = KRB5_KDB_OK_TO_AUTH_AS_DELEGATE as i32;
+        const OkToAuthAsDelegate = KRB5_KDB_OK_TO_AUTH_AS_DELEGATE as krb5_flags;
         /// Prevents PAC or AD-SIGNEDPATH data from being added to service tickets for the principal
-        const NoAuthDataRequired = KRB5_KDB_NO_AUTH_DATA_REQUIRED as i32;
+        const NoAuthDataRequired = KRB5_KDB_NO_AUTH_DATA_REQUIRED as krb5_flags;
         /// Prevents keys for the principal from being extracted or set to a known value by the kadmin protocol
-        const LockdownKeys = KRB5_KDB_LOCKDOWN_KEYS as i32;
+        const LockdownKeys = KRB5_KDB_LOCKDOWN_KEYS as krb5_flags;
 
         const _ = !0;
     }
@@ -94,14 +99,14 @@ pub struct Principal {
     /// See [`PrincipalAttributes`]
     attributes: PrincipalAttributes,
     /// Current key version number
-    kvno: u32,
+    kvno: krb5_kvno,
     /// Master key version number
-    mkvno: u32,
+    mkvno: krb5_kvno,
     /// Associated policy
     #[getset(skip)]
     policy: Option<String>,
     /// Extra attributes
-    aux_attributes: i64,
+    aux_attributes: c_long,
     /// Maximum renewable ticket life
     max_renewable_life: Option<Duration>,
     /// When the last successful authentication occurred
@@ -109,7 +114,7 @@ pub struct Principal {
     /// When the last failed authentication occurred
     last_failed: Option<DateTime<Utc>>,
     /// Number of failed authentication attempts
-    fail_auth_count: u32,
+    fail_auth_count: c_uint,
     /// TL-data
     #[getset(skip)]
     tl_data: TlData,
@@ -252,7 +257,7 @@ impl Principal {
             .fail_auth_count(0)
             .tl_data(TlData {
                 entries: vec![TlDataEntry {
-                    data_type: KRB5_TL_LAST_ADMIN_UNLOCK as i16,
+                    data_type: KRB5_TL_LAST_ADMIN_UNLOCK as krb5_int16,
                     contents: dt_to_ts(Some(Utc::now()))?.to_le_bytes().to_vec(),
                 }],
             })
@@ -286,15 +291,15 @@ macro_rules! principal_doer_struct {
         $(#[$outer])*
         pub struct $StructName {
             pub(crate) name: String,
-            pub(crate) mask: i64,
+            pub(crate) mask: c_long,
             pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
             pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) attributes: Option<PrincipalAttributes>,
             pub(crate) policy: Option<Option<String>>,
-            pub(crate) aux_attributes: Option<i64>,
+            pub(crate) aux_attributes: Option<c_long>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
-            pub(crate) fail_auth_count: Option<u32>,
+            pub(crate) fail_auth_count: Option<krb5_kvno>,
             pub(crate) tl_data: Option<TlData>,
             pub(crate) db_args: Option<DbArgs>,
             $($manual_fields)*
@@ -309,7 +314,7 @@ macro_rules! principal_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn expire_time(mut self, expire_time: Option<DateTime<Utc>>) -> Self {
             self.expire_time = Some(expire_time);
-            self.mask |= KADM5_PRINC_EXPIRE_TIME as i64;
+            self.mask |= KADM5_PRINC_EXPIRE_TIME as c_long;
             self
         }
 
@@ -318,14 +323,14 @@ macro_rules! principal_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn password_expiration(mut self, password_expiration: Option<DateTime<Utc>>) -> Self {
             self.password_expiration = Some(password_expiration);
-            self.mask |= KADM5_PW_EXPIRATION as i64;
+            self.mask |= KADM5_PW_EXPIRATION as c_long;
             self
         }
 
         /// Set the maximum ticket life
         pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
             self.max_life = Some(max_life);
-            self.mask |= KADM5_MAX_LIFE as i64;
+            self.mask |= KADM5_MAX_LIFE as c_long;
             self
         }
 
@@ -335,7 +340,7 @@ macro_rules! principal_doer_impl {
         /// ones if needed
         pub fn attributes(mut self, attributes: PrincipalAttributes) -> Self {
             self.attributes = Some(attributes);
-            self.mask |= KADM5_ATTRIBUTES as i64;
+            self.mask |= KADM5_ATTRIBUTES as c_long;
             self
         }
 
@@ -349,43 +354,43 @@ macro_rules! principal_doer_impl {
                 (KADM5_POLICY_CLR, KADM5_POLICY)
             };
             self.policy = Some(policy.map(String::from));
-            self.mask |= flag as i64;
-            self.mask &= !(nflag as i64);
+            self.mask |= flag as c_long;
+            self.mask &= !(nflag as c_long);
             self
         }
 
         /// Set auxiliary attributes
-        pub fn aux_attributes(mut self, aux_attributes: i64) -> Self {
+        pub fn aux_attributes(mut self, aux_attributes: c_long) -> Self {
             self.aux_attributes = Some(aux_attributes);
-            self.mask |= KADM5_AUX_ATTRIBUTES as i64;
+            self.mask |= KADM5_AUX_ATTRIBUTES as c_long;
             self
         }
 
         /// Set the maximum renewable ticket life
         pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
             self.max_renewable_life = Some(max_renewable_life);
-            self.mask |= KADM5_MAX_RLIFE as i64;
+            self.mask |= KADM5_MAX_RLIFE as c_long;
             self
         }
 
         /// Set the number of failed authentication attempts
-        pub fn fail_auth_count(mut self, fail_auth_count: u32) -> Self {
+        pub fn fail_auth_count(mut self, fail_auth_count: krb5_kvno) -> Self {
             self.fail_auth_count = Some(fail_auth_count);
-            self.mask |= KADM5_FAIL_AUTH_COUNT as i64;
+            self.mask |= KADM5_FAIL_AUTH_COUNT as c_long;
             self
         }
 
         /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
             self.tl_data = Some(tl_data);
-            self.mask |= KADM5_TL_DATA as i64;
+            self.mask |= KADM5_TL_DATA as c_long;
             self
         }
 
         /// Database specific arguments
         pub fn db_args(mut self, db_args: DbArgs) -> Self {
             self.db_args = Some(db_args);
-            self.mask |= KADM5_TL_DATA as i64;
+            self.mask |= KADM5_TL_DATA as c_long;
             self
         }
 
@@ -434,7 +439,7 @@ macro_rules! principal_doer_impl {
             };
             let tl_data = if let Some(tl_data) = tl_data {
                 let raw_tl_data = tl_data.to_raw();
-                entry.n_tl_data = tl_data.entries.len() as i16;
+                entry.n_tl_data = tl_data.entries.len() as krb5_int16;
                 entry.tl_data = raw_tl_data.raw;
                 Some(raw_tl_data)
             } else {
@@ -481,7 +486,7 @@ principal_doer_struct!(
     /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalBuilder {
-        pub(crate) kvno: Option<u32>,
+        pub(crate) kvno: Option<krb5_kvno>,
         pub(crate) key: PrincipalBuilderKey,
         pub(crate) keysalts: Option<KeySalts>,
     }
@@ -505,9 +510,9 @@ impl PrincipalBuilder {
     }
 
     /// Set the initial key version number
-    pub fn kvno(mut self, kvno: u32) -> Self {
+    pub fn kvno(mut self, kvno: krb5_kvno) -> Self {
         self.kvno = Some(kvno);
-        self.mask |= KADM5_KVNO as i64;
+        self.mask |= KADM5_KVNO as c_long;
         self
     }
 
