@@ -70,7 +70,7 @@ pub mod keysalt;
 pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
 pub mod kadmin;
-pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
+pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
 
 pub mod sync;
 

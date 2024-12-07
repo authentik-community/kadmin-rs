@@ -22,7 +22,7 @@ use pyo3::prelude::*;
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminApiVersion, KAdminImpl},
+    kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
     keysalt::KeySalts,
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
@@ -67,6 +67,8 @@ enum KAdminOperation {
     GetPolicy(String, Sender<Result<Option<Policy>>>),
     /// See [`KAdminImpl::list_policies`]
     ListPolicies(Option<String>, Sender<Result<Vec<String>>>),
+    /// See [`KAdminImpl::get_privileges`]
+    GetPrivileges(Sender<Result<KAdminPrivileges>>),
     /// Stop the kadmin thread
     Exit,
 }
@@ -124,6 +126,9 @@ impl KAdminOperation {
             }
             Self::ListPolicies(query, sender) => {
                 let _ = sender.send(kadmin.list_policies(query.as_deref()));
+            }
+            Self::GetPrivileges(sender) => {
+                let _ = sender.send(kadmin.get_privileges());
             }
         }
     }
@@ -316,6 +321,14 @@ impl KAdminImpl for KAdmin {
             query.map(String::from),
             sender,
         ))?;
+        receiver.recv()?
+    }
+
+    fn get_privileges(&self) -> Result<KAdminPrivileges> {
+        let (sender, receiver) = channel();
+        self.inner
+            .op_sender
+            .send(KAdminOperation::GetPrivileges(sender))?;
         receiver.recv()?
     }
 }

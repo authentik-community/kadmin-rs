@@ -3,13 +3,14 @@
 use std::{
     collections::HashMap,
     ffi::CString,
-    os::raw::{c_char, c_void},
+    os::raw::{c_char, c_long, c_void},
     ptr::{null, null_mut},
     sync::Mutex,
 };
 #[cfg(feature = "client")]
 use std::{ffi::CStr, mem::MaybeUninit};
 
+use bitflags::bitflags;
 use kadmin_sys::*;
 use libc::EINVAL;
 #[cfg(feature = "python")]
@@ -61,6 +62,27 @@ impl From<KAdminApiVersion> for u32 {
 impl Default for KAdminApiVersion {
     fn default() -> Self {
         Self::Version2
+    }
+}
+
+/// KAdmin privileges
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[cfg_attr(feature = "python", pyclass(eq))]
+pub struct KAdminPrivileges(c_long);
+
+bitflags! {
+    impl KAdminPrivileges: c_long {
+        /// Inquire privilege
+        const Inquire = KADM5_PRIV_GET as c_long;
+        /// Add privilege
+        const Add = KADM5_PRIV_ADD as c_long;
+        /// Modify privilege
+        const Modify = KADM5_PRIV_MODIFY as c_long;
+        /// Delete privilege
+        const Delete = KADM5_PRIV_DELETE as c_long;
+
+        const _ = !0;
     }
 }
 
@@ -272,6 +294,9 @@ pub trait KAdminImpl {
     /// ```
     #[doc(alias("listpols", "get_policies", "getpols"))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;
+
+    /// Get current privileges
+    fn get_privileges(&self) -> Result<KAdminPrivileges>;
 }
 
 impl KAdmin {
@@ -671,6 +696,13 @@ impl KAdminImpl for KAdmin {
             kadm5_free_name_list(self.server_handle, policies, count);
         }
         Ok(result)
+    }
+
+    fn get_privileges(&self) -> Result<KAdminPrivileges> {
+        let mut privs = 0;
+        let code = unsafe { kadm5_get_privs(self.server_handle, &mut privs) };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(KAdminPrivileges::from_bits_retain(privs))
     }
 }
 

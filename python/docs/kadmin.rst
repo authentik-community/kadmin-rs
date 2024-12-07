@@ -272,6 +272,13 @@ kadmin
       :return: the list of policy names matching the query
       :rtype: list[str]
 
+   .. py:method:: get_privileges()
+
+      Get current privileges
+
+      :return: The current session privileges
+      :rtype: KAdminPrivileges
+
 .. py:class:: Principal
 
    .. py:attribute:: name
@@ -589,6 +596,12 @@ kadmin
       Prevents keys for the principal from being extracted or set to a known value by the kadmin protocol
 
       :type: PrincipalAttributes
+
+   .. py:method:: bits()
+
+      Get the underlying bits
+
+      :rtype: int
 
 .. py:class:: NewPrincipalKey
 
@@ -957,6 +970,35 @@ kadmin
    .. py:attribute:: entries
 
       :type: list[TlDataEntry]
+
+.. py:class:: KAdminPrivileges(bits)
+
+   KAdmin privileges
+
+   :param bits: Attributes bits
+   :type bits: int
+
+   .. py:attribute:: Inquire
+
+      :type: KAdminPrivileges
+
+   .. py:attribute:: Add
+
+      :type: KAdminPrivileges
+
+   .. py:attribute:: Modify
+
+      :type: KAdminPrivileges
+
+   .. py:attribute:: Delete
+
+      :type: KAdminPrivileges
+
+   .. py:method:: bits()
+
+      Get the underlying bits
+
+      :rtype: int
 
 
 Exceptions
