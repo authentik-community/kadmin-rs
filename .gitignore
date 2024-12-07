@@ -6,3 +6,4 @@ target
 *.egg-info
 __pycache__
 _build
+java/rust/

@@ -80,5 +80,8 @@ pub use policy::Policy;
 pub mod principal;
 pub use principal::{Principal, PrincipalAttributes};
 
+#[cfg(feature = "java")]
+mod java;
+
 #[cfg(feature = "python")]
 mod python;
