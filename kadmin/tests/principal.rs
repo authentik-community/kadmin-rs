@@ -162,6 +162,22 @@ macro_rules! gen_tests {
             assert!(princ.unlock(&kadmin).is_ok());
             Ok(())
         }
+
+        #[cfg(feature = "client")]
+        #[test]
+        #[serial]
+        fn strings() -> Result<()> {
+            let realm = K5Test::new()?;
+            let kadmin = KAdmin::builder()
+                .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+            let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
+            assert!(princ.get_strings(&kadmin)?.is_empty());
+            princ.set_string(&kadmin, "key", Some("value"))?;
+            let strings = princ.get_strings(&kadmin)?;
+            assert!(strings.contains_key("key"));
+            assert_eq!(strings.get("key"), Some(String::from("value")).as_ref());
+            Ok(())
+        }
     };
 }
 
