@@ -34,6 +34,7 @@ class KAdmin:
     def get_policy(self, name: str) -> Policy | None: ...
     def policy_exists(self, name: str) -> bool: ...
     def list_policies(self, query: str | None = None) -> List[str]: ...
+    def get_privileges(self) -> KAdminPrivileges: ...
     @staticmethod
     def with_local(
         params: Params | None = None,
@@ -214,3 +215,13 @@ class TlDataEntry:
 @final
 class TlData:
     entries: list[TlDataEntry]
+
+@final
+class KAdminPrivileges:
+    Inquire: Self
+    Add: Self
+    Modify: Self
+    Delete: Self
+
+    def __init__(self, bits: int): ...
+    def bits(self) -> int: ...

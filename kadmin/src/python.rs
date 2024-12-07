@@ -2,6 +2,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
+    ffi::c_long,
     ops::{BitAndAssign, BitOrAssign, BitXorAssign},
     str::FromStr,
 };
@@ -15,7 +16,7 @@ use pyo3::{
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminApiVersion, KAdminImpl},
+    kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
     keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
     policy::Policy,
@@ -41,6 +42,7 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPrincipalBuilderKey>()?;
     m.add_class::<Principal>()?;
     m.add_class::<Policy>()?;
+    m.add_class::<KAdminPrivileges>()?;
     exceptions::init(m)?;
     Ok(())
 }
@@ -492,6 +494,11 @@ impl KAdmin {
         self.list_policies(query)
     }
 
+    #[pyo3(name = "get_privileges")]
+    fn py_get_privileges(&self) -> Result<KAdminPrivileges> {
+        self.get_privileges()
+    }
+
     #[cfg(feature = "client")]
     #[staticmethod]
     #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None, api_version=None))]
@@ -720,6 +727,69 @@ impl Policy {
     #[pyo3(name = "delete")]
     fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
         self.delete(kadmin)
+    }
+}
+
+#[pymethods]
+#[allow(non_upper_case_globals)]
+impl KAdminPrivileges {
+    #[classattr]
+    #[pyo3(name = "Add")]
+    const PyAdd: Self = Self::Add;
+    #[classattr]
+    #[pyo3(name = "Delete")]
+    const PyDelete: Self = Self::Delete;
+    #[classattr]
+    #[pyo3(name = "Inquire")]
+    const PyInquire: Self = Self::Inquire;
+    #[classattr]
+    #[pyo3(name = "Modify")]
+    const PyModify: Self = Self::Modify;
+
+    #[new]
+    fn py_new(bits: c_long) -> Self {
+        Self::from_bits_retain(bits)
+    }
+
+    #[pyo3(name = "bits")]
+    fn py_bits(&self) -> c_long {
+        self.bits()
+    }
+
+    fn __contains__(&self, other: Self) -> bool {
+        self.contains(other)
+    }
+
+    fn __and__(&self, other: Self) -> Self {
+        *self & other
+    }
+
+    fn __iand__(&mut self, other: Self) {
+        Self::bitand_assign(self, other);
+    }
+
+    fn __xor__(&self, other: Self) -> Self {
+        *self ^ other
+    }
+
+    fn __ixor__(&mut self, other: Self) {
+        Self::bitxor_assign(self, other);
+    }
+
+    fn __or__(&self, other: Self) -> Self {
+        *self | other
+    }
+
+    fn __ior__(&mut self, other: Self) {
+        Self::bitor_assign(self, other);
+    }
+
+    fn __invert__(&self) -> Self {
+        self.complement()
+    }
+
+    fn __int__(&self) -> c_long {
+        self.bits()
     }
 }
 
