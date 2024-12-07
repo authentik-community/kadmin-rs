@@ -1,6 +1,9 @@
 //! Define [`Params`] to pass to kadm5
 
-use std::{ffi::CString, ptr::null_mut};
+use std::{
+    ffi::{CString, c_int, c_long},
+    ptr::null_mut,
+};
 
 use kadmin_sys::*;
 #[cfg(feature = "python")]
@@ -137,14 +140,14 @@ impl Default for Params {
 #[derive(Clone, Debug, Default)]
 pub struct ParamsBuilder {
     /// Mask for which values are set
-    mask: i64,
+    mask: c_long,
 
     /// Default database realm
     realm: Option<String>,
     /// kadmind port to connect to
-    kadmind_port: i32,
+    kadmind_port: c_int,
     /// kpasswd port to connect to
-    kpasswd_port: i32,
+    kpasswd_port: c_int,
     /// Admin server which kadmin should contact
     admin_server: Option<String>,
     /// Name of the KDC database
@@ -161,56 +164,56 @@ impl ParamsBuilder {
     /// Set the default database realm
     pub fn realm(mut self, realm: &str) -> Self {
         self.realm = Some(realm.to_owned());
-        self.mask |= KADM5_CONFIG_REALM as i64;
+        self.mask |= KADM5_CONFIG_REALM as c_long;
         self
     }
 
     /// Set the kadmind port to connect to
-    pub fn kadmind_port(mut self, port: i32) -> Self {
+    pub fn kadmind_port(mut self, port: c_int) -> Self {
         self.kadmind_port = port;
-        self.mask |= KADM5_CONFIG_KADMIND_PORT as i64;
+        self.mask |= KADM5_CONFIG_KADMIND_PORT as c_long;
         self
     }
 
     /// Set the kpasswd port to connect to
-    pub fn kpasswd_port(mut self, port: i32) -> Self {
+    pub fn kpasswd_port(mut self, port: c_int) -> Self {
         self.kpasswd_port = port;
-        self.mask |= KADM5_CONFIG_KPASSWD_PORT as i64;
+        self.mask |= KADM5_CONFIG_KPASSWD_PORT as c_long;
         self
     }
 
     /// Set the admin server which kadmin should contact
     pub fn admin_server(mut self, admin_server: &str) -> Self {
         self.admin_server = Some(admin_server.to_owned());
-        self.mask |= KADM5_CONFIG_ADMIN_SERVER as i64;
+        self.mask |= KADM5_CONFIG_ADMIN_SERVER as c_long;
         self
     }
 
     /// Set the name of the KDC database
     pub fn dbname(mut self, dbname: &str) -> Self {
         self.dbname = Some(dbname.to_owned());
-        self.mask |= KADM5_CONFIG_DBNAME as i64;
+        self.mask |= KADM5_CONFIG_DBNAME as c_long;
         self
     }
 
     /// Set the location of the access control list file
     pub fn acl_file(mut self, acl_file: &str) -> Self {
         self.acl_file = Some(acl_file.to_owned());
-        self.mask |= KADM5_CONFIG_ACL_FILE as i64;
+        self.mask |= KADM5_CONFIG_ACL_FILE as c_long;
         self
     }
 
     /// Set the location of the dictionary file containing strings that are not allowed as passwords
     pub fn dict_file(mut self, dict_file: &str) -> Self {
         self.dict_file = Some(dict_file.to_owned());
-        self.mask |= KADM5_CONFIG_DICT_FILE as i64;
+        self.mask |= KADM5_CONFIG_DICT_FILE as c_long;
         self
     }
 
     /// Set the location where the master key has been stored
     pub fn stash_file(mut self, stash_file: &str) -> Self {
         self.stash_file = Some(stash_file.to_owned());
-        self.mask |= KADM5_CONFIG_STASH_FILE as i64;
+        self.mask |= KADM5_CONFIG_STASH_FILE as c_long;
         self
     }
 

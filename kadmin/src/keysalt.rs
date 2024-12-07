@@ -20,37 +20,37 @@ use crate::error::{Error, Result};
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum EncryptionType {
     /// Triple DES cbc mode raw (weak, deprecated)
-    Des3CbcRaw = ENCTYPE_DES3_CBC_RAW as i32,
+    Des3CbcRaw = ENCTYPE_DES3_CBC_RAW as krb5_enctype,
     /// Triple DES cbc mode with HMAC/sha1 (deprecated)
-    Des3CbcSha1 = ENCTYPE_DES3_CBC_SHA1 as i32,
+    Des3CbcSha1 = ENCTYPE_DES3_CBC_SHA1 as krb5_enctype,
     /// ArcFour with HMAC/md5 (deprecated)
-    ArcfourHmac = ENCTYPE_ARCFOUR_HMAC as i32,
+    ArcfourHmac = ENCTYPE_ARCFOUR_HMAC as krb5_enctype,
     /// Exportable ArcFour with HMAC/md5 (weak, deprecated)
-    ArcfourHmacExp = ENCTYPE_ARCFOUR_HMAC_EXP as i32,
+    ArcfourHmacExp = ENCTYPE_ARCFOUR_HMAC_EXP as krb5_enctype,
     /// AES-128 CTS mode with 96-bit SHA-1 HMAC
-    Aes128CtsHmacSha196 = ENCTYPE_AES128_CTS_HMAC_SHA1_96 as i32,
+    Aes128CtsHmacSha196 = ENCTYPE_AES128_CTS_HMAC_SHA1_96 as krb5_enctype,
     /// AES-256 CTS mode with 96-bit SHA-1 HMAC
-    Aes256CtsHmacSha196 = ENCTYPE_AES256_CTS_HMAC_SHA1_96 as i32,
+    Aes256CtsHmacSha196 = ENCTYPE_AES256_CTS_HMAC_SHA1_96 as krb5_enctype,
     /// Camellia-128 CTS mode with CMAC
-    Camellia128CtsCmac = ENCTYPE_CAMELLIA128_CTS_CMAC as i32,
+    Camellia128CtsCmac = ENCTYPE_CAMELLIA128_CTS_CMAC as krb5_enctype,
     /// Camellia-256 CTS mode with CMAC
-    Camellia256CtsCmac = ENCTYPE_CAMELLIA256_CTS_CMAC as i32,
+    Camellia256CtsCmac = ENCTYPE_CAMELLIA256_CTS_CMAC as krb5_enctype,
     /// AES-128 CTS mode with 128-bit SHA-256 HMAC
-    Aes128CtsHmacSha256128 = ENCTYPE_AES128_CTS_HMAC_SHA256_128 as i32,
+    Aes128CtsHmacSha256128 = ENCTYPE_AES128_CTS_HMAC_SHA256_128 as krb5_enctype,
     /// AES-256 CTS mode with 192-bit SHA-384 HMAC
-    Aes256CtsHmacSha384192 = ENCTYPE_AES256_CTS_HMAC_SHA384_192 as i32,
+    Aes256CtsHmacSha384192 = ENCTYPE_AES256_CTS_HMAC_SHA384_192 as krb5_enctype,
 }
 
-impl From<EncryptionType> for i32 {
+impl From<EncryptionType> for krb5_enctype {
     fn from(enctype: EncryptionType) -> Self {
         enctype as Self
     }
 }
 
-impl TryFrom<i32> for EncryptionType {
+impl TryFrom<krb5_enctype> for EncryptionType {
     type Error = Error;
 
-    fn try_from(enctype: i32) -> Result<Self> {
+    fn try_from(enctype: krb5_enctype) -> Result<Self> {
         Self::from_repr(enctype).ok_or(Error::EncryptionTypeConversion)
     }
 }
@@ -82,7 +82,7 @@ impl TryFrom<EncryptionType> for String {
     type Error = Error;
 
     fn try_from(enctype: EncryptionType) -> Result<Self> {
-        let buffer = [0_u8; 100];
+        let buffer = [0; 100];
         let code = unsafe {
             let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(enctype.into(), b.as_mut_ptr(), 100)
@@ -103,13 +103,13 @@ impl TryFrom<EncryptionType> for String {
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum SaltType {
     /// Default for Kerberos Version 5
-    Normal = KRB5_KDB_SALTTYPE_NORMAL as i32,
+    Normal = KRB5_KDB_SALTTYPE_NORMAL as krb5_int32,
     /// Same as the default, without using realm information
-    NoRealm = KRB5_KDB_SALTTYPE_NOREALM as i32,
+    NoRealm = KRB5_KDB_SALTTYPE_NOREALM as krb5_int32,
     /// Uses only realm information as the salt
-    OnlyRealm = KRB5_KDB_SALTTYPE_ONLYREALM as i32,
+    OnlyRealm = KRB5_KDB_SALTTYPE_ONLYREALM as krb5_int32,
     /// Generate a random salt
-    Special = KRB5_KDB_SALTTYPE_SPECIAL as i32,
+    Special = KRB5_KDB_SALTTYPE_SPECIAL as krb5_int32,
 }
 
 impl Default for SaltType {
@@ -118,16 +118,16 @@ impl Default for SaltType {
     }
 }
 
-impl From<SaltType> for i32 {
+impl From<SaltType> for krb5_int32 {
     fn from(salttype: SaltType) -> Self {
         salttype as Self
     }
 }
 
-impl TryFrom<i32> for SaltType {
+impl TryFrom<krb5_int32> for SaltType {
     type Error = Error;
 
-    fn try_from(salttype: i32) -> Result<Self> {
+    fn try_from(salttype: krb5_int32) -> Result<Self> {
         Self::from_repr(salttype).ok_or(Error::SaltTypeConversion)
     }
 }
@@ -174,7 +174,7 @@ impl TryFrom<SaltType> for String {
     type Error = Error;
 
     fn try_from(salttype: SaltType) -> Result<Self> {
-        let buffer = [0_u8; 100];
+        let buffer = [0; 100];
         let code = unsafe {
             let mut b: [c_char; 100] = std::mem::transmute(buffer);
             krb5_enctype_to_string(salttype.into(), b.as_mut_ptr(), 100)

@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    ffi::CString,
+    ffi::{CString, c_int},
     os::raw::{c_char, c_long, c_void},
     ptr::{null, null_mut},
     sync::Mutex,
@@ -53,7 +53,7 @@ pub enum KAdminApiVersion {
     Version4 = KADM5_API_VERSION_4,
 }
 
-impl From<KAdminApiVersion> for u32 {
+impl From<KAdminApiVersion> for krb5_ui_4 {
     fn from(api_version: KAdminApiVersion) -> Self {
         api_version as Self
     }
@@ -316,7 +316,7 @@ impl KAdminImpl for KAdmin {
 
         if let Some(policy) = &builder.policy {
             if policy.is_none() {
-                mask &= !(KADM5_POLICY_CLR as i64);
+                mask &= !(KADM5_POLICY_CLR as c_long);
             }
         }
 
@@ -334,7 +334,7 @@ impl KAdminImpl for KAdmin {
         let pass = match &builder.key {
             PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
             PrincipalBuilderKey::NoKey => {
-                mask |= KADM5_KEY_DATA as i64;
+                mask |= KADM5_KEY_DATA as c_long;
                 None
             }
             PrincipalBuilderKey::RandKey => None,
@@ -348,19 +348,19 @@ impl KAdminImpl for KAdmin {
         };
 
         if builder.key == PrincipalBuilderKey::OldStyleRandKey {
-            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
-            mask |= KADM5_ATTRIBUTES as i64;
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as krb5_flags;
+            mask |= KADM5_ATTRIBUTES as c_long;
             old_style_randkey = true;
         }
 
         let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-            (keysalts.len() as i32, keysalts.as_mut_ptr())
+            (keysalts.len() as c_int, keysalts.as_mut_ptr())
         } else {
             (0, null_mut())
         };
 
-        mask |= KADM5_PRINCIPAL as i64;
+        mask |= KADM5_PRINCIPAL as c_long;
         let code = if keysalts.is_none() {
             unsafe { kadm5_create_principal(self.server_handle, &mut entry.raw, mask, raw_pass) }
         } else {
@@ -375,13 +375,13 @@ impl KAdminImpl for KAdmin {
                 )
             }
         };
-        let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
+        let code = if code == EINVAL as kadm5_ret_t && builder.key == PrincipalBuilderKey::RandKey {
             let pass = prepare_dummy_pass()?;
             let raw_pass = pass.as_ptr().cast_mut();
             // The server doesn't support randkey creation. Create the principal with a dummy
             // password and disallow tickets.
-            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as i32;
-            mask |= KADM5_ATTRIBUTES as i64;
+            entry.raw.attributes |= KRB5_KDB_DISALLOW_ALL_TIX as krb5_flags;
+            mask |= KADM5_ATTRIBUTES as c_long;
             old_style_randkey = true;
             if keysalts.is_none() {
                 unsafe {
@@ -406,8 +406,8 @@ impl KAdminImpl for KAdmin {
 
         if old_style_randkey {
             self.principal_randkey(&builder.name, None, builder.keysalts.as_ref())?;
-            entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as i32);
-            mask = KADM5_ATTRIBUTES as i64;
+            entry.raw.attributes &= !(KRB5_KDB_DISALLOW_ALL_TIX as krb5_flags);
+            mask = KADM5_ATTRIBUTES as c_long;
             let code = unsafe { kadm5_modify_principal(self.server_handle, &mut entry.raw, mask) };
             kadm5_ret_t_escape_hatch(&self.context, code)?;
         }
@@ -459,13 +459,13 @@ impl KAdminImpl for KAdmin {
                 self.server_handle,
                 temp_princ,
                 &mut principal_ent,
-                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA | KADM5_TL_DATA) as i64,
+                (KADM5_PRINCIPAL_NORMAL_MASK | KADM5_KEY_DATA | KADM5_TL_DATA) as c_long,
             )
         };
         unsafe {
             krb5_free_principal(self.context.context, temp_princ);
         }
-        if code == KADM5_UNK_PRINC as i64 {
+        if code == KADM5_UNK_PRINC as kadm5_ret_t {
             return Ok(None);
         }
         kadm5_ret_t_escape_hatch(&self.context, code)?;
@@ -488,7 +488,7 @@ impl KAdminImpl for KAdmin {
         let keepold = keepold.unwrap_or(false);
         let mut keysalts = keysalts.map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-            (keysalts.len() as i32, keysalts.as_mut_ptr())
+            (keysalts.len() as c_int, keysalts.as_mut_ptr())
         } else {
             (0, null_mut())
         };
@@ -525,7 +525,7 @@ impl KAdminImpl for KAdmin {
 
         let mut keysalts = keysalts.map(|ks| ks.to_raw());
         let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-            (keysalts.len() as i32, keysalts.as_mut_ptr())
+            (keysalts.len() as c_int, keysalts.as_mut_ptr())
         } else {
             (0, null_mut())
         };
@@ -542,7 +542,7 @@ impl KAdminImpl for KAdmin {
             )
         };
 
-        let code = if code == KADM5_RPC_ERROR as i64 && !keepold && keysalts.is_none() {
+        let code = if code == KADM5_RPC_ERROR as kadm5_ret_t && !keepold && keysalts.is_none() {
             unsafe {
                 kadm5_randkey_principal(self.server_handle, princ.raw, null_mut(), null_mut())
             }
@@ -631,7 +631,7 @@ impl KAdminImpl for KAdmin {
 
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
         let mut entry = builder.make_entry()?;
-        let mask = builder.mask | KADM5_POLICY as i64;
+        let mask = builder.mask | KADM5_POLICY as c_long;
         let code = unsafe { kadm5_create_policy(self.server_handle, &mut entry.raw, mask) };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
@@ -662,7 +662,7 @@ impl KAdminImpl for KAdmin {
                 &mut policy_ent,
             )
         };
-        if code == KADM5_UNK_POLICY as i64 {
+        if code == KADM5_UNK_POLICY as kadm5_ret_t {
             return Ok(None);
         }
         kadm5_ret_t_escape_hatch(&self.context, code)?;
@@ -827,7 +827,7 @@ impl KAdminBuilder {
                     kadmin.context.context,
                     null_mut(),
                     CString::new("host")?.as_ptr().cast_mut(),
-                    KRB5_NT_SRV_HST as i32,
+                    KRB5_NT_SRV_HST as krb5_int32,
                     princ_ptr.as_mut_ptr(),
                 )
             };

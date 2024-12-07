@@ -1,5 +1,9 @@
 //! kadm5 policy
-use std::{ffi::CString, ptr::null_mut, time::Duration};
+use std::{
+    ffi::{CString, c_long},
+    ptr::null_mut,
+    time::Duration,
+};
 
 use getset::{CopyGetters, Getters};
 use kadmin_sys::*;
@@ -27,22 +31,22 @@ pub struct Policy {
     /// Maximum lifetime of a password
     password_max_life: Option<Duration>,
     /// Minimum length of a password
-    password_min_length: i64,
+    password_min_length: c_long,
     /// Minimum number of character classes required in a password. The five character classes are
     /// lower case, upper case, numbers, punctuation, and whitespace/unprintable characters
-    password_min_classes: i64,
+    password_min_classes: c_long,
     /// Number of past keys kept for a principal. May not be filled if used with other database
     /// modules such as the MIT krb5 LDAP KDC database module
-    password_history_num: i64,
+    password_history_num: c_long,
     /// How many principals use this policy. Not filled for at least MIT krb5
-    policy_refcnt: i64,
+    policy_refcnt: c_long,
     /// Number of authentication failures before the principal is locked. Authentication failures
     /// are only tracked for principals which require preauthentication. The counter of failed
     /// attempts resets to 0 after a successful attempt to authenticate. A value of 0 disables
     /// lock‐out
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
-    password_max_fail: u32,
+    password_max_fail: krb5_kvno,
     /// Allowable time between authentication failures. If an authentication failure happens after
     /// this duration has elapsed since the previous failure, the number of authentication failures
     /// is reset to 1. A value of `None` means forever
@@ -58,7 +62,7 @@ pub struct Policy {
     /// Policy attributes
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    attributes: i32,
+    attributes: krb5_flags,
     /// Maximum ticket life
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
@@ -186,16 +190,16 @@ macro_rules! policy_doer_struct {
         $(#[$outer])*
         pub struct $StructName {
             pub(crate) name: String,
-            pub(crate) mask: i64,
+            pub(crate) mask: c_long,
             pub(crate) password_min_life: Option<Option<Duration>>,
             pub(crate) password_max_life: Option<Option<Duration>>,
-            pub(crate) password_min_length: Option<i64>,
-            pub(crate) password_min_classes: Option<i64>,
-            pub(crate) password_history_num: Option<i64>,
-            pub(crate) password_max_fail: Option<u32>,
+            pub(crate) password_min_length: Option<c_long>,
+            pub(crate) password_min_classes: Option<c_long>,
+            pub(crate) password_history_num: Option<c_long>,
+            pub(crate) password_max_fail: Option<krb5_kvno>,
             pub(crate) password_failcount_interval: Option<Option<Duration>>,
             pub(crate) password_lockout_duration: Option<Option<Duration>>,
-            pub(crate) attributes: Option<i32>,
+            pub(crate) attributes: Option<krb5_flags>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
             pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
@@ -212,7 +216,7 @@ macro_rules! policy_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn password_min_life(mut self, password_min_life: Option<Duration>) -> Self {
             self.password_min_life = Some(password_min_life);
-            self.mask |= KADM5_PW_MIN_LIFE as i64;
+            self.mask |= KADM5_PW_MIN_LIFE as c_long;
             self
         }
 
@@ -221,16 +225,16 @@ macro_rules! policy_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn password_max_life(mut self, password_max_life: Option<Duration>) -> Self {
             self.password_max_life = Some(password_max_life);
-            self.mask |= KADM5_PW_MAX_LIFE as i64;
+            self.mask |= KADM5_PW_MAX_LIFE as c_long;
             self
         }
 
         /// Set the minimum length of a password
         ///
         /// Defaults to not set
-        pub fn password_min_length(mut self, password_min_length: i64) -> Self {
+        pub fn password_min_length(mut self, password_min_length: c_long) -> Self {
             self.password_min_length = Some(password_min_length);
-            self.mask |= KADM5_PW_MIN_LENGTH as i64;
+            self.mask |= KADM5_PW_MIN_LENGTH as c_long;
             self
         }
 
@@ -239,9 +243,9 @@ macro_rules! policy_doer_impl {
         /// characters
         ///
         /// Defaults to not set
-        pub fn password_min_classes(mut self, password_min_classes: i64) -> Self {
+        pub fn password_min_classes(mut self, password_min_classes: c_long) -> Self {
             self.password_min_classes = Some(password_min_classes);
-            self.mask |= KADM5_PW_MIN_CLASSES as i64;
+            self.mask |= KADM5_PW_MIN_CLASSES as c_long;
             self
         }
 
@@ -249,9 +253,9 @@ macro_rules! policy_doer_impl {
         /// database modules such as the MIT krb5 LDAP KDC database module
         ///
         /// Defaults to not set
-        pub fn password_history_num(mut self, password_history_num: i64) -> Self {
+        pub fn password_history_num(mut self, password_history_num: c_long) -> Self {
             self.password_history_num = Some(password_history_num);
-            self.mask |= KADM5_PW_HISTORY_NUM as i64;
+            self.mask |= KADM5_PW_HISTORY_NUM as c_long;
             self
         }
 
@@ -261,9 +265,9 @@ macro_rules! policy_doer_impl {
         /// disables lock‐out
         ///
         /// Defaults to not set
-        pub fn password_max_fail(mut self, password_max_fail: u32) -> Self {
+        pub fn password_max_fail(mut self, password_max_fail: krb5_kvno) -> Self {
             self.password_max_fail = Some(password_max_fail);
-            self.mask |= KADM5_PW_MAX_FAILURE as i64;
+            self.mask |= KADM5_PW_MAX_FAILURE as c_long;
             self
         }
 
@@ -277,7 +281,7 @@ macro_rules! policy_doer_impl {
             password_failcount_interval: Option<Duration>,
         ) -> Self {
             self.password_failcount_interval = Some(password_failcount_interval);
-            self.mask |= KADM5_PW_FAILURE_COUNT_INTERVAL as i64;
+            self.mask |= KADM5_PW_FAILURE_COUNT_INTERVAL as c_long;
             self
         }
 
@@ -291,28 +295,28 @@ macro_rules! policy_doer_impl {
             password_lockout_duration: Option<Duration>,
         ) -> Self {
             self.password_lockout_duration = Some(password_lockout_duration);
-            self.mask |= KADM5_PW_LOCKOUT_DURATION as i64;
+            self.mask |= KADM5_PW_LOCKOUT_DURATION as c_long;
             self
         }
 
         /// Set policy attributes
-        pub fn attributes(mut self, attributes: i32) -> Self {
+        pub fn attributes(mut self, attributes: krb5_flags) -> Self {
             self.attributes = Some(attributes);
-            self.mask |= KADM5_POLICY_ATTRIBUTES as i64;
+            self.mask |= KADM5_POLICY_ATTRIBUTES as c_long;
             self
         }
 
         /// Set the maximum ticket life
         pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
             self.max_life = Some(max_life);
-            self.mask |= KADM5_POLICY_MAX_LIFE as i64;
+            self.mask |= KADM5_POLICY_MAX_LIFE as c_long;
             self
         }
 
         /// Set the maximum renewable ticket life
         pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
             self.max_renewable_life = Some(max_renewable_life);
-            self.mask |= KADM5_POLICY_MAX_RLIFE as i64;
+            self.mask |= KADM5_POLICY_MAX_RLIFE as c_long;
             self
         }
 
@@ -321,14 +325,14 @@ macro_rules! policy_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
             self.allowed_keysalts = Some(allowed_keysalts);
-            self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as i64;
+            self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as c_long;
             self
         }
 
         /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
             self.tl_data = Some(tl_data);
-            self.mask |= KADM5_POLICY_TL_DATA as i64;
+            self.mask |= KADM5_POLICY_TL_DATA as c_long;
             self
         }
 
@@ -384,7 +388,7 @@ macro_rules! policy_doer_impl {
             };
             let tl_data = if let Some(tl_data) = &self.tl_data {
                 let raw_tl_data = tl_data.to_raw();
-                policy.n_tl_data = tl_data.entries.len() as i16;
+                policy.n_tl_data = tl_data.entries.len() as krb5_int16;
                 policy.tl_data = raw_tl_data.raw;
                 Some(raw_tl_data)
             } else {

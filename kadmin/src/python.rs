@@ -2,12 +2,13 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ffi::c_long,
+    ffi::{c_int, c_long},
     ops::{BitAndAssign, BitOrAssign, BitXorAssign},
     str::FromStr,
 };
 
 use either::Either;
+use kadmin_sys::{krb5_enctype, krb5_flags, krb5_int16, krb5_int32, krb5_octet};
 use pyo3::{
     prelude::*,
     types::{PyDict, PyString, PyTuple},
@@ -54,8 +55,8 @@ impl Params {
     #[allow(clippy::too_many_arguments)]
     fn py_new(
         realm: Option<&str>,
-        kadmind_port: Option<i32>,
-        kpasswd_port: Option<i32>,
+        kadmind_port: Option<c_int>,
+        kpasswd_port: Option<c_int>,
         admin_server: Option<&str>,
         dbname: Option<&str>,
         acl_file: Option<&str>,
@@ -127,7 +128,7 @@ impl DbArgs {
 #[pymethods]
 impl EncryptionType {
     #[new]
-    fn py_new(enctype: Either<i32, String>) -> Result<Self> {
+    fn py_new(enctype: Either<krb5_enctype, String>) -> Result<Self> {
         Ok(match enctype {
             Either::Left(i) => i.try_into()?,
             Either::Right(s) => EncryptionType::from_str(&s)?,
@@ -139,7 +140,7 @@ impl EncryptionType {
 impl SaltType {
     #[new]
     #[pyo3(signature = (salttype = None))]
-    fn py_new(salttype: Option<Either<i32, String>>) -> Result<Self> {
+    fn py_new(salttype: Option<Either<krb5_int32, String>>) -> Result<Self> {
         Ok(match salttype {
             None => Default::default(),
             Some(salttype) => match salttype {
@@ -173,7 +174,7 @@ impl KeySalts {
 #[pymethods]
 impl TlDataEntry {
     #[new]
-    fn py_new(data_type: i16, contents: Vec<u8>) -> Self {
+    fn py_new(data_type: krb5_int16, contents: Vec<krb5_octet>) -> Self {
         Self {
             data_type,
             contents,
@@ -248,12 +249,12 @@ impl PrincipalAttributes {
     const PySupportDesMd5: Self = Self::SupportDesMd5;
 
     #[new]
-    fn py_new(bits: i32) -> Self {
+    fn py_new(bits: krb5_flags) -> Self {
         Self::from_bits_retain(bits)
     }
 
     #[pyo3(name = "bits")]
-    fn py_bits(&self) -> i32 {
+    fn py_bits(&self) -> krb5_flags {
         self.bits()
     }
 
@@ -289,7 +290,7 @@ impl PrincipalAttributes {
         self.complement()
     }
 
-    fn __int__(&self) -> i32 {
+    fn __int__(&self) -> krb5_flags {
         self.bits()
     }
 }
@@ -796,6 +797,7 @@ impl KAdminPrivileges {
 /// python-kadmin-rs exceptions
 mod exceptions {
     use indoc::indoc;
+    use kadmin_sys::kadm5_ret_t;
     use pyo3::{create_exception, exceptions::PyException, intern, prelude::*};
 
     use crate::error::Error;
@@ -932,7 +934,7 @@ mod exceptions {
             let (exc, extras) = match &error {
                 Error::Kerberos { code, message } => (
                     KerberosException::new_err(error.to_string()),
-                    Some((*code as i64, message)),
+                    Some((*code as kadm5_ret_t, message)),
                 ),
                 Error::KAdmin { code, message } => (
                     KAdminException::new_err(error.to_string()),
