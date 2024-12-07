@@ -550,6 +550,10 @@ impl KAdminImpl for KAdmin {
             strings.insert(c_string_to_string(raw.key)?, c_string_to_string(raw.value)?);
         }
 
+        unsafe {
+            kadm5_free_strings(self.server_handle, raw_strings, count);
+        }
+
         Ok(strings)
     }
 
