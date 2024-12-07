@@ -4,7 +4,7 @@ use std::{
     collections::HashMap,
     ffi::CString,
     os::raw::{c_char, c_void},
-    ptr::null_mut,
+    ptr::{null, null_mut},
     sync::Mutex,
 };
 #[cfg(feature = "client")]
@@ -566,11 +566,11 @@ impl KAdminImpl for KAdmin {
             kadm5_set_string(
                 self.server_handle,
                 princ.raw,
-                key.as_ptr().cast_mut(),
-                if let Some(value) = value {
-                    value.as_ptr().cast_mut()
+                key.as_ptr(),
+                if let Some(value) = &value {
+                    value.as_ptr()
                 } else {
-                    null_mut()
+                    null()
                 },
             )
         };
