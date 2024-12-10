@@ -33,7 +33,7 @@ server = []
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.70"
+bindgen = "0.71"
 system-deps = "7.0"
 
 [lints.clippy]
