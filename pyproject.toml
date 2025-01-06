@@ -67,7 +67,7 @@ package-mode = false
 name = "kadmin-rs"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.9,<3.14"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
