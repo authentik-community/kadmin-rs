@@ -62,13 +62,6 @@ features = ["local", "python"]
 line-length = 100
 target-version = "py312"
 
-[tool.poetry]
-package-mode = false
-name = "kadmin-rs"
-
-[tool.poetry.dependencies]
-python = ">=3.9,<3.14"
-
 [tool.poetry.group.dev.dependencies]
 black = "*"
 build = "*"
