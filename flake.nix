@@ -1,11 +1,7 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    poetry2nix = {
-      url = "github:nix-community/poetry2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     futils.url = "github:numtide/flake-utils";
   };
 
@@ -13,7 +9,6 @@
     self,
     nixpkgs,
     rust-overlay,
-    poetry2nix,
     futils,
   } @ inputs: let
     inherit (nixpkgs) lib;
@@ -24,7 +19,6 @@
         inherit system;
         overlays = [
           rust-overlay.overlays.default
-          poetry2nix.overlays.default
         ];
       });
   in
