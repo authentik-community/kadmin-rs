@@ -64,6 +64,7 @@ target-version = "py312"
 
 [tool.poetry]
 package-mode = false
+requires-poetry = ">=2.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
