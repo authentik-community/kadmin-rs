@@ -64,10 +64,7 @@ target-version = "py312"
 
 [tool.poetry]
 package-mode = false
-name = "kadmin-rs"
-
-[tool.poetry.dependencies]
-python = ">=3.8"
+requires-poetry = ">=2.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"

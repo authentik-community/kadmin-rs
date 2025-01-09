@@ -1,6 +1,24 @@
-from typing import List, Self, final
+from typing import Self, final
 import datetime
 
+__all__ = (
+    "DbArgs",
+    "EncryptionType",
+    "KAdmin",
+    "KAdminApiVersion",
+    "KAdminPrivileges",
+    "KeySalt",
+    "KeySalts",
+    "NewPrincipalKey",
+    "Params",
+    "Policy",
+    "Principal",
+    "PrincipalAttributes",
+    "SaltType",
+    "TlData",
+    "TlDataEntry",
+    "__version__",
+)
 __version__: str
 
 @final
@@ -28,12 +46,12 @@ class KAdmin:
     ): ...
     def principal_get_strings(self, name: str) -> dict[str, str]: ...
     def principal_set_string(self, name: str, key: str, value: str | None): ...
-    def list_principals(self, query: str | None = None) -> List[str]: ...
+    def list_principals(self, query: str | None = None) -> list[str]: ...
     def add_policy(self, name: str, **kwargs) -> Policy: ...
     def delete_policy(self, name: str) -> None: ...
     def get_policy(self, name: str) -> Policy | None: ...
     def policy_exists(self, name: str) -> bool: ...
-    def list_policies(self, query: str | None = None) -> List[str]: ...
+    def list_policies(self, query: str | None = None) -> list[str]: ...
     def get_privileges(self) -> KAdminPrivileges: ...
     @staticmethod
     def with_password(
