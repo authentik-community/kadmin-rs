@@ -850,18 +850,28 @@ mod exceptions {
         PyException,
         "Top-level exception"
     );
-    create_exception!(exceptions, KAdminException, PyKAdminException, indoc! {"
+    create_exception!(
+        exceptions,
+        KAdminException,
+        PyKAdminException,
+        indoc! {"
             kadm5 error
 
             :ivar code: kadm5 error code
             :ivar origin_message: kadm5 error message
-            "});
-    create_exception!(exceptions, KerberosException, PyKAdminException, indoc! {"
+            "}
+    );
+    create_exception!(
+        exceptions,
+        KerberosException,
+        PyKAdminException,
+        indoc! {"
             Kerberos error
 
             :ivar code: Kerberos error code
             :ivar origin_message: Kerberos error message
-            "});
+            "}
+    );
     create_exception!(
         exceptions,
         EncryptionTypeConversion,
