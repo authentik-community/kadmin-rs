@@ -124,7 +124,7 @@ test-all: test-rust test-sanity test-python
 alias ta := test-all
 
 _install-python:
-  pip install --force-reinstall dist/python_kadmin_rs-*.whl
+  uv pip install --force-reinstall dist/python_kadmin_rs-*.whl
 # Build and install wheel
 install-python: clean-python build-python _install-python
 
@@ -138,7 +138,7 @@ clean-rust:
 
 # Cleanup python wheel builds
 clean-python:
-  pip uninstall -y python-kadmin-rs
+  uv pip uninstall python-kadmin-rs
   rm -rf dist wheelhouse
 
 # Cleanup all
