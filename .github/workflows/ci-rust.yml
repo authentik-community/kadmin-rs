@@ -77,17 +77,8 @@ jobs:
       KRB5_TRACE: /dev/stderr
     steps:
       - uses: actions/checkout@v4
-      - name: Install poetry & deps
-        shell: bash
-        run: |
-          pipx install poetry || true
-      - name: Setup python and restore poetry
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-          cache: "poetry"
-      - name: Install Python dependencies
-        run: poetry install --only=test
+      - name: Setup Python & deps
+        uses: astral-sh/setup-uv@v5
       - name: Setup rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/github-script@v7
@@ -99,7 +90,7 @@ jobs:
         with:
           tool: just,sccache
       - name: Test
-        run: poetry run just ci-test-${{ matrix.job }}
+        run: uv run just ci-test-${{ matrix.job }}
   check-rust:
     if: always()
     needs:
