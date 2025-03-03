@@ -19,7 +19,7 @@ local = ["kadmin-sys/server"]
 python = ["dep:pyo3", "dep:indoc", "dep:either"]
 
 [dependencies]
-bitflags = "2.8"
+bitflags = "2.9"
 chrono = "0.4"
 either = { version = "1.14", optional = true }
 getset = "0.1"
