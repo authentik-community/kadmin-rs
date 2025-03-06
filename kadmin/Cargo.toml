@@ -21,7 +21,7 @@ python = ["dep:pyo3", "dep:indoc", "dep:either"]
 [dependencies]
 bitflags = "2.9"
 chrono = "0.4"
-either = { version = "1.14", optional = true }
+either = { version = "1.15", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
 kadmin-sys = { path = "../kadmin-sys", version = "0.3.0", default-features = false }
