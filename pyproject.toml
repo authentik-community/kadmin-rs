@@ -62,18 +62,16 @@ features = ["local", "python"]
 line-length = 100
 target-version = "py312"
 
-[tool.poetry]
-package-mode = false
-requires-poetry = ">=2.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "*"
-build = "*"
-cibuildwheel = "*"
-mypy = "*"
-ruff = "*"
-sphinx = "*"
-sphinx-rtd-theme = "*"
-
-[tool.poetry.group.test.dependencies]
-k5test = "*"
+[dependency-groups]
+dev = [
+  "black",
+  "build",
+  "cibuildwheel",
+  "mypy",
+  "ruff",
+  "sphinx",
+  "sphinx-rtd-theme",
+]
+test = [
+  "k5test",
+]
