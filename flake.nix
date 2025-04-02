@@ -52,6 +52,7 @@
 
         RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
         RUST_BACKTRACE = 1;
+        RUSTC_WRAPPER = "sccache";
         LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
       };
     });
