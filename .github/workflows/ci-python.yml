@@ -199,6 +199,7 @@ jobs:
           CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: manylinux_2_28
+          RUSTC_WRAPPER: ""
       - uses: actions/upload-artifact@v4
         with:
           name: python-cibw-wheels-${{ matrix.cibw-only }}
