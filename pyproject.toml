@@ -4,7 +4,8 @@ version = "0.5.3"
 description = "Python interface to the Kerberos administration interface (kadm5)"
 requires-python = ">=3.9,<3.14"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   { name = "Marc 'risson' Schmitt", email = "marc.schmitt@risson.space" },
   { name = "authentik community", email = "hello@goauthentik.io" },
@@ -15,7 +16,6 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: System Administrators",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3",
