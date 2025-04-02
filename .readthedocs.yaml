@@ -8,7 +8,6 @@ build:
     - libclang-dev
     - libkrb5-dev
     - pkg-config
-    - sccache
   tools:
     python: "latest"
     rust: "latest"
