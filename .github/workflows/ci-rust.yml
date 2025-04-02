@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mozilla-actions/sccache-action@v0.0.8
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - if: ${{ matrix.toolchain }}
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mozilla-actions/sccache-action@v0.0.8
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
@@ -80,7 +80,7 @@ jobs:
           cache: "poetry"
       - name: Install Python dependencies
         run: poetry install --only=test
-      - uses: mozilla-actions/sccache-action@v0.0.8
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
