@@ -36,7 +36,7 @@ jobs:
           python-version-file: "pyproject.toml"
           cache: "poetry"
       - run: poetry install --only=dev
-      - uses: mozilla-actions/sccache-action@v0.0.8
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
@@ -61,7 +61,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
       - run: poetry install --only=dev
-      - uses: mozilla-actions/sccache-action@v0.0.8
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
