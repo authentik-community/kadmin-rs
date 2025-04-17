@@ -55,7 +55,7 @@ build-rust:
 [private]
 ci-build-deps:
   sudo apt-get update
-  sudo apt-get install -y --no-install-recommends libkrb5-dev krb5-multidev
+  sudo apt-get install -y --no-install-recommends libkrb5-dev krb5-multidev python3-dev
 [private]
 ci-build-rust: ci-build-deps
   RUSTFLAGS="-Dwarnings" just build-rust
