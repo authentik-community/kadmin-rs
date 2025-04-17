@@ -41,6 +41,9 @@ Repository = "https://github.com/authentik-community/kadmin-rs.git"
 requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[tool.cibuildwheel]
+enable = ["cpython-freethreading", "pypy"]
+
 [tool.setuptools.packages]
 find = { where = ["python/src"] }
 

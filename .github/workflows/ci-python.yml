@@ -48,10 +48,13 @@ jobs:
       matrix:
         python-version:
           - "3.9"
+          - "pypy3.9"
           - "3.10"
+          - "pypy3.10"
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.13t"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,10 +85,13 @@ jobs:
           # - h5l
         python-version:
           - "3.9"
+          - "pypy3.9"
           - "3.10"
+          - "pypy3.10"
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.13t"
     runs-on: ubuntu-latest
     env:
       KRB5_TRACE: /dev/stderr
@@ -193,12 +199,12 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
           CIBW_ENVIRONMENT_PASS_LINUX: "DEBIAN_FRONTEND CARGO_INCREMENTAL"
           CIBW_ENVIRONMENT_MACOS: "PKG_CONFIG_PATH=/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig MACOSX_DEPLOYMENT_TARGET=14.0 PATH=$HOME/.cargo/bin:$PATH"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_28
+          # CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: manylinux_2_28
           RUSTC_WRAPPER: ""
       - uses: actions/upload-artifact@v4
         with:
