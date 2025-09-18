@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    ffi::{CString, c_int},
+    ffi::{CString, c_int, c_uint},
     os::raw::{c_char, c_long, c_void},
     ptr::{null, null_mut},
     sync::Mutex,
@@ -498,7 +498,7 @@ impl KAdminImpl for KAdmin {
                 kadm5_chpass_principal_3(
                     self.server_handle,
                     princ.raw,
-                    keepold as krb5_boolean,
+                    keepold as c_uint,
                     n_ks_tuple,
                     ks_tuple,
                     password.as_ptr().cast_mut(),
@@ -534,7 +534,7 @@ impl KAdminImpl for KAdmin {
             kadm5_randkey_principal_3(
                 self.server_handle,
                 princ.raw,
-                keepold as krb5_boolean,
+                keepold as c_uint,
                 n_ks_tuple,
                 ks_tuple,
                 null_mut(),
