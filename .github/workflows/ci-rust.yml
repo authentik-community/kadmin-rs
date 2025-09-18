@@ -76,7 +76,7 @@ jobs:
       - name: Setup python and restore poetry
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.12" # same version as python3-dev
           cache: "poetry"
       - name: Install Python dependencies
         run: poetry install --only=test
