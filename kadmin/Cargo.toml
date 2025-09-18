@@ -1,6 +1,6 @@
 [package]
 name = "kadmin"
-version = "0.6.0"
+version = "0.6.1"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -24,7 +24,7 @@ chrono = "0.4"
 either = { version = "1.15", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
-kadmin-sys = { path = "../kadmin-sys", version = "0.3.1", default-features = false }
+kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
 libc = "0.2"
 pyo3 = { version = "0.25", features = [
   "extension-module",
