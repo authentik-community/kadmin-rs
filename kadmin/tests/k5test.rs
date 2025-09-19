@@ -40,8 +40,8 @@ def restore_env(saved_env):
 );
 
 pub(crate) struct K5Test {
-    realm: PyObject,
-    saved_env: PyObject,
+    realm: Py<PyAny>,
+    saved_env: Py<PyAny>,
 }
 
 impl K5Test {
@@ -51,7 +51,7 @@ impl K5Test {
             let module = PyModule::from_code(py, K5REALM_INIT, c_str!(""), c_str!(""))?;
             let realm = module.getattr("realm")?;
             let saved_env = module.getattr("saved_env")?;
-            Ok::<(PyObject, PyObject), PyErr>((realm.into(), saved_env.into()))
+            Ok::<(Py<PyAny>, Py<PyAny>), PyErr>((realm.into(), saved_env.into()))
         })?;
 
         Ok(Self { realm, saved_env })
