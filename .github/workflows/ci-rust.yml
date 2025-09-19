@@ -74,7 +74,7 @@ jobs:
         run: |
           pipx install poetry || true
       - name: Setup python and restore poetry
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12" # same version as python3-dev
           cache: "poetry"
