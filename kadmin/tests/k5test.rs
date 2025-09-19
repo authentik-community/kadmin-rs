@@ -47,7 +47,7 @@ pub(crate) struct K5Test {
 impl K5Test {
     #[allow(dead_code)]
     pub(crate) fn new() -> Result<Self> {
-        let (realm, saved_env) = Python::with_gil(|py| {
+        let (realm, saved_env) = Python::attach(|py| {
             let module = PyModule::from_code(py, K5REALM_INIT, c_str!(""), c_str!(""))?;
             let realm = module.getattr("realm")?;
             let saved_env = module.getattr("saved_env")?;
@@ -59,7 +59,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn realm_name(&self) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let realm_name: String = realm.getattr("realm")?.extract()?;
             Ok(realm_name)
@@ -68,7 +68,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn tmpdir(&self) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let tmpdir: String = realm.getattr("tmpdir")?.extract()?;
             Ok(tmpdir)
@@ -77,7 +77,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn user_princ(&self) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let user_princ: String = realm.getattr("user_princ")?.extract()?;
             Ok(user_princ)
@@ -86,7 +86,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn admin_princ(&self) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let admin_princ: String = realm.getattr("admin_princ")?.extract()?;
             Ok(admin_princ)
@@ -95,7 +95,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn kadmin_ccache(&self) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let kadmin_ccache: String = realm.getattr("kadmin_ccache")?.extract()?;
             Ok(kadmin_ccache)
@@ -104,7 +104,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn password(&self, name: &str) -> Result<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let password: String = realm.call_method1("password", (name,))?.extract()?;
             Ok(password)
@@ -113,7 +113,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn kinit(&self, name: &str, password: &str) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             realm.call_method1("kinit", (name, password))?;
             Ok(())
@@ -122,7 +122,7 @@ impl K5Test {
 
     #[allow(dead_code)]
     pub(crate) fn prep_kadmin(&self) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             realm.call_method0("prep_kadmin")?;
             Ok(())
@@ -132,7 +132,7 @@ impl K5Test {
 
 impl Drop for K5Test {
     fn drop(&mut self) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let realm = self.realm.bind(py);
             let saved_env = self.saved_env.bind(py);
 
