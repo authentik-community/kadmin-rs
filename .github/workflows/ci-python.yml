@@ -55,6 +55,8 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.13t"
+          - "3.14"
+          - "3.14t"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -92,6 +94,8 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.13t"
+          - "3.14"
+          - "3.14t"
     runs-on: ubuntu-latest
     env:
       KRB5_TRACE: /dev/stderr
@@ -190,7 +194,7 @@ jobs:
         if: runner.os == 'Linux'
         with:
           platforms: all
-      - uses: pypa/cibuildwheel@v3.1.4
+      - uses: pypa/cibuildwheel@v3.2.0
         with:
           only: "${{ matrix.cibw-only }}"
         env:

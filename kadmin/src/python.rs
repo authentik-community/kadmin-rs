@@ -977,7 +977,7 @@ mod exceptions {
                 }
             };
 
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 if let Some((code, message)) = extras {
                     let bound_exc = exc.value(py);
                     if let Err(err) = bound_exc.setattr(intern!(py, "code"), code) {
