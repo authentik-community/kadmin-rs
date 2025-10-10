@@ -27,6 +27,7 @@ use crate::{
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::{Principal, PrincipalBuilder, PrincipalModifier},
+    sys::KAdm5Variant,
 };
 
 /// Operations from [`KAdminImpl`]
@@ -164,8 +165,8 @@ pub struct KAdmin {
 
 impl KAdmin {
     /// Construct a new [`KAdminBuilder`]
-    pub fn builder() -> KAdminBuilder {
-        KAdminBuilder::default()
+    pub fn builder(variant: KAdm5Variant) -> KAdminBuilder {
+        KAdminBuilder::new(variant)
     }
 }
 
@@ -334,14 +335,25 @@ impl KAdminImpl for KAdmin {
 }
 
 /// [`KAdmin`] builder
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct KAdminBuilder {
+    variant: KAdm5Variant,
     params: Option<Params>,
     db_args: Option<DbArgs>,
     api_version: KAdminApiVersion,
 }
 
 impl KAdminBuilder {
+    /// Create a new [`KAdminBuilder`] instance
+    pub fn new(variant: KAdm5Variant) -> Self {
+        Self {
+            variant,
+            params: Default::default(),
+            db_args: Default::default(),
+            api_version: Default::default(),
+        }
+    }
+
     /// Provide additional [`Params`][`crate::params::Params`] to this
     /// [`KAdmin`] instance
     pub fn params(mut self, params: Params) -> Self {
@@ -365,7 +377,7 @@ impl KAdminBuilder {
     /// Construct a [`crate::kadmin::KAdminBuilder`] object that isn't initialized yet from the
     /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
-        let mut builder = crate::kadmin::KAdmin::builder();
+        let mut builder = crate::kadmin::KAdmin::builder(self.variant);
         if let Some(params) = self.params {
             builder = builder.params(params);
         }

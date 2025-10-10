@@ -57,8 +57,8 @@ pub use error::Error;
 pub mod context;
 pub use context::Context;
 
-pub mod params;
-pub use params::Params;
+// pub mod params;
+// pub use params::Params;
 
 pub mod db_args;
 pub use db_args::DbArgs;
@@ -69,16 +69,18 @@ pub use tl_data::{TlData, TlDataEntry};
 pub mod keysalt;
 pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
-pub mod kadmin;
-pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
+// pub mod kadmin;
+// pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
+//
+// pub mod sync;
+//
+// pub mod policy;
+// pub use policy::Policy;
+//
+// pub mod principal;
+// pub use principal::{Principal, PrincipalAttributes};
 
-pub mod sync;
-
-pub mod policy;
-pub use policy::Policy;
-
-pub mod principal;
-pub use principal::{Principal, PrincipalAttributes};
+pub mod sys;
 
 #[cfg(feature = "python")]
 mod python;

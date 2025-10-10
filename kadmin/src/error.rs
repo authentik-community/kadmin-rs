@@ -35,7 +35,6 @@ pub enum Error {
     /// Conversion to an encryption type failed
     #[error("Conversion to encryption type failed")]
     EncryptionTypeConversion,
-
     /// Conversion to a salt type failed
     #[error("Conversion to salt type failed")]
     SaltTypeConversion,
@@ -55,12 +54,14 @@ pub enum Error {
     /// byte was found
     #[error(transparent)]
     StringConversion(#[from] std::ffi::NulError),
+
     /// Failed to send an operation to the sync executor
     #[error("Failed to send operation to executor")]
     ThreadSendError,
     /// Failed to receive the result from an operatior from the sync executor
     #[error("Failed to receive result from executor")]
     ThreadRecvError(#[from] std::sync::mpsc::RecvError),
+
     /// Failed to convert a [`krb5_timestamp`] to a [`chrono::DateTime`]
     #[error("Failed to convert krb5 timestamp to chrono DateTime")]
     TimestampConversion,
@@ -70,6 +71,11 @@ pub enum Error {
     /// Failed to convert a [`Duration`][`std::time::Duration`] to a [`krb5_deltat`]
     #[error("Failed to convert Duration to a krb5 deltat")]
     DurationConversion(std::num::TryFromIntError),
+
+    /// Failed to acquire [`crate::kadmin::KADMIN_INIT_LOCK`] or
+    /// [`crate::context::CONTEXT_INIT_LOCK`]
+    #[error("Failed to acquire the kadmin initialisation lock")]
+    LockError,
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {
