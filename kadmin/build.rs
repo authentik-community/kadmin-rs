@@ -4,11 +4,12 @@
 use std::{
     collections::HashSet,
     env,
-    fs::read_to_string,
+    fs::{read_to_string, write},
     path::{Path, PathBuf},
     process::Command,
 };
 
+use quote::quote;
 use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone)]
@@ -93,54 +94,6 @@ impl Kadm5Variant {
             Self::Heimdal => "KADMIN_HEIMDAL_KRB5_CONFIG",
         }
     }
-}
-
-fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
-    config.outputs();
-
-    let mut builder = bindgen::Builder::default()
-        .header("src/wrapper.h")
-        .allowlist_type("(_|)kadm5.*")
-        .allowlist_var("KADM5_.*")
-        // Principal attributes
-        .allowlist_var("KRB5_KDB_DISALLOW_POSTDATED")
-        .allowlist_var("KRB5_KDB_DISALLOW_FORWARDABLE")
-        .allowlist_var("KRB5_KDB_DISALLOW_TGT_BASED")
-        .allowlist_var("KRB5_KDB_DISALLOW_RENEWABLE")
-        .allowlist_var("KRB5_KDB_DISALLOW_PROXIABLE")
-        .allowlist_var("KRB5_KDB_DISALLOW_DUP_SKEY")
-        .allowlist_var("KRB5_KDB_DISALLOW_ALL_TIX")
-        .allowlist_var("KRB5_KDB_REQUIRES_PRE_AUTH")
-        .allowlist_var("KRB5_KDB_REQUIRES_HW_AUTH")
-        .allowlist_var("KRB5_KDB_REQUIRES_PWCHANGE")
-        .allowlist_var("KRB5_KDB_DISALLOW_SVR")
-        .allowlist_var("KRB5_KDB_PWCHANGE_SERVICE")
-        .allowlist_var("KRB5_KDB_SUPPORT_DESMD5")
-        .allowlist_var("KRB5_KDB_NEW_PRINC")
-        .allowlist_var("KRB5_KDB_OK_AS_DELEGATE")
-        .allowlist_var("KRB5_KDB_OK_TO_AUTH_AS_DELEGATE")
-        .allowlist_var("KRB5_KDB_NO_AUTH_DATA_REQUIRED")
-        .allowlist_var("KRB5_KDB_LOCKDOWN_KEYS")
-        // Other utilites
-        .allowlist_var("KRB5_NT_SRV_HST")
-        .allowlist_var("KRB5_OK")
-        .allowlist_var("ENCTYPE_.*")
-        .allowlist_var("KRB5_KDB_SALTTYPE_.*")
-        .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
-        .clang_arg("-fparse-all-comments")
-        .derive_default(true)
-        .generate_cstr(true)
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
-
-    for include_path in &config.include_paths {
-        builder = builder.clang_arg(format!("-I{}", include_path.display()));
-    }
-
-    let bindings = builder.generate().unwrap();
-
-    bindings
-        .write_to_file(out_path.join(format!("bindings_{}.rs", config.name())))
-        .unwrap();
 }
 
 fn main() {
@@ -363,4 +316,116 @@ fn verify_header_variant(path: &Path, variant: Kadm5Variant) -> bool {
     } else {
         false
     }
+}
+
+fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
+    config.outputs();
+
+    let mut builder = bindgen::Builder::default()
+        .header("src/wrapper.h")
+        .allowlist_type("(_|)kadm5.*")
+        .allowlist_var("KADM5_.*")
+        // Principal attributes
+        .allowlist_var("KRB5_KDB_DISALLOW_POSTDATED")
+        .allowlist_var("KRB5_KDB_DISALLOW_FORWARDABLE")
+        .allowlist_var("KRB5_KDB_DISALLOW_TGT_BASED")
+        .allowlist_var("KRB5_KDB_DISALLOW_RENEWABLE")
+        .allowlist_var("KRB5_KDB_DISALLOW_PROXIABLE")
+        .allowlist_var("KRB5_KDB_DISALLOW_DUP_SKEY")
+        .allowlist_var("KRB5_KDB_DISALLOW_ALL_TIX")
+        .allowlist_var("KRB5_KDB_REQUIRES_PRE_AUTH")
+        .allowlist_var("KRB5_KDB_REQUIRES_HW_AUTH")
+        .allowlist_var("KRB5_KDB_REQUIRES_PWCHANGE")
+        .allowlist_var("KRB5_KDB_DISALLOW_SVR")
+        .allowlist_var("KRB5_KDB_PWCHANGE_SERVICE")
+        .allowlist_var("KRB5_KDB_SUPPORT_DESMD5")
+        .allowlist_var("KRB5_KDB_NEW_PRINC")
+        .allowlist_var("KRB5_KDB_OK_AS_DELEGATE")
+        .allowlist_var("KRB5_KDB_OK_TO_AUTH_AS_DELEGATE")
+        .allowlist_var("KRB5_KDB_NO_AUTH_DATA_REQUIRED")
+        .allowlist_var("KRB5_KDB_LOCKDOWN_KEYS")
+        // Other utilites
+        .allowlist_var("KRB5_NT_SRV_HST")
+        .allowlist_var("KRB5_OK")
+        .allowlist_var("ENCTYPE_.*")
+        .allowlist_var("KRB5_KDB_SALTTYPE_.*")
+        .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
+        .allowlist_function("kadm5.*")
+        .allowlist_function("krb5_init_context")
+        .allowlist_function("krb5_free_context")
+        .allowlist_function("krb5_get_error_message")
+        .allowlist_function("krb5_free_error_message")
+        .allowlist_function("krb5_parse_name")
+        .allowlist_function("krb5_sname_to_principal")
+        .allowlist_function("krb5_free_principal")
+        .allowlist_function("krb5_unparse_name")
+        .allowlist_function("krb5_free_unparsed_name")
+        .allowlist_function("krb5_cc_get_principal")
+        .allowlist_function("krb5_cc_default")
+        .allowlist_function("krb5_cc_resolve")
+        .allowlist_function("krb5_cc_close")
+        .allowlist_function("krb5_get_default_realm")
+        .allowlist_function("krb5_free_default_realm")
+        .allowlist_function("krb5_string_to_enctype")
+        .allowlist_function("krb5_string_to_salttype")
+        .allowlist_function("krb5_enctype_to_string")
+        .allowlist_function("krb5_salttype_to_string")
+        .clang_arg("-fparse-all-comments")
+        .derive_default(true)
+        .generate_cstr(true)
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
+
+    for include_path in &config.include_paths {
+        builder = builder.clang_arg(format!("-I{}", include_path.display()));
+    }
+
+    let bindings = builder.generate().unwrap();
+    let bindings_path = out_path.join(format!("bindings_{}.rs", config.name()));
+
+    bindings.write_to_file(&bindings_path).unwrap();
+
+    transform_bindings_functions_to_dlopen_wrapper(&bindings_path);
+}
+
+fn transform_bindings_functions_to_dlopen_wrapper(bindings_path: &Path) {
+    let content = read_to_string(bindings_path).unwrap();
+
+    let syntax_tree = syn::parse_file(&content).unwrap();
+
+    let mut bindings = Vec::new();
+    let mut function_fields = Vec::new();
+
+    for item in syntax_tree.items {
+        match item {
+            syn::Item::ForeignMod(foreign_mod) => {
+                for foreign_item in foreign_mod.items {
+                    if let syn::ForeignItem::Fn(func) = foreign_item {
+                        let name = &func.sig.ident;
+                        let inputs = &func.sig.inputs;
+                        let output = &func.sig.output;
+
+                        function_fields.push(quote! {
+                            #name: unsafe extern "C" fn(#inputs) #output
+                        });
+                    }
+                }
+            }
+            _ => bindings.push(item),
+        }
+    }
+
+    let bindings_tokens = quote! {
+        #(#bindings)*
+
+        use dlopen2::wrapper::WrapperApi;
+
+        #[derive(WrapperApi)]
+        pub struct Api {
+            #(#function_fields,)*
+        }
+    };
+
+    let bindings_syntax = syn::parse2(bindings_tokens).unwrap();
+    let bindings_output = prettyplease::unparse(&bindings_syntax);
+    write(bindings_path, bindings_output).unwrap();
 }

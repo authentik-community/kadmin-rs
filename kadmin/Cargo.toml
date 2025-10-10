@@ -39,7 +39,10 @@ thiserror = "2"
 [build-dependencies]
 bindgen = "0.72"
 pkg-config = "0.3"
+prettyplease = "0.2"
+quote = "1.0"
 strum = { version = "0.27", features = ["derive"] }
+syn = { version = "2.0", features = ["full", "parsing"] }
 
 [dev-dependencies]
 anyhow = "1"

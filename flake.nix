@@ -25,39 +25,46 @@
     eachDefaultSystem (system: let
       pkgs = nixpkgsFor.${system};
     in {
-      devShell = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          (lib.hiPrio rust-bin.nightly.latest.rustfmt)
-          (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
-          sccache
+      devShell =
+        pkgs.mkShell
+        {
+          buildInputs = with pkgs; [
+            (lib.hiPrio rust-bin.nightly.latest.rustfmt)
+            (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+            sccache
 
-          poetry
-          python3Full
+            poetry
+            python3Full
 
-          clang
-          glibc
-          krb5.out
-          krb5.dev
-          heimdal.dev
-          libclang
-          openssl
-          pkg-config
+            clang
+            glibc
+            # krb5.out
+            # krb5.dev
+            # heimdal.dev
+            libclang
+            openssl
+            pkg-config
 
-          cargo-msrv
-          cargo-release
-          cargo-workspaces
-          git
-          just
-          valgrind
-        ];
+            cargo-msrv
+            cargo-release
+            cargo-workspaces
+            git
+            just
+            valgrind
+          ];
 
-        RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-        RUST_BACKTRACE = 1;
-        RUSTC_WRAPPER = "sccache";
-        LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+          RUST_BACKTRACE = 1;
+          RUSTC_WRAPPER = "sccache";
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-        KADMIN_MIT_INCLUDES = "${pkgs.krb5.dev}/include";
-        KADMIN_HEIMDAL_INCLUDES = "${pkgs.heimdal.dev}/include";
-      };
+          KADMIN_MIT_INCLUDES = "${pkgs.krb5.dev}/include";
+          KADMIN_HEIMDAL_INCLUDES = "${pkgs.heimdal.dev}/include";
+          SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
+          SYSTEM_DEPS_KRB5_LIB = "${pkgs.krb5.dev}/lib";
+          SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
+          SYSTEM_DEPS_KADM5CLNT_LIB = "${pkgs.krb5.dev}/lib";
+          SYSTEM_DEPS_KADM5CLNT_INCLUDE = "${pkgs.krb5.dev}/include";
+        };
     });
 }

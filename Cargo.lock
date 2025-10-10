@@ -305,10 +305,13 @@ dependencies = [
  "kadmin-sys",
  "libc",
  "pkg-config",
+ "prettyplease",
  "pyo3",
+ "quote",
  "rand 0.9.2",
  "serial_test",
  "strum",
+ "syn",
  "thiserror",
 ]
 
