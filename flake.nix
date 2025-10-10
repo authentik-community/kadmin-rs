@@ -36,8 +36,9 @@
 
           clang
           glibc
-          krb5.dev
           krb5.out
+          krb5.dev
+          heimdal.dev
           libclang
           openssl
           pkg-config
@@ -54,6 +55,9 @@
         RUST_BACKTRACE = 1;
         RUSTC_WRAPPER = "sccache";
         LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+
+        KADMIN_MIT_INCLUDES = "${pkgs.krb5.dev}/include";
+        KADMIN_HEIMDAL_INCLUDES = "${pkgs.heimdal.dev}/include";
       };
     });
 }

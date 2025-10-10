@@ -21,6 +21,7 @@ python = ["dep:pyo3", "dep:indoc", "dep:either"]
 [dependencies]
 bitflags = "2.9"
 chrono = "0.4"
+dlopen2 = "0.8"
 either = { version = "1.15", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
@@ -34,6 +35,11 @@ pyo3 = { version = "0.26", features = [
 ], optional = true }
 strum = { version = "0.27", features = ["derive"] }
 thiserror = "2"
+
+[build-dependencies]
+bindgen = "0.72"
+pkg-config = "0.3"
+strum = { version = "0.27", features = ["derive"] }
 
 [dev-dependencies]
 anyhow = "1"

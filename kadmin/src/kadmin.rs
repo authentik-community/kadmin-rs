@@ -2,8 +2,8 @@
 
 use std::{
     collections::HashMap,
-    ffi::{CString, c_int, c_uint},
-    os::raw::{c_char, c_long, c_void},
+    ffi::{CString, c_int, c_uint, c_void},
+    os::raw::{c_char, c_long},
     ptr::{null, null_mut},
     sync::Mutex,
 };
@@ -90,7 +90,6 @@ bitflags! {
 ///
 /// This interface is not thread safe. Consider creating one per thread where needed, or using the
 /// [`sync::KAdmin`][`crate::sync::KAdmin`] interface that is thread safe.
-#[derive(Debug)]
 pub struct KAdmin {
     /// Kerberos context
     pub(crate) context: Context,
