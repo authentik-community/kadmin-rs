@@ -20,15 +20,16 @@ use crate::{
     context::Context,
     conv::{c_string_to_string, parse_name},
     db_args::DbArgs,
-    error::{Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
+    error::{Error, Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     keysalt::KeySalts,
     params::Params,
     policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
+    sys::{KAdm5Variant, Library},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
-static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
+pub static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 
 /// kadm5 API version
 ///
@@ -91,6 +92,8 @@ bitflags! {
 /// This interface is not thread safe. Consider creating one per thread where needed, or using the
 /// [`sync::KAdmin`][`crate::sync::KAdmin`] interface that is thread safe.
 pub struct KAdmin {
+    /// Kadm5 library
+    library: Library,
     /// Kerberos context
     pub(crate) context: Context,
     /// Server handle for kadm5
@@ -300,8 +303,8 @@ pub trait KAdminImpl {
 
 impl KAdmin {
     /// Construct a new [`KAdminBuilder`]
-    pub fn builder() -> KAdminBuilder {
-        KAdminBuilder::default()
+    pub fn builder(variant: KAdm5Variant) -> KAdminBuilder {
+        KAdminBuilder::new(variant)
     }
 }
 
@@ -707,19 +710,22 @@ impl KAdminImpl for KAdmin {
 
 impl Drop for KAdmin {
     fn drop(&mut self) {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock kadmin for de-initialization.");
-        unsafe {
-            kadm5_flush(self.server_handle);
-            kadm5_destroy(self.server_handle);
+        if self.server_handle.is_null() {
+            return;
+        }
+        if let Ok(_guard) = KADMIN_INIT_LOCK.lock() {
+            unsafe {
+                kadm5_flush(self.server_handle);
+                kadm5_destroy(self.server_handle);
+            }
         }
     }
 }
 
 /// [`KAdmin`] builder
-#[derive(Debug, Default)]
 pub struct KAdminBuilder {
+    variant: KAdm5Variant,
+    library: Option<Library>,
     context: Option<Context>,
     params: Option<Params>,
     db_args: Option<DbArgs>,
@@ -727,6 +733,18 @@ pub struct KAdminBuilder {
 }
 
 impl KAdminBuilder {
+    /// Create a new [`KAdminBuilder`] instance
+    pub fn new(variant: KAdm5Variant) -> Self {
+        Self {
+            variant,
+            library: Default::default(),
+            context: Default::default(),
+            params: Default::default(),
+            db_args: Default::default(),
+            api_version: Default::default(),
+        }
+    }
+
     /// Set the [`Context`] to use for this [`KAdmin`] instance
     pub fn context(mut self, context: Context) -> Self {
         self.context = Some(context);
@@ -753,11 +771,15 @@ impl KAdminBuilder {
 
     /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
     fn get_kadmin(self) -> Result<(KAdmin, Params, DbArgs, KAdminApiVersion)> {
+        let library = self.library.unwrap_or(Library::from_variant(self.variant)?);
+        let context = self.context.unwrap_or(Context::new()?);
+
         let params = self.params.unwrap_or_default();
         let db_args = self.db_args.unwrap_or_default();
-        let context = self.context.unwrap_or(Context::new()?);
         let api_version = self.api_version;
+
         let kadmin = KAdmin {
+            library,
             context,
             server_handle: null_mut(),
         };
@@ -769,9 +791,7 @@ impl KAdminBuilder {
     #[cfg(any(feature = "client", doc))]
     #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
@@ -811,9 +831,7 @@ impl KAdminBuilder {
     #[cfg(any(feature = "client", doc))]
     #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
@@ -889,9 +907,7 @@ impl KAdminBuilder {
         client_name: Option<&str>,
         ccache_name: Option<&str>,
     ) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
@@ -968,9 +984,7 @@ impl KAdminBuilder {
     #[cfg(any(feature = "client", doc))]
     #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut _kadmin, _params, _db_args, _api_version) = self.get_kadmin()?;
 
@@ -981,9 +995,7 @@ impl KAdminBuilder {
     #[cfg(any(feature = "local", doc))]
     #[cfg_attr(docsrs, doc(cfg(feature = "local")))]
     pub fn with_local(self) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK
-            .lock()
-            .expect("Failed to lock context initialization.");
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
