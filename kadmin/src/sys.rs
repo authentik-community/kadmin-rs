@@ -57,13 +57,8 @@ impl Library {
     ) -> Option<Container<T>> {
         for path in library_paths {
             for library in libraries.iter().filter(|lib| lib.contains(contains)) {
-                dbg!(&path, &library, &contains);
                 let full_path = format!("{}/lib{}.so", path, library);
-                dbg!(&full_path);
                 let load = unsafe { Container::load(&full_path) };
-                if let Err(err) = &load {
-                    dbg!(err);
-                }
                 if let Ok(cont) = load {
                     return Some(cont);
                 }

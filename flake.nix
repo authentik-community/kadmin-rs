@@ -63,9 +63,11 @@
           KADMIN_MIT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
           KADMIN_HEIMDAL_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
           SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
-          SYSTEM_DEPS_KRB5_LIB = "${pkgs.krb5.dev}/lib";
+          SYSTEM_DEPS_KRB5_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
+          SYSTEM_DEPS_KRB5_LIB = "krb5";
           SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
-          SYSTEM_DEPS_KADM5CLNT_LIB = "${pkgs.krb5.dev}/lib";
+          SYSTEM_DEPS_KADM5CLNT_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
+          SYSTEM_DEPS_KADM5CLNT_LIB = "kadm5clnt_mit";
           SYSTEM_DEPS_KADM5CLNT_INCLUDE = "${pkgs.krb5.dev}/include";
         };
     });

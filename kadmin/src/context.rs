@@ -266,7 +266,7 @@ mod tests {
     fn error_code_to_message() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
         let context = Context::new(&lib).unwrap();
-        let message = context.error_code_to_message(-1765328384);
+        let message = context.error_code_to_message(-1_765_328_384);
         assert_eq!(message, "No error".to_string());
         Ok(())
     }
