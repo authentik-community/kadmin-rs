@@ -1,7 +1,9 @@
 //! Define [`Params`] to pass to kadm5
 
+#[cfg(mit)]
+use std::ffi::c_long;
 use std::{
-    ffi::{CString, c_int, c_long},
+    ffi::{CString, c_int},
     ptr::null_mut,
 };
 
@@ -307,14 +309,12 @@ impl ParamsBuilder {
     #[cfg(mit)]
     /// Set the kpasswd port to connect to
     ///
-    /// No-op for heimdal
+    /// No-op for non-MIT variants
     pub fn kpasswd_port(mut self, port: c_int) -> Self {
-        #[cfg(heimdal)]
-        if self.variant == KAdm5Variant::HeimdalClient
-            || self.variant == KAdm5Variant::HeimdalServer
-        {
+        if !self.variant.is_mit() {
             return self;
         }
+
         self.kpasswd_port = port;
         self.mask |= sys::mit::KADM5_CONFIG_KPASSWD_PORT as i32;
         self
@@ -367,14 +367,12 @@ impl ParamsBuilder {
     #[cfg(mit)]
     /// Set the location of the dictionary file containing strings that are not allowed as passwords
     ///
-    /// No-op for Heimdal
+    /// No-op for non-MIT variants
     pub fn dict_file(mut self, dict_file: &str) -> Self {
-        #[cfg(heimdal)]
-        if self.variant == KAdm5Variant::HeimdalClient
-            || self.variant == KAdm5Variant::HeimdalServer
-        {
+        if !self.variant.is_mit() {
             return self;
         }
+
         self.dict_file = Some(dict_file.to_owned());
         self.mask |= sys::mit::KADM5_CONFIG_DICT_FILE as i32;
         self

@@ -32,6 +32,50 @@ pub enum KAdm5Variant {
     HeimdalServer,
 }
 
+impl KAdm5Variant {
+    /// Check if this [`KAdm5Variant`] is for MIT krb5
+    pub fn is_mit(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitClient | Self::MitServer => true,
+            #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
+
+    /// Check if this [`KAdm5Variant`] is for Heimdal
+    pub fn is_heimdal(&self) -> bool {
+        match self {
+            #[cfg(heimdal)]
+            Self::HeimdalClient | Self::HeimdalServer => true,
+            #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
+
+    /// Check if this [`KAdm5Variant`] is for client-side usage
+    pub fn is_client(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitClient => true,
+            #[cfg(heimdal)]
+            Self::HeimdalClient => true,
+            _ => false,
+        }
+    }
+
+    /// Check if this [`KAdm5Variant`] is for server-side usage
+    pub fn is_server(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitServer => true,
+            #[cfg(heimdal)]
+            Self::HeimdalServer => true,
+            _ => false,
+        }
+    }
+}
+
 /// Bindings to a kadm5 library
 #[allow(clippy::exhaustive_enums)]
 pub enum Library {
@@ -66,6 +110,28 @@ impl Library {
             #[cfg(heimdal)]
             Self::HeimdalClient(_) | Self::HeimdalServer(_) => true,
             #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
+
+    /// Check if this [`Library`] is for client-side usage
+    pub fn is_client(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitClient(_) => true,
+            #[cfg(heimdal)]
+            Self::HeimdalClient(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Check if this [`Library`] is for server-side usage
+    pub fn is_server(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitServer(_) => true,
+            #[cfg(heimdal)]
+            Self::HeimdalServer(_) => true,
             _ => false,
         }
     }
