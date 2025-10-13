@@ -372,7 +372,7 @@ fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
         .allowlist_var("ENCTYPE_.*")
         .allowlist_var("KRB5_KDB_SALTTYPE_.*")
         .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
-        .allowlist_function("kadm5.*")
+        .allowlist_function("kadm5_init_krb5_context")
         .allowlist_function("krb5_init_context")
         .allowlist_function("krb5_free_context")
         .allowlist_function("krb5_get_error_message")

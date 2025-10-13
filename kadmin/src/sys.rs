@@ -1,6 +1,8 @@
 //! Bindings to various kadm5 libraries
 
-use dlopen2::wrapper::Container;
+use std::ffi::OsStr;
+
+use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::error::Result;
 
@@ -48,24 +50,107 @@ pub enum Library {
 }
 
 impl Library {
+    fn find_library<T: WrapperApi>(
+        library_paths: Vec<&'static str>,
+        libraries: Vec<&'static str>,
+        contains: &'static str,
+    ) -> Option<Container<T>> {
+        for path in library_paths {
+            for library in libraries.iter().filter(|lib| lib.contains(contains)) {
+                dbg!(&path, &library, &contains);
+                let full_path = format!("{}/lib{}.so", path, library);
+                dbg!(&full_path);
+                let load = unsafe { Container::load(&full_path) };
+                if let Err(err) = &load {
+                    dbg!(err);
+                }
+                if let Ok(cont) = load {
+                    return Some(cont);
+                }
+            }
+        }
+        None
+    }
+
     /// Create a new [`Library`] instance from a [`KAdm5Variant`]
     pub fn from_variant(variant: KAdm5Variant) -> Result<Self> {
         Ok(match variant {
             #[cfg(mit)]
             KAdm5Variant::MitClient => {
-                Library::MitClient(unsafe { Container::load("libkadm5clnt.so") }?)
+                if let Some(cont) =
+                    Self::find_library(mit::library_paths(), mit::libraries(), "clnt")
+                {
+                    Library::MitClient(cont)
+                } else {
+                    Library::MitClient(unsafe { Container::load("libkadm5clnt_mit.so") }?)
+                }
             }
             #[cfg(mit)]
             KAdm5Variant::MitServer => {
-                Library::MitServer(unsafe { Container::load("libkadm5clnt.so") }?)
+                if let Some(cont) =
+                    Self::find_library(mit::library_paths(), mit::libraries(), "srv")
+                {
+                    Library::MitServer(cont)
+                } else {
+                    Library::MitServer(unsafe { Container::load("libkadm5srv_mit.so") }?)
+                }
             }
             #[cfg(heimdal)]
             KAdm5Variant::HeimdalClient => {
-                Library::HeimdalClient(unsafe { Container::load("libkadm5clnt.so") }?)
+                if let Some(cont) =
+                    Self::find_library(heimdal::library_paths(), heimdal::libraries(), "clnt")
+                {
+                    Library::HeimdalClient(cont)
+                } else {
+                    Library::HeimdalClient(unsafe { Container::load("libkadm5clnt.so") }?)
+                }
             }
             #[cfg(heimdal)]
             KAdm5Variant::HeimdalServer => {
-                Library::HeimdalServer(unsafe { Container::load("libkadm5clnt.so") }?)
+                if let Some(cont) =
+                    Self::find_library(heimdal::library_paths(), heimdal::libraries(), "srv")
+                {
+                    Library::HeimdalServer(cont)
+                } else {
+                    Library::HeimdalServer(unsafe { Container::load("libkadm5srv.so") }?)
+                }
+            }
+        })
+    }
+
+    /// Create a new [`Library`] instance from a [`KAdm5Variant`] and a custom library path
+    pub fn from_path<S: AsRef<OsStr>>(variant: KAdm5Variant, path: S) -> Result<Self> {
+        Ok(match variant {
+            #[cfg(mit)]
+            KAdm5Variant::MitClient => Library::MitClient(unsafe { Container::load(path) }?),
+            #[cfg(mit)]
+            KAdm5Variant::MitServer => Library::MitServer(unsafe { Container::load(path) }?),
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalClient => {
+                Library::HeimdalClient(unsafe { Container::load(path) }?)
+            }
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalServer => {
+                Library::HeimdalServer(unsafe { Container::load(path) }?)
+            }
+        })
+    }
+
+    /// Create a new [`Library`] instance from a [`KAdm5Variant`] and symbols from the program
+    /// itself.
+    pub fn from_self(variant: KAdm5Variant) -> Result<Self> {
+        Ok(match variant {
+            #[cfg(mit)]
+            KAdm5Variant::MitClient => Library::MitClient(unsafe { Container::load_self() }?),
+            #[cfg(mit)]
+            KAdm5Variant::MitServer => Library::MitServer(unsafe { Container::load_self() }?),
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalClient => {
+                Library::HeimdalClient(unsafe { Container::load_self() }?)
+            }
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalServer => {
+                Library::HeimdalServer(unsafe { Container::load_self() }?)
             }
         })
     }
@@ -124,4 +209,37 @@ pub mod heimdal {
     }
 
     include!(concat!(env!("OUT_DIR"), "/bindings_heimdal.rs"));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(mit)]
+    #[test]
+    fn library_load_mit_client() -> Result<()> {
+        Library::from_variant(KAdm5Variant::MitClient)?;
+        Ok(())
+    }
+
+    #[cfg(mit)]
+    #[test]
+    fn library_load_mit_server() -> Result<()> {
+        Library::from_variant(KAdm5Variant::MitServer)?;
+        Ok(())
+    }
+
+    #[cfg(heimdal)]
+    #[test]
+    fn library_load_heimdal_client() -> Result<()> {
+        Library::from_variant(KAdm5Variant::HeimdalClient)?;
+        Ok(())
+    }
+
+    #[cfg(heimdal)]
+    #[test]
+    fn library_load_heimdal_server() -> Result<()> {
+        Library::from_variant(KAdm5Variant::HeimdalServer)?;
+        Ok(())
+    }
 }

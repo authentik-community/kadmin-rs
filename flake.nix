@@ -60,6 +60,8 @@
 
           KADMIN_MIT_INCLUDES = "${pkgs.krb5.dev}/include";
           KADMIN_HEIMDAL_INCLUDES = "${pkgs.heimdal.dev}/include";
+          KADMIN_MIT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
+          KADMIN_HEIMDAL_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
           SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
           SYSTEM_DEPS_KRB5_LIB = "${pkgs.krb5.dev}/lib";
           SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
