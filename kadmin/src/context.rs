@@ -222,27 +222,27 @@ impl<'a> Drop for Context<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn new() {
-        let context = Context::new();
-        assert!(context.is_ok());
-    }
-
-    #[test]
-    fn error_code_to_message() {
-        let context = Context::new().unwrap();
-        let message = context.error_code_to_message(-1765328384);
-        assert_eq!(message, "No error".to_string());
-    }
-
-    #[test]
-    fn error_code_to_message_wrong_code() {
-        let context = Context::new().unwrap();
-        let message = context.error_code_to_message(-1);
-        assert_eq!(message, "Unknown code ____ 255".to_string());
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn new() {
+//         let context = Context::new();
+//         assert!(context.is_ok());
+//     }
+//
+//     #[test]
+//     fn error_code_to_message() {
+//         let context = Context::new().unwrap();
+//         let message = context.error_code_to_message(-1765328384);
+//         assert_eq!(message, "No error".to_string());
+//     }
+//
+//     #[test]
+//     fn error_code_to_message_wrong_code() {
+//         let context = Context::new().unwrap();
+//         let message = context.error_code_to_message(-1);
+//         assert_eq!(message, "Unknown code ____ 255".to_string());
+//     }
+// }

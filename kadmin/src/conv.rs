@@ -44,7 +44,14 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
 /// Convert a [`DateTime<Utc>`] to a [`krb5_timestamp`]
 pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
     if let Some(dt) = dt {
-        dt.timestamp().try_into().map_err(Error::DateTimeConversion)
+        #[cfg(mit)]
+        {
+            dt.timestamp().try_into().map_err(Error::DateTimeConversion)
+        }
+        #[cfg(all(heimdal, not(mit)))]
+        {
+            Ok(dt.timestamp())
+        }
     } else {
         Ok(0)
     }
@@ -77,7 +84,6 @@ pub(crate) fn unparse_name_mit(
         return Ok(None);
     }
     let mut raw_name: *mut c_char = null_mut();
-    // let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
     let code = match context.library {
         #[cfg(mit)]
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
@@ -87,6 +93,7 @@ pub(crate) fn unparse_name_mit(
                 &mut raw_name,
             )
         },
+        #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
     krb5_error_code_escape_hatch(context, code)?;
@@ -96,6 +103,7 @@ pub(crate) fn unparse_name_mit(
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
             cont.krb5_free_unparsed_name(context.context as sys::mit::krb5_context, raw_name);
         },
+        #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
     Ok(Some(name))
@@ -113,7 +121,7 @@ pub(crate) fn unparse_name_heimdal(
     let mut raw_name: *mut c_char = null_mut();
     // let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
     let code = match context.library {
-        #[cfg(mit)]
+        #[cfg(heimdal)]
         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
             cont.krb5_unparse_name(
                 context.context as sys::heimdal::krb5_context,
@@ -121,15 +129,17 @@ pub(crate) fn unparse_name_heimdal(
                 &mut raw_name,
             )
         },
+        #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
     krb5_error_code_escape_hatch(context, code)?;
     let name = c_string_to_string(raw_name)?;
     match context.library {
-        #[cfg(mit)]
+        #[cfg(heimdal)]
         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
             cont.krb5_free_unparsed_name(context.context as sys::heimdal::krb5_context, raw_name);
         },
+        #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
     Ok(Some(name))

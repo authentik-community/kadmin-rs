@@ -16,12 +16,16 @@ use crate::error::Result;
 #[repr(u32)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum KAdm5Variant {
+    #[cfg(mit)]
     /// MIT krb5 client-side
     MitClient,
+    #[cfg(mit)]
     /// MIT krb5 server-side
     MitServer,
+    #[cfg(heimdal)]
     /// Heimdal client-side
     HeimdalClient,
+    #[cfg(heimdal)]
     /// Heimdal server-side
     HeimdalServer,
 }
@@ -45,8 +49,25 @@ pub enum Library {
 
 impl Library {
     /// Create a new [`Library`] instance from a [`KAdm5Variant`]
-    pub fn from_variant(_variant: KAdm5Variant) -> Result<Self> {
-        todo!()
+    pub fn from_variant(variant: KAdm5Variant) -> Result<Self> {
+        Ok(match variant {
+            #[cfg(mit)]
+            KAdm5Variant::MitClient => {
+                Library::MitClient(unsafe { Container::load("libkadm5clnt.so") }?)
+            }
+            #[cfg(mit)]
+            KAdm5Variant::MitServer => {
+                Library::MitServer(unsafe { Container::load("libkadm5clnt.so") }?)
+            }
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalClient => {
+                Library::HeimdalClient(unsafe { Container::load("libkadm5clnt.so") }?)
+            }
+            #[cfg(heimdal)]
+            KAdm5Variant::HeimdalServer => {
+                Library::HeimdalServer(unsafe { Container::load("libkadm5clnt.so") }?)
+            }
+        })
     }
 }
 
@@ -70,6 +91,7 @@ pub mod mit {
             .split_whitespace()
             .collect()
     }
+
     include!(concat!(env!("OUT_DIR"), "/bindings_mit.rs"));
 }
 

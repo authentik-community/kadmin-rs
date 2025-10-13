@@ -302,7 +302,6 @@ dependencies = [
  "either",
  "getset",
  "indoc",
- "kadmin-sys",
  "libc",
  "pkg-config",
  "prettyplease",

@@ -12,6 +12,101 @@ use std::{
 use quote::quote;
 use strum::IntoEnumIterator;
 
+#[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter)]
+enum Kadm5Variant {
+    #[cfg(feature = "mit")]
+    Mit,
+    #[cfg(feature = "heimdal")]
+    Heimdal,
+}
+
+impl Kadm5Variant {
+    fn name(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "mit")]
+            Kadm5Variant::Mit => "mit",
+            #[cfg(feature = "heimdal")]
+            Kadm5Variant::Heimdal => "heimdal",
+        }
+    }
+
+    fn cargo_callbacks() {
+        // Those are hardcoded because we need to handle them even if disabled
+        println!("cargo:rustc-check-cfg=cfg(mit)");
+        println!("cargo:rustc-check-cfg=cfg(heimdal)");
+        for variant in Self::iter() {
+            println!(
+                "cargo:rerun-if-env-changed={}",
+                variant.includes_override_env_var()
+            );
+            println!(
+                "cargo:rerun-if-env-changed={}",
+                variant.bin_override_env_var()
+            );
+        }
+    }
+
+    fn includes_override_env_var(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "mit")]
+            Self::Mit => "KADMIN_MIT_INCLUDES",
+            #[cfg(feature = "heimdal")]
+            Self::Heimdal => "KADMIN_HEIMDAL_INCLUDES",
+        }
+    }
+
+    fn bins(&self) -> Vec<&'static str> {
+        match self {
+            #[cfg(feature = "mit")]
+            Kadm5Variant::Mit => vec!["krb5-config.mit", "krb5-config"],
+            #[cfg(feature = "heimdal")]
+            Kadm5Variant::Heimdal => vec!["krb5-config.heimdal", "krb5-config"],
+        }
+    }
+
+    fn bin_override_env_var(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "mit")]
+            Self::Mit => "KADMIN_MIT_KRB5_CONFIG",
+            #[cfg(feature = "heimdal")]
+            Self::Heimdal => "KADMIN_HEIMDAL_KRB5_CONFIG",
+        }
+    }
+
+    fn pkg_config_names(&self) -> Vec<&'static str> {
+        match self {
+            #[cfg(feature = "mit")]
+            Kadm5Variant::Mit => vec![
+                "mit-krb5/kadm-client",
+                "mit-krb5/kadm-server",
+                "kadm-client",
+                "kadm-server",
+            ],
+            #[cfg(feature = "heimdal")]
+            Kadm5Variant::Heimdal => vec![
+                "heimdal-kadm-client",
+                "heimdal-kadm-server",
+                "kadm-server",
+                "kadm-client",
+                "heimdal-kadm5",
+            ],
+        }
+    }
+
+    fn verify_header_variant(&self, path: &Path) -> bool {
+        if let Ok(content) = read_to_string(path) {
+            match self {
+                #[cfg(feature = "mit")]
+                Kadm5Variant::Mit => content.contains("kiprop"),
+                #[cfg(feature = "heimdal")]
+                Kadm5Variant::Heimdal => !content.contains("kiprop"),
+            }
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Kadm5Config {
     #[allow(dead_code)]
@@ -53,49 +148,6 @@ impl Kadm5Config {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter)]
-enum Kadm5Variant {
-    Mit,
-    Heimdal,
-}
-
-impl Kadm5Variant {
-    fn name(&self) -> &'static str {
-        match self {
-            Kadm5Variant::Mit => "mit",
-            Kadm5Variant::Heimdal => "heimdal",
-        }
-    }
-
-    fn cargo_callbacks() {
-        for variant in Self::iter() {
-            println!("cargo:rustc-check-cfg=cfg({})", variant.name());
-            println!(
-                "cargo:rerun-if-env-changed={}",
-                variant.includes_override_env_var()
-            );
-            println!(
-                "cargo:rerun-if-env-changed={}",
-                variant.bin_override_env_var()
-            );
-        }
-    }
-
-    fn includes_override_env_var(&self) -> &'static str {
-        match self {
-            Self::Mit => "KADMIN_MIT_INCLUDES",
-            Self::Heimdal => "KADMIN_HEIMDAL_INCLUDES",
-        }
-    }
-
-    fn bin_override_env_var(&self) -> &'static str {
-        match self {
-            Self::Mit => "KADMIN_MIT_KRB5_CONFIG",
-            Self::Heimdal => "KADMIN_HEIMDAL_KRB5_CONFIG",
-        }
-    }
-}
-
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     Kadm5Variant::cargo_callbacks();
@@ -104,6 +156,7 @@ fn main() {
 
     let mut found_any = false;
 
+    #[cfg(feature = "mit")]
     if let Some(config) = find_kadm5(Kadm5Variant::Mit) {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
@@ -114,6 +167,7 @@ fn main() {
         found_any = true;
     }
 
+    #[cfg(feature = "heimdal")]
     if let Some(config) = find_kadm5(Kadm5Variant::Heimdal) {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
@@ -186,12 +240,7 @@ fn try_krb5_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
         }
     }
 
-    let bins = match variant {
-        Kadm5Variant::Mit => vec!["krb5-config.mit", "krb5-config"],
-        Kadm5Variant::Heimdal => vec!["krb5-config.heimdal", "krb5-config"],
-    };
-
-    for bin in bins {
+    for bin in variant.bins() {
         for lib in libs.clone() {
             if let Some(c) = probe_krb5_config(bin, lib, variant) {
                 if let Some(config) = config.as_mut() {
@@ -240,7 +289,7 @@ fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: Kadm5Variant) -> Opt
     // Search include paths for the header
     for include_path in &include_paths {
         let header_path = include_path.join("kadm5/admin.h");
-        if header_path.exists() && verify_header_variant(&header_path, variant) {
+        if header_path.exists() && variant.verify_header_variant(&header_path) {
             return Some(Kadm5Config {
                 variant,
                 include_paths,
@@ -254,25 +303,9 @@ fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: Kadm5Variant) -> Opt
 }
 
 fn try_pkg_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
-    let pkg_names = match variant {
-        Kadm5Variant::Mit => vec![
-            "mit-krb5/kadm-client",
-            "mit-krb5/kadm-server",
-            "kadm-client",
-            "kadm-server",
-        ],
-        Kadm5Variant::Heimdal => vec![
-            "heimdal-kadm-client",
-            "heimdal-kadm-server",
-            "kadm-server",
-            "kadm-client",
-            "heimdal-kadm5",
-        ],
-    };
-
     let mut config: Option<Kadm5Config> = None;
 
-    for pkg_name in pkg_names {
+    for pkg_name in variant.pkg_config_names() {
         if let Ok(lib) = pkg_config::Config::new().probe(pkg_name) {
             if let Some(c) = probe_from_pkg_config(lib, variant) {
                 if let Some(config) = config.as_mut() {
@@ -290,7 +323,7 @@ fn try_pkg_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
 fn probe_from_pkg_config(lib: pkg_config::Library, variant: Kadm5Variant) -> Option<Kadm5Config> {
     for include_path in &lib.include_paths {
         let header_path = include_path.join("kadm5/admin.h");
-        if header_path.exists() && verify_header_variant(&header_path, variant) {
+        if header_path.exists() && variant.verify_header_variant(&header_path) {
             return Some(Kadm5Config {
                 variant,
                 include_paths: HashSet::from_iter(lib.include_paths.iter().cloned()),
@@ -305,17 +338,6 @@ fn probe_from_pkg_config(lib: pkg_config::Library, variant: Kadm5Variant) -> Opt
     }
 
     None
-}
-
-fn verify_header_variant(path: &Path, variant: Kadm5Variant) -> bool {
-    if let Ok(content) = read_to_string(path) {
-        match variant {
-            Kadm5Variant::Mit => content.contains("kiprop"),
-            Kadm5Variant::Heimdal => !content.contains("kiprop"),
-        }
-    } else {
-        false
-    }
 }
 
 fn generate_bindings(config: &Kadm5Config, out_path: &Path) {

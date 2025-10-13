@@ -1,8 +1,26 @@
 //! [`Error`] type for various errors this library can encounter
 
-use kadmin_sys::*;
-
 use crate::context::Context;
+#[cfg(all(heimdal, not(mit)))]
+use crate::sys::heimdal::{KRB5_OK, KRB5_OK as KADM5_OK, kadm5_ret_t, krb5_error_code};
+#[cfg(mit)]
+use crate::sys::mit::{
+    KADM5_AUTH_ADD, KADM5_AUTH_CHANGEPW, KADM5_AUTH_DELETE, KADM5_AUTH_GET,
+    KADM5_AUTH_INSUFFICIENT, KADM5_AUTH_LIST, KADM5_AUTH_MODIFY, KADM5_AUTH_SETKEY,
+    KADM5_BAD_API_VERSION, KADM5_BAD_AUX_ATTR, KADM5_BAD_CLASS, KADM5_BAD_CLIENT_PARAMS,
+    KADM5_BAD_DB, KADM5_BAD_HIST_KEY, KADM5_BAD_HISTORY, KADM5_BAD_LENGTH, KADM5_BAD_MASK,
+    KADM5_BAD_MIN_PASS_LIFE, KADM5_BAD_PASSWORD, KADM5_BAD_POLICY, KADM5_BAD_PRINCIPAL,
+    KADM5_BAD_SERVER_HANDLE, KADM5_BAD_SERVER_NAME, KADM5_BAD_SERVER_PARAMS,
+    KADM5_BAD_STRUCT_VERSION, KADM5_BAD_TL_TYPE, KADM5_CANT_RESOLVE, KADM5_DUP, KADM5_FAILURE,
+    KADM5_GSS_ERROR, KADM5_INIT, KADM5_MISSING_CONF_PARAMS, KADM5_MISSING_KRB5_CONF_PARAMS,
+    KADM5_NEW_LIB_API_VERSION, KADM5_NEW_SERVER_API_VERSION, KADM5_NEW_STRUCT_VERSION,
+    KADM5_NO_RENAME_SALT, KADM5_NO_SRV, KADM5_NOT_INIT, KADM5_OK, KADM5_OLD_LIB_API_VERSION,
+    KADM5_OLD_SERVER_API_VERSION, KADM5_OLD_STRUCT_VERSION, KADM5_PASS_Q_CLASS, KADM5_PASS_Q_DICT,
+    KADM5_PASS_Q_GENERIC, KADM5_PASS_Q_TOOSHORT, KADM5_PASS_REUSE, KADM5_PASS_TOOSOON,
+    KADM5_POLICY_REF, KADM5_PROTECT_PRINCIPAL, KADM5_RPC_ERROR, KADM5_SECURE_PRINC_MISSING,
+    KADM5_SETKEY_DUP_ENCTYPES, KADM5_SETKEY3_ETYPE_MISMATCH, KADM5_SETV4KEY_INVAL_ENCTYPE,
+    KADM5_UNK_POLICY, KADM5_UNK_PRINC, KADM5_XDR_FAILURE, KRB5_OK, kadm5_ret_t, krb5_error_code,
+};
 
 /// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
@@ -76,6 +94,10 @@ pub enum Error {
     /// [`crate::context::CONTEXT_INIT_LOCK`]
     #[error("Failed to acquire the kadmin initialisation lock")]
     LockError,
+
+    /// Failed to load the kadm5 library
+    #[error("Failed to load the kadm5 library")]
+    LibraryLoadError(#[from] dlopen2::Error),
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {
@@ -104,6 +126,7 @@ pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> 
     if code == KADM5_OK as kadm5_ret_t {
         return Ok(());
     }
+    #[cfg(mit)]
     let message = match code as u32 {
         KADM5_FAILURE => "Operation failed for unspecified reason",
         KADM5_AUTH_GET => "Operation requires ``get'' privilege",
@@ -188,6 +211,8 @@ pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> 
         _ => "Unknown error",
     }
     .to_owned();
+    #[cfg(all(heimdal, not(mit)))]
+    let message = "Unknown error".to_owned();
     if message != "Unknown error" {
         Err(Error::KAdmin { code, message })
     } else {

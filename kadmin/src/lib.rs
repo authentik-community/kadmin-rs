@@ -43,11 +43,11 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(feature = "client", feature = "local", not(doc)))]
-compile_error!("Feature \"client\" and feature \"local\" cannot be enabled at the same time.");
-
-#[cfg(all(not(feature = "client"), not(feature = "local"), not(doc)))]
-compile_error!("Exactly one of feature \"client\" or feature \"local\" must be selected.");
+// #[cfg(all(feature = "client", feature = "local", not(doc)))]
+// compile_error!("Feature \"client\" and feature \"local\" cannot be enabled at the same time.");
+//
+// #[cfg(all(not(feature = "client"), not(feature = "local"), not(doc)))]
+// compile_error!("Exactly one of feature \"client\" or feature \"local\" must be selected.");
 
 mod conv;
 
@@ -57,17 +57,17 @@ pub use error::Error;
 pub mod context;
 pub use context::Context;
 
-// pub mod params;
-// pub use params::Params;
+pub mod params;
+pub use params::Params;
 
-pub mod db_args;
-pub use db_args::DbArgs;
+// pub mod db_args;
+// pub use db_args::DbArgs;
 
-pub mod tl_data;
-pub use tl_data::{TlData, TlDataEntry};
+// pub mod tl_data;
+// pub use tl_data::{TlData, TlDataEntry};
 
-pub mod keysalt;
-pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
+// pub mod keysalt;
+// pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
 // pub mod kadmin;
 // pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};

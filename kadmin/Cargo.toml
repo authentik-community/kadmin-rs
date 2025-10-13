@@ -13,9 +13,9 @@ keywords = ["kerberos", "krb5", "kadm5", "kadmin"]
 categories = ["api-bindings", "authentication"]
 
 [features]
-default = ["client"]
-client = ["kadmin-sys/client"]
-local = ["kadmin-sys/server"]
+mit = []
+heimdal = []
+default = ["mit", "heimdal"]
 python = ["dep:pyo3", "dep:indoc", "dep:either"]
 
 [dependencies]
@@ -25,7 +25,7 @@ dlopen2 = "0.8"
 either = { version = "1.15", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
-kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
+# kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
 libc = "0.2"
 pyo3 = { version = "0.26", features = [
   "extension-module",
