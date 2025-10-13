@@ -256,6 +256,7 @@ pub struct ParamsBuilder {
 }
 
 impl ParamsBuilder {
+    /// Create a new [`ParamsBuilder`] instance for a specific [`KAdm5Variant`]
     pub fn new(variant: KAdm5Variant) -> Self {
         Self {
             variant,

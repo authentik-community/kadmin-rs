@@ -267,7 +267,7 @@ mod tests {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
         let context = Context::new(&lib).unwrap();
         let message = context.error_code_to_message(-1_765_328_384);
-        assert_eq!(message, "No error".to_string());
+        assert_eq!(message, "No error");
         Ok(())
     }
 
@@ -276,7 +276,7 @@ mod tests {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
         let context = Context::new(&lib).unwrap();
         let message = context.error_code_to_message(-1);
-        assert_eq!(message, "Unknown code ____ 255".to_string());
+        assert_eq!(message, "Unknown code ____ 255");
         Ok(())
     }
 }

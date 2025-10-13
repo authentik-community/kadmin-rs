@@ -50,6 +50,26 @@ pub enum Library {
 }
 
 impl Library {
+    /// Check if this [`Library`] is for MIT krb5
+    pub fn is_mit(&self) -> bool {
+        match self {
+            #[cfg(mit)]
+            Self::MitClient(_) | Self::MitServer(_) => true,
+            #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
+
+    /// Check if this [`Library`] is for Heimdal
+    pub fn is_heimdal(&self) -> bool {
+        match self {
+            #[cfg(heimdal)]
+            Self::HeimdalClient(_) | Self::HeimdalServer(_) => true,
+            #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
+
     fn find_library<T: WrapperApi>(
         library_paths: Vec<&'static str>,
         libraries: Vec<&'static str>,
