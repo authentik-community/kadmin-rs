@@ -60,7 +60,6 @@ impl Context {
                     )
                 },
             };
-            // let code = unsafe { krb5_get_default_realm(self.context, &mut raw_default_realm) };
             match code {
                 KRB5_OK => {
                     let default_realm = unsafe { CStr::from_ptr(raw_default_realm) }.to_owned();
@@ -143,7 +142,7 @@ impl ContextBuilder {
     ///
     /// Context must have been built with the same [`Library`] as passed to [`Self::build`]
     #[cfg(mit)]
-    pub(crate) unsafe fn mit_context(mut self, context: sys::mit::krb5_context) -> Self {
+    pub unsafe fn mit_context(mut self, context: sys::mit::krb5_context) -> Self {
         self.context = Some(context as *mut c_void);
         self
     }
@@ -156,7 +155,7 @@ impl ContextBuilder {
     ///
     /// Context must have been built with the same [`Library`] as passed to [`Self::build`]
     #[cfg(heimdal)]
-    pub(crate) unsafe fn heimdal_context(mut self, context: sys::heimdal::krb5_context) -> Self {
+    pub unsafe fn heimdal_context(mut self, context: sys::heimdal::krb5_context) -> Self {
         self.context = Some(context as *mut c_void);
         self
     }
@@ -262,8 +261,9 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(mit)]
     #[test]
-    fn error_code_to_message() -> Result<()> {
+    fn error_code_to_message_mit() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1_765_328_384);
@@ -271,12 +271,33 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(heimdal)]
     #[test]
-    fn error_code_to_message_wrong_code() -> Result<()> {
+    fn error_code_to_message_heimdal() -> Result<()> {
+        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
+        let context = Context::new(lib).unwrap();
+        let message = context.error_code_to_message(-1_765_328_384);
+        assert_eq!(message, "No error");
+        Ok(())
+    }
+
+    #[cfg(mit)]
+    #[test]
+    fn error_code_to_message_wrong_code_mit() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
         assert_eq!(message, "Unknown code ____ 255");
+        Ok(())
+    }
+
+    #[cfg(heimdal)]
+    #[test]
+    fn error_code_to_message_wrong_code_heimdal() -> Result<()> {
+        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
+        let context = Context::new(lib).unwrap();
+        let message = context.error_code_to_message(-1);
+        assert_eq!(message, "Unknown error -1");
         Ok(())
     }
 }

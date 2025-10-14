@@ -158,6 +158,10 @@ impl Library {
             for library in libraries.iter().filter(|lib| lib.contains(contains)) {
                 let full_path = format!("{}/lib{}.so", path, library);
                 let load = unsafe { Container::load(&full_path) };
+                dbg!(&full_path);
+                if let Err(e) = &load {
+                    dbg!(e);
+                }
                 if let Ok(cont) = load {
                     return Some(cont);
                 }

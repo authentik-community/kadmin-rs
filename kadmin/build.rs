@@ -13,20 +13,20 @@ use quote::quote;
 use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter)]
-enum Kadm5Variant {
+enum KAdm5Variant {
     #[cfg(feature = "mit")]
     Mit,
     #[cfg(feature = "heimdal")]
     Heimdal,
 }
 
-impl Kadm5Variant {
+impl KAdm5Variant {
     fn name(&self) -> &'static str {
         match self {
             #[cfg(feature = "mit")]
-            Kadm5Variant::Mit => "mit",
+            Self::Mit => "mit",
             #[cfg(feature = "heimdal")]
-            Kadm5Variant::Heimdal => "heimdal",
+            Self::Heimdal => "heimdal",
         }
     }
 
@@ -58,9 +58,9 @@ impl Kadm5Variant {
     fn bins(&self) -> Vec<&'static str> {
         match self {
             #[cfg(feature = "mit")]
-            Kadm5Variant::Mit => vec!["krb5-config.mit", "krb5-config"],
+            Self::Mit => vec!["krb5-config.mit", "krb5-config"],
             #[cfg(feature = "heimdal")]
-            Kadm5Variant::Heimdal => vec!["krb5-config.heimdal", "krb5-config"],
+            Self::Heimdal => vec!["krb5-config.heimdal", "krb5-config"],
         }
     }
 
@@ -76,14 +76,14 @@ impl Kadm5Variant {
     fn pkg_config_names(&self) -> Vec<&'static str> {
         match self {
             #[cfg(feature = "mit")]
-            Kadm5Variant::Mit => vec![
+            Self::Mit => vec![
                 "mit-krb5/kadm-client",
                 "mit-krb5/kadm-server",
                 "kadm-client",
                 "kadm-server",
             ],
             #[cfg(feature = "heimdal")]
-            Kadm5Variant::Heimdal => vec![
+            Self::Heimdal => vec![
                 "heimdal-kadm-client",
                 "heimdal-kadm-server",
                 "kadm-server",
@@ -97,9 +97,9 @@ impl Kadm5Variant {
         if let Ok(content) = read_to_string(path) {
             match self {
                 #[cfg(feature = "mit")]
-                Kadm5Variant::Mit => content.contains("kiprop"),
+                Self::Mit => content.contains("kiprop"),
                 #[cfg(feature = "heimdal")]
-                Kadm5Variant::Heimdal => !content.contains("kiprop"),
+                Self::Heimdal => !content.contains("kiprop"),
             }
         } else {
             false
@@ -108,15 +108,14 @@ impl Kadm5Variant {
 }
 
 #[derive(Debug, Clone)]
-struct Kadm5Config {
-    #[allow(dead_code)]
-    variant: Kadm5Variant,
+struct KAdm5Config {
+    variant: KAdm5Variant,
     include_paths: HashSet<PathBuf>,
     library_paths: HashSet<PathBuf>,
     libraries: HashSet<String>,
 }
 
-impl Kadm5Config {
+impl KAdm5Config {
     fn name(&self) -> &'static str {
         self.variant.name()
     }
@@ -150,14 +149,14 @@ impl Kadm5Config {
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
-    Kadm5Variant::cargo_callbacks();
+    KAdm5Variant::cargo_callbacks();
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let mut found_any = false;
 
     #[cfg(feature = "mit")]
-    if let Some(config) = find_kadm5(Kadm5Variant::Mit) {
+    if let Some(config) = find_kadm5(KAdm5Variant::Mit) {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found MIT Kerberos kadm5. Includes: {:?}. Links: {:?}. Libraries: {:?}",
@@ -168,7 +167,7 @@ fn main() {
     }
 
     #[cfg(feature = "heimdal")]
-    if let Some(config) = find_kadm5(Kadm5Variant::Heimdal) {
+    if let Some(config) = find_kadm5(KAdm5Variant::Heimdal) {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found Heimdal Kerberos kadm5. Includes: {:?}. Links: {:?}. Libraries: \
@@ -184,7 +183,7 @@ fn main() {
     }
 }
 
-fn find_kadm5(variant: Kadm5Variant) -> Option<Kadm5Config> {
+fn find_kadm5(variant: KAdm5Variant) -> Option<KAdm5Config> {
     let mut config = None;
     if let Some(c) = try_overrides(variant) {
         config = Some(c);
@@ -209,9 +208,9 @@ fn find_kadm5(variant: Kadm5Variant) -> Option<Kadm5Config> {
     config
 }
 
-fn try_overrides(variant: Kadm5Variant) -> Option<Kadm5Config> {
+fn try_overrides(variant: KAdm5Variant) -> Option<KAdm5Config> {
     if let Ok(includes_override) = env::var(variant.includes_override_env_var()) {
-        return Some(Kadm5Config {
+        return Some(KAdm5Config {
             variant,
             include_paths: includes_override
                 .split_whitespace()
@@ -224,8 +223,8 @@ fn try_overrides(variant: Kadm5Variant) -> Option<Kadm5Config> {
     None
 }
 
-fn try_krb5_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
-    let mut config: Option<Kadm5Config> = None;
+fn try_krb5_config(variant: KAdm5Variant) -> Option<KAdm5Config> {
+    let mut config: Option<KAdm5Config> = None;
     let libs = vec![Some("kadm-client"), Some("kadm-server"), None];
 
     if let Ok(bin_override) = env::var(variant.bin_override_env_var()) {
@@ -255,7 +254,7 @@ fn try_krb5_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
     config
 }
 
-fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: Kadm5Variant) -> Option<Kadm5Config> {
+fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: KAdm5Variant) -> Option<KAdm5Config> {
     let mut args = vec!["--cflags", "--libs"];
     if let Some(lib) = lib {
         args.push(lib);
@@ -290,7 +289,7 @@ fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: Kadm5Variant) -> Opt
     for include_path in &include_paths {
         let header_path = include_path.join("kadm5/admin.h");
         if header_path.exists() && variant.verify_header_variant(&header_path) {
-            return Some(Kadm5Config {
+            return Some(KAdm5Config {
                 variant,
                 include_paths,
                 library_paths,
@@ -302,8 +301,8 @@ fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: Kadm5Variant) -> Opt
     None
 }
 
-fn try_pkg_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
-    let mut config: Option<Kadm5Config> = None;
+fn try_pkg_config(variant: KAdm5Variant) -> Option<KAdm5Config> {
+    let mut config: Option<KAdm5Config> = None;
 
     for pkg_name in variant.pkg_config_names() {
         if let Ok(lib) = pkg_config::Config::new().probe(pkg_name) {
@@ -320,11 +319,11 @@ fn try_pkg_config(variant: Kadm5Variant) -> Option<Kadm5Config> {
     config
 }
 
-fn probe_from_pkg_config(lib: pkg_config::Library, variant: Kadm5Variant) -> Option<Kadm5Config> {
+fn probe_from_pkg_config(lib: pkg_config::Library, variant: KAdm5Variant) -> Option<KAdm5Config> {
     for include_path in &lib.include_paths {
         let header_path = include_path.join("kadm5/admin.h");
         if header_path.exists() && variant.verify_header_variant(&header_path) {
-            return Some(Kadm5Config {
+            return Some(KAdm5Config {
                 variant,
                 include_paths: HashSet::from_iter(lib.include_paths.iter().cloned()),
                 library_paths: HashSet::from_iter(lib.link_paths.iter().cloned()),
@@ -340,7 +339,7 @@ fn probe_from_pkg_config(lib: pkg_config::Library, variant: Kadm5Variant) -> Opt
     None
 }
 
-fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
+fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
     config.outputs();
 
     let mut builder = bindgen::Builder::default()
@@ -380,8 +379,6 @@ fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
         .allowlist_function("kadm5_set_string")
         .allowlist_function("kadm5_get_principals")
         .allowlist_function("kadm5_free_name_list")
-        .allowlist_function("kadm5_delete_policy")
-        .allowlist_function("kadm5_get_policies")
         .allowlist_function("kadm5_flush")
         .allowlist_function("kadm5_destroy")
         .allowlist_function("kadm5_init_with_password")
@@ -409,6 +406,13 @@ fn generate_bindings(config: &Kadm5Config, out_path: &Path) {
         .derive_default(true)
         .generate_cstr(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
+
+    #[cfg(feature = "mit")]
+    if config.variant == KAdm5Variant::Mit {
+        builder = builder
+            .allowlist_function("kadm5_delete_policy")
+            .allowlist_function("kadm5_get_policies");
+    }
 
     for include_path in &config.include_paths {
         builder = builder.clang_arg(format!("-I{}", include_path.display()));
