@@ -20,7 +20,6 @@ use crate::{
     db_args::DbArgs,
     error::{Error, Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     // keysalt::KeySalts,
-    params::{Params, ParamsInner},
     // policy::{Policy, PolicyBuilder, PolicyModifier},
     // principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
     sys::{self, KAdm5Variant, Library},
@@ -60,8 +59,8 @@ impl Default for KAdminApiVersion {
 }
 
 impl KAdminApiVersion {
-    fn to_raw(&self, variant: KAdm5Variant) -> Result<u32> {
-        Ok(0)
+    fn to_raw(self, _variant: KAdm5Variant) -> Result<u32> {
+        todo!()
     }
 }
 
@@ -90,9 +89,9 @@ impl KAdminApiVersion {
 ///
 /// This interface is not thread safe. Consider creating one per thread where needed, or using the
 /// [`sync::KAdmin`][`crate::sync::KAdmin`] interface that is thread safe.
-pub struct KAdmin<'a> {
+pub struct KAdmin {
     /// Kerberos context
-    pub(crate) context: Context<'a>,
+    pub(crate) context: Context,
     /// Server handle for kadm5
     pub(crate) server_handle: *mut c_void,
 }
@@ -192,11 +191,13 @@ pub trait KAdminImpl {
     //     keysalts: Option<&KeySalts>,
     // ) -> Result<()>;
 
+    #[cfg(mit)]
     /// Retrieve string attributes on a principal
     ///
     /// [`Principal::get_strings`] is also available
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>>;
 
+    #[cfg(mit)]
     /// Set string attribute on a principal
     ///
     /// Set `value` to None to remove the string
@@ -235,6 +236,7 @@ pub trait KAdminImpl {
     // #[doc(alias = "modpol")]
     // fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()>;
 
+    #[cfg(mit)]
     /// Delete a policy
     ///
     /// [`Policy::delete`] is also available
@@ -269,6 +271,7 @@ pub trait KAdminImpl {
     //     Ok(self.get_policy(name)?.is_some())
     // }
 
+    #[cfg(mit)]
     /// List policies
     ///
     /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
@@ -291,14 +294,14 @@ pub trait KAdminImpl {
     // fn get_privileges(&self) -> Result<KAdminPrivileges>;
 }
 
-impl<'a> KAdmin<'_> {
+impl KAdmin {
     /// Construct a new [`KAdminBuilder`]
-    pub fn builder(variant: KAdm5Variant) -> KAdminBuilder<'a> {
+    pub fn builder(variant: KAdm5Variant) -> KAdminBuilder {
         KAdminBuilder::new(variant)
     }
 }
 
-impl KAdminImpl for KAdmin<'_> {
+impl KAdminImpl for KAdmin {
     // fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
     //     let mut entry = builder.make_entry(&self.context)?;
     //     let mut mask = builder.mask;
@@ -720,24 +723,32 @@ impl KAdminImpl for KAdmin<'_> {
     //     Ok(())
     // }
 
+    #[cfg(mit)]
     fn delete_policy(&self, name: &str) -> Result<()> {
+        if !self.context.library.is_mit() {
+            return Err(Error::LibraryMismatch(
+                "Policies operations are only available for MIT kadm5",
+            ));
+        }
+
         let name = CString::new(name)?;
         let code = match &self.context.library {
-            #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.kadm5_delete_policy(self.server_handle, name.as_ptr().cast_mut())
             },
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-                (unsafe { cont.kadm5_delete_policy(self.server_handle, name.as_ptr().cast_mut()) })
-                    as i64
-            }
+            _ => unreachable!(),
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
     }
 
     // fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
+    //     if !self.context.library.is_mit() {
+    //         return Err(Error::LibraryMismatch(
+    //             "Policies operations are only available for MIT kadm5",
+    //         ));
+    //     }
+    //
     //     let name = CString::new(name)?;
     //     let mut policy_ent = _kadm5_policy_ent_t::default();
     //     let code = unsafe {
@@ -757,12 +768,18 @@ impl KAdminImpl for KAdmin<'_> {
     //     Ok(Some(policy))
     // }
 
+    #[cfg(mit)]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
+        if !self.context.library.is_mit() {
+            return Err(Error::LibraryMismatch(
+                "Policies operations are only available for MIT kadm5",
+            ));
+        }
+
         let query = CString::new(query.unwrap_or("*"))?;
         let mut count = 0;
         let mut policies: *mut *mut c_char = null_mut();
         let code = match &self.context.library {
-            #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.kadm5_get_policies(
                     self.server_handle,
@@ -771,17 +788,7 @@ impl KAdminImpl for KAdmin<'_> {
                     &mut count,
                 )
             },
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-                (unsafe {
-                    cont.kadm5_get_policies(
-                        self.server_handle,
-                        query.as_ptr().cast_mut(),
-                        &mut policies,
-                        &mut count,
-                    )
-                }) as i64
-            }
+            _ => unreachable!(),
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
@@ -792,14 +799,10 @@ impl KAdminImpl for KAdmin<'_> {
             result.push(c_string_to_string(*raw)?);
         }
         match &self.context.library {
-            #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.kadm5_free_name_list(self.server_handle, policies, count);
             },
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-                cont.kadm5_free_name_list(self.server_handle, policies, &mut count);
-            },
+            _ => unreachable!(),
         };
         Ok(result)
     }
@@ -812,7 +815,7 @@ impl KAdminImpl for KAdmin<'_> {
     // }
 }
 
-impl Drop for KAdmin<'_> {
+impl Drop for KAdmin {
     fn drop(&mut self) {
         if self.server_handle.is_null() {
             return;
@@ -850,11 +853,10 @@ struct ParamsGuard {
 }
 
 /// [`KAdmin`] builder
-pub struct KAdminBuilder<'a> {
+pub struct KAdminBuilder {
     variant: KAdm5Variant,
     library: Option<Library>,
-
-    context: Option<Context<'a>>,
+    context: Option<Context>,
 
     // kadm5_config_params
     /// Mask for which values are set
@@ -883,7 +885,7 @@ pub struct KAdminBuilder<'a> {
     api_version: KAdminApiVersion,
 }
 
-impl<'a> KAdminBuilder<'a> {
+impl KAdminBuilder {
     /// Create a new [`KAdminBuilder`] instance
     pub fn new(variant: KAdm5Variant) -> Self {
         Self {
@@ -909,8 +911,14 @@ impl<'a> KAdminBuilder<'a> {
         }
     }
 
+    /// Set the [`Library`] to use for this [`KAdmin`] instance
+    pub fn library(mut self, library: Library) -> Self {
+        self.library = Some(library);
+        self
+    }
+
     /// Set the [`Context`] to use for this [`KAdmin`] instance
-    pub fn context(mut self, context: Context<'a>) -> Self {
+    pub fn context(mut self, context: Context) -> Self {
         self.context = Some(context);
         self
     }
@@ -918,7 +926,7 @@ impl<'a> KAdminBuilder<'a> {
     // ### kadm5_config_params
 
     /// Set the default database realm
-    pub fn realm(mut self, realm: &str) -> Self {
+    pub fn params_realm(mut self, realm: &str) -> Self {
         self.params_realm = Some(realm.to_owned());
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -932,7 +940,7 @@ impl<'a> KAdminBuilder<'a> {
     }
 
     /// Set the kadmind port to connect to
-    pub fn kadmind_port(mut self, port: c_int) -> Self {
+    pub fn params_kadmind_port(mut self, port: c_int) -> Self {
         self.params_kadmind_port = port;
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -951,7 +959,7 @@ impl<'a> KAdminBuilder<'a> {
     /// Set the kpasswd port to connect to
     ///
     /// No-op for non-MIT variants
-    pub fn kpasswd_port(mut self, port: c_int) -> Self {
+    pub fn params_kpasswd_port(mut self, port: c_int) -> Self {
         if !self.variant.is_mit() {
             return self;
         }
@@ -962,7 +970,7 @@ impl<'a> KAdminBuilder<'a> {
     }
 
     /// Set the admin server which kadmin should contact
-    pub fn admin_server(mut self, admin_server: &str) -> Self {
+    pub fn params_admin_server(mut self, admin_server: &str) -> Self {
         self.params_admin_server = Some(admin_server.to_owned());
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -978,7 +986,7 @@ impl<'a> KAdminBuilder<'a> {
     }
 
     /// Set the name of the KDC database
-    pub fn dbname(mut self, dbname: &str) -> Self {
+    pub fn params_dbname(mut self, dbname: &str) -> Self {
         self.params_dbname = Some(dbname.to_owned());
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -992,7 +1000,7 @@ impl<'a> KAdminBuilder<'a> {
     }
 
     /// Set the location of the access control list file
-    pub fn acl_file(mut self, acl_file: &str) -> Self {
+    pub fn params_acl_file(mut self, acl_file: &str) -> Self {
         self.params_acl_file = Some(acl_file.to_owned());
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -1009,7 +1017,7 @@ impl<'a> KAdminBuilder<'a> {
     /// Set the location of the dictionary file containing strings that are not allowed as passwords
     ///
     /// No-op for non-MIT variants
-    pub fn dict_file(mut self, dict_file: &str) -> Self {
+    pub fn params_dict_file(mut self, dict_file: &str) -> Self {
         if !self.variant.is_mit() {
             return self;
         }
@@ -1020,7 +1028,7 @@ impl<'a> KAdminBuilder<'a> {
     }
 
     /// Set the location where the master key has been stored
-    pub fn stash_file(mut self, stash_file: &str) -> Self {
+    pub fn params_stash_file(mut self, stash_file: &str) -> Self {
         self.params_stash_file = Some(stash_file.to_owned());
         self.params_mask |= match self.variant {
             #[cfg(mit)]
@@ -1043,20 +1051,6 @@ impl<'a> KAdminBuilder<'a> {
     pub fn api_version(mut self, api_version: KAdminApiVersion) -> Self {
         self.api_version = api_version;
         self
-    }
-
-    /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
-    fn get_kadmin(self) -> Result<(KAdmin<'a>, DbArgs, KAdminApiVersion)> {
-        let context = self.context.unwrap_or(Context::new()?);
-
-        let db_args = self.db_args.unwrap_or_default();
-        let api_version = self.api_version;
-
-        let kadmin = KAdmin {
-            context,
-            server_handle: null_mut(),
-        };
-        Ok((kadmin, db_args, api_version))
     }
 
     fn get_params(&self) -> Result<ParamsGuard> {
@@ -1092,8 +1086,8 @@ impl<'a> KAdminBuilder<'a> {
             .map(|s| CString::new(s.as_str()))
             .transpose()?;
 
+        #[cfg(mit)]
         let params_mit = match self.variant {
-            #[cfg(mit)]
             KAdm5Variant::MitClient | KAdm5Variant::MitServer => {
                 Some(sys::mit::kadm5_config_params {
                     mask: self.params_mask as c_long,
@@ -1153,11 +1147,12 @@ impl<'a> KAdminBuilder<'a> {
                     iprop_listen: null_mut(),
                 })
             }
+            #[allow(unreachable_patterns)]
             _ => None,
         };
 
+        #[cfg(heimdal)]
         let params_heimdal = match self.variant {
-            #[cfg(heimdal)]
             KAdm5Variant::HeimdalClient | KAdm5Variant::HeimdalServer => {
                 Some(sys::heimdal::kadm5_config_params {
                     mask: self.params_mask as u32,
@@ -1194,11 +1189,14 @@ impl<'a> KAdminBuilder<'a> {
                     },
                 })
             }
+            #[allow(unreachable_patterns)]
             _ => None,
         };
 
         Ok(ParamsGuard {
+            #[cfg(mit)]
             params_mit,
+            #[cfg(heimdal)]
             params_heimdal,
             _realm,
             _admin_server,
@@ -1210,16 +1208,52 @@ impl<'a> KAdminBuilder<'a> {
         })
     }
 
+    /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
+    fn get_kadmin(self) -> Result<(KAdmin, ParamsGuard, DbArgs, KAdminApiVersion)> {
+        if self.library.is_some() && self.context.is_some() {
+            return Err(Error::LibraryMismatch(
+                "Both library and context cannot be set at the same time",
+            ));
+        }
+        if let Some(library) = &self.library {
+            if library.variant() != self.variant {
+                return Err(Error::LibraryMismatch(
+                    "Library variant and builder variant don't match",
+                ));
+            }
+        }
+        if let Some(context) = &self.context {
+            if context.library.variant() != self.variant {
+                return Err(Error::LibraryMismatch(
+                    "Context variant and builder variant don't match",
+                ));
+            }
+        }
+        let params = self.get_params()?;
+        let db_args = self.db_args.unwrap_or_default();
+        let api_version = self.api_version;
+
+        let context = self.context.unwrap_or(Context::new(
+            self.library.unwrap_or(Library::from_variant(self.variant)?),
+        )?);
+
+        let kadmin = KAdmin {
+            context,
+            server_handle: null_mut(),
+        };
+        Ok((kadmin, params, db_args, api_version))
+    }
+
     /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
     /// name) and a password
     ///
     /// Can only be used with client-side libraries.
-    pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin<'a>> {
+    pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
         let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
 
-        if !kadmin.library.is_client() {
+        if !kadmin.context.library.is_client() {
             return Err(Error::LibraryMismatch(
                 "with_password can only be used with client-side libraries",
             ));
@@ -1227,7 +1261,7 @@ impl<'a> KAdminBuilder<'a> {
 
         let client_name = CString::new(client_name)?;
         let password = CString::new(password)?;
-        let service_name = match &kadmin.library {
+        let service_name = match &kadmin.context.library {
             #[cfg(mit)]
             Library::MitClient(_) | Library::MitServer(_) => sys::mit::KADM5_ADMIN_SERVICE,
             #[cfg(heimdal)]
@@ -1236,7 +1270,7 @@ impl<'a> KAdminBuilder<'a> {
             }
         }
         .to_owned();
-        let struct_version = match &kadmin.library {
+        let struct_version = match &kadmin.context.library {
             #[cfg(mit)]
             Library::MitClient(_) | Library::MitServer(_) => sys::mit::KADM5_STRUCT_VERSION,
             #[cfg(heimdal)]
@@ -1245,27 +1279,7 @@ impl<'a> KAdminBuilder<'a> {
             }
         };
 
-        // let params_raw = match &kadmin.library {
-        //     Library::MitClient(_) | Library::MitServer(_) => match params.inner {
-        //         ParamsInner::Mit(p) => p
-        //     }
-        // };
-
-        // let code = unsafe {
-        //     kadm5_init_with_password(
-        //         kadmin.context.context,
-        //         client_name.as_ptr().cast_mut(),
-        //         password.as_ptr().cast_mut(),
-        //         service_name.as_ptr().cast_mut(),
-        //         &mut params.params,
-        //         struct_version,
-        //         api_version.into(),
-        //         db_args.db_args,
-        //         &mut kadmin.server_handle,
-        //     )
-        // };
-
-        let code = match &kadmin.library {
+        let code = match &kadmin.context.library {
             #[cfg(mit)]
             Library::MitClient(cont) => unsafe {
                 cont.kadm5_init_with_password(
@@ -1273,9 +1287,9 @@ impl<'a> KAdminBuilder<'a> {
                     client_name.as_ptr().cast_mut(),
                     password.as_ptr().cast_mut(),
                     service_name.as_ptr().cast_mut(),
-                    null_mut(), // &mut params.params,
+                    &mut params.params_mit.unwrap(),
                     struct_version,
-                    api_version.to_raw(kadmin.library.variant())?,
+                    api_version.to_raw(kadmin.context.library.variant())?,
                     db_args.db_args,
                     &mut kadmin.server_handle,
                 )
@@ -1288,9 +1302,9 @@ impl<'a> KAdminBuilder<'a> {
                         client_name.as_ptr().cast_mut(),
                         password.as_ptr().cast_mut(),
                         service_name.as_ptr().cast_mut(),
-                        null_mut(), // &mut params.params,
+                        &mut params.params_heimdal.unwrap(),
                         struct_version.into(),
-                        api_version.to_raw(kadmin.library.variant())?.into(),
+                        api_version.to_raw(kadmin.context.library.variant())?.into(),
                         &mut kadmin.server_handle,
                     )
                 }) as i64
@@ -1374,7 +1388,7 @@ impl<'a> KAdminBuilder<'a> {
     //
     //     Ok(kadmin)
     // }
-    //
+
     // /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
     // /// principal name) and an optional credentials cache name
     // ///
@@ -1459,16 +1473,16 @@ impl<'a> KAdminBuilder<'a> {
     //
     //     Ok(kadmin)
     // }
-    //
-    // /// Not implemented
-    // pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
-    //     let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
-    //
-    //     let (mut _kadmin, _params, _db_args, _api_version) = self.get_kadmin()?;
-    //
-    //     unimplemented!();
-    // }
-    //
+
+    /// Not implemented
+    pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+
+        let (mut _kadmin, _params, _db_args, _api_version) = self.get_kadmin()?;
+
+        unimplemented!();
+    }
+
     // /// Construct a [`KAdmin`] object from this builder for local database manipulation.
     // pub fn with_local(self) -> Result<KAdmin> {
     //     let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;

@@ -96,7 +96,7 @@ pub(crate) fn unparse_name_mit(
         #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
-    krb5_error_code_escape_hatch(context, code)?;
+    krb5_error_code_escape_hatch(context, code.into())?;
     let name = c_string_to_string(raw_name)?;
     match &context.library {
         #[cfg(mit)]
@@ -132,7 +132,7 @@ pub(crate) fn unparse_name_heimdal(
         #[allow(unreachable_patterns)]
         _ => unreachable!(),
     };
-    krb5_error_code_escape_hatch(context, code)?;
+    krb5_error_code_escape_hatch(context, code.into())?;
     let name = c_string_to_string(raw_name)?;
     match &context.library {
         #[cfg(heimdal)]
@@ -173,7 +173,7 @@ pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedN
 
     let parsed_name = ParsedName { raw, context };
 
-    krb5_error_code_escape_hatch(context, code)?;
+    krb5_error_code_escape_hatch(context, code.into())?;
     let mut canon = null_mut();
     let code = match &context.library {
         #[cfg(mit)]
@@ -193,7 +193,7 @@ pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedN
             )
         },
     };
-    krb5_error_code_escape_hatch(context, code)?;
+    krb5_error_code_escape_hatch(context, code.into())?;
     Ok(parsed_name)
 }
 

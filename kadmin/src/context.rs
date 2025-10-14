@@ -9,9 +9,9 @@ use std::{
 };
 
 #[cfg(all(heimdal, not(mit)))]
-use crate::sys::heimdal::{KRB5_OK, krb5_error_code};
+use crate::sys::heimdal::krb5_error_code;
 #[cfg(mit)]
-use crate::sys::mit::{KRB5_OK, krb5_error_code};
+use crate::sys::mit::krb5_error_code;
 use crate::{
     Error,
     conv::c_string_to_string,
@@ -60,28 +60,27 @@ impl Context {
                     )
                 },
             };
-            match code {
-                KRB5_OK => {
-                    let default_realm = unsafe { CStr::from_ptr(raw_default_realm) }.to_owned();
-                    match &self.library {
-                        #[cfg(mit)]
-                        Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-                            cont.krb5_free_default_realm(
-                                self.context as sys::mit::krb5_context,
-                                raw_default_realm,
-                            );
-                        },
-                        #[cfg(heimdal)]
-                        Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-                            cont.krb5_free_default_realm(
-                                self.context as sys::heimdal::krb5_context,
-                                raw_default_realm,
-                            );
-                        },
-                    }
-                    Some(default_realm)
+            if krb5_error_code_escape_hatch(self, code.into()).is_ok() {
+                let default_realm = unsafe { CStr::from_ptr(raw_default_realm) }.to_owned();
+                match &self.library {
+                    #[cfg(mit)]
+                    Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
+                        cont.krb5_free_default_realm(
+                            self.context as sys::mit::krb5_context,
+                            raw_default_realm,
+                        );
+                    },
+                    #[cfg(heimdal)]
+                    Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
+                        cont.krb5_free_default_realm(
+                            self.context as sys::heimdal::krb5_context,
+                            raw_default_realm,
+                        );
+                    },
                 }
-                _ => None,
+                Some(default_realm)
+            } else {
+                None
             }
         };
     }
@@ -89,15 +88,21 @@ impl Context {
     /// Get the error message from a kerberos error code
     ///
     /// Only works for krb5 errors, not for kadm5 errors
-    pub(crate) fn error_code_to_message(&self, code: krb5_error_code) -> String {
+    pub(crate) fn error_code_to_message(&self, code: i64) -> String {
         let message: *const c_char = match &self.library {
             #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-                cont.krb5_get_error_message(self.context as sys::mit::krb5_context, code)
+                cont.krb5_get_error_message(
+                    self.context as sys::mit::krb5_context,
+                    code as sys::mit::krb5_error_code,
+                )
             },
             #[cfg(heimdal)]
             Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-                cont.krb5_get_error_message(self.context as sys::heimdal::krb5_context, code)
+                cont.krb5_get_error_message(
+                    self.context as sys::heimdal::krb5_context,
+                    code as sys::heimdal::krb5_error_code,
+                )
             },
         };
 
@@ -198,7 +203,7 @@ impl ContextBuilder {
             context,
             default_realm: None,
         };
-        krb5_error_code_escape_hatch(&context, code)?;
+        krb5_error_code_escape_hatch(&context, code.into())?;
         context.fill_default_realm();
         Ok(context)
     }

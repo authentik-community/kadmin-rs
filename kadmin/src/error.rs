@@ -2,9 +2,9 @@
 
 use crate::context::Context;
 #[cfg(all(heimdal, not(mit)))]
-use crate::sys::heimdal::{KRB5_OK, KRB5_OK as KADM5_OK, kadm5_ret_t, krb5_error_code};
+use crate::sys::heimdal::{KADM5_OK, KRB5_OK};
 #[cfg(mit)]
-use crate::sys::mit::{self, KADM5_OK, KRB5_OK, kadm5_ret_t, krb5_error_code};
+use crate::sys::mit::{self, KADM5_OK, KRB5_OK};
 
 /// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
@@ -17,7 +17,7 @@ pub enum Error {
     #[error("Kerberos error: {message} (code: {code})")]
     Kerberos {
         /// Kerberos error code
-        code: krb5_error_code,
+        code: i64,
         /// Kerberos error message
         message: String,
     },
@@ -29,7 +29,7 @@ pub enum Error {
     #[error("KAdmin error: {message} (code: {code})")]
     KAdmin {
         /// kadm5 error code
-        code: kadm5_ret_t,
+        code: i64,
         /// kadm5 error message
         message: String,
     },
@@ -97,8 +97,8 @@ impl<T> From<std::sync::mpsc::SendError<T>> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Helper function to "raise" an error from a [`krb5_error_code`]
-pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: krb5_error_code) -> Result<()> {
-    if code == KRB5_OK {
+pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: i64) -> Result<()> {
+    if code == KRB5_OK as i64 {
         Ok(())
     } else {
         Err(Error::Kerberos {
@@ -109,13 +109,13 @@ pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: krb5_error_c
 }
 
 /// Helper function to "raise" an error from a [`kadm5_ret_t`]
-pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> Result<()> {
-    if code == KADM5_OK as kadm5_ret_t {
+pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: i64) -> Result<()> {
+    if code == KADM5_OK as i64 {
         return Ok(());
     }
 
     if context.library.is_heimdal() {
-        return krb5_error_code_escape_hatch(context, code as krb5_error_code);
+        return krb5_error_code_escape_hatch(context, code);
     }
 
     #[cfg(mit)]
@@ -207,7 +207,7 @@ pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> 
             mit::KADM5_XDR_FAILURE => "XDR encoding error",
             mit::KADM5_CANT_RESOLVE => "",
             mit::KADM5_PASS_Q_GENERIC => "Database synchronization failed",
-            _ => return krb5_error_code_escape_hatch(context, code as krb5_error_code),
+            _ => return krb5_error_code_escape_hatch(context, code),
         }
         .to_owned();
         Err(Error::KAdmin { code, message })
@@ -215,6 +215,6 @@ pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> 
 
     #[cfg(not(mit))]
     {
-        krb5_error_code_escape_hatch(context, code as krb5_error_code)
+        krb5_error_code_escape_hatch(context, code)
     }
 }
