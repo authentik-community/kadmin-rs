@@ -23,15 +23,15 @@ use crate::{
 pub static CONTEXT_INIT_LOCK: Mutex<()> = Mutex::new(());
 
 /// A Kerberos context (`krb5_context`) for use with KAdmin
-pub struct Context<'a> {
-    pub(crate) library: &'a Library,
+pub struct Context {
+    pub(crate) library: Library,
     pub(crate) context: *mut c_void,
     pub(crate) default_realm: Option<CString>,
 }
 
-impl<'a> Context<'a> {
+impl Context {
     /// Create a default context
-    pub fn new(library: &'a Library) -> Result<Self> {
+    pub fn new(library: Library) -> Result<Self> {
         Self::builder().build(library)
     }
 
@@ -44,7 +44,7 @@ impl<'a> Context<'a> {
     fn fill_default_realm(&mut self) {
         self.default_realm = {
             let mut raw_default_realm: *mut c_char = null_mut();
-            let code = match self.library {
+            let code = match &self.library {
                 #[cfg(mit)]
                 Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                     cont.krb5_get_default_realm(
@@ -64,7 +64,7 @@ impl<'a> Context<'a> {
             match code {
                 KRB5_OK => {
                     let default_realm = unsafe { CStr::from_ptr(raw_default_realm) }.to_owned();
-                    match self.library {
+                    match &self.library {
                         #[cfg(mit)]
                         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                             cont.krb5_free_default_realm(
@@ -91,7 +91,7 @@ impl<'a> Context<'a> {
     ///
     /// Only works for krb5 errors, not for kadm5 errors
     pub(crate) fn error_code_to_message(&self, code: krb5_error_code) -> String {
-        let message: *const c_char = match self.library {
+        let message: *const c_char = match &self.library {
             #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.krb5_get_error_message(self.context as sys::mit::krb5_context, code)
@@ -104,7 +104,7 @@ impl<'a> Context<'a> {
 
         match c_string_to_string(message) {
             Ok(string) => {
-                match self.library {
+                match &self.library {
                     #[cfg(mit)]
                     Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                         cont.krb5_free_error_message(
@@ -164,7 +164,7 @@ impl ContextBuilder {
     /// Build a [`Context`] instance
     ///
     /// If no context was provided, a default one is created with [`kadm5_init_krb5_context`]
-    pub fn build<'a>(self, library: &'a Library) -> Result<Context<'a>> {
+    pub fn build(self, library: Library) -> Result<Context> {
         if let Some(ctx) = self.context {
             let mut context = Context {
                 library,
@@ -177,7 +177,7 @@ impl ContextBuilder {
 
         let _guard = CONTEXT_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
-        let (context, code) = match library {
+        let (context, code) = match &library {
             #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => {
                 let mut context_ptr: MaybeUninit<sys::mit::krb5_context> = MaybeUninit::zeroed();
@@ -205,10 +205,10 @@ impl ContextBuilder {
     }
 }
 
-impl<'a> Drop for Context<'a> {
+impl Drop for Context {
     fn drop(&mut self) {
         if let Ok(_guard) = CONTEXT_INIT_LOCK.lock() {
-            match self.library {
+            match &self.library {
                 #[cfg(mit)]
                 Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                     cont.krb5_free_context(self.context as sys::mit::krb5_context);
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn new_mit_client() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
-        let context = Context::new(&lib);
+        let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
     }
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn new_mit_server() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitServer)?;
-        let context = Context::new(&lib);
+        let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
     }
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn new_heimdal_client() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
-        let context = Context::new(&lib);
+        let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
     }
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn new_heimdal_server() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::HeimdalServer)?;
-        let context = Context::new(&lib);
+        let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
     }
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn error_code_to_message() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
-        let context = Context::new(&lib).unwrap();
+        let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1_765_328_384);
         assert_eq!(message, "No error");
         Ok(())
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn error_code_to_message_wrong_code() -> Result<()> {
         let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
-        let context = Context::new(&lib).unwrap();
+        let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
         assert_eq!(message, "Unknown code ____ 255");
         Ok(())

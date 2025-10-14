@@ -84,7 +84,7 @@ pub(crate) fn unparse_name_mit(
         return Ok(None);
     }
     let mut raw_name: *mut c_char = null_mut();
-    let code = match context.library {
+    let code = match &context.library {
         #[cfg(mit)]
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
             cont.krb5_unparse_name(
@@ -98,7 +98,7 @@ pub(crate) fn unparse_name_mit(
     };
     krb5_error_code_escape_hatch(context, code)?;
     let name = c_string_to_string(raw_name)?;
-    match context.library {
+    match &context.library {
         #[cfg(mit)]
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
             cont.krb5_free_unparsed_name(context.context as sys::mit::krb5_context, raw_name);
@@ -120,7 +120,7 @@ pub(crate) fn unparse_name_heimdal(
     }
     let mut raw_name: *mut c_char = null_mut();
     // let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
-    let code = match context.library {
+    let code = match &context.library {
         #[cfg(heimdal)]
         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
             cont.krb5_unparse_name(
@@ -134,7 +134,7 @@ pub(crate) fn unparse_name_heimdal(
     };
     krb5_error_code_escape_hatch(context, code)?;
     let name = c_string_to_string(raw_name)?;
-    match context.library {
+    match &context.library {
         #[cfg(heimdal)]
         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
             cont.krb5_free_unparsed_name(context.context as sys::heimdal::krb5_context, raw_name);
@@ -148,7 +148,7 @@ pub(crate) fn unparse_name_heimdal(
 pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedName<'a>> {
     let name = CString::new(name)?;
 
-    let (raw, code) = match context.library {
+    let (raw, code) = match &context.library {
         #[cfg(mit)]
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
             let mut raw: sys::mit::krb5_principal = null_mut();
@@ -175,7 +175,7 @@ pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedN
 
     krb5_error_code_escape_hatch(context, code)?;
     let mut canon = null_mut();
-    let code = match context.library {
+    let code = match &context.library {
         #[cfg(mit)]
         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
             cont.krb5_unparse_name(
@@ -199,7 +199,7 @@ pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedN
 
 pub(crate) struct ParsedName<'a> {
     pub(crate) raw: *mut c_void,
-    context: &'a Context<'a>,
+    context: &'a Context,
 }
 
 impl Drop for ParsedName<'_> {
@@ -207,7 +207,7 @@ impl Drop for ParsedName<'_> {
         if self.raw.is_null() {
             return;
         }
-        match self.context.library {
+        match &self.context.library {
             #[cfg(mit)]
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.krb5_free_principal(

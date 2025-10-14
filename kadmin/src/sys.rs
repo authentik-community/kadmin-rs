@@ -94,6 +94,19 @@ pub enum Library {
 }
 
 impl Library {
+    pub fn variant(&self) -> KAdm5Variant {
+        match self {
+            #[cfg(mit)]
+            Self::MitClient(_) => KAdm5Variant::MitClient,
+            #[cfg(mit)]
+            Self::MitServer(_) => KAdm5Variant::MitServer,
+            #[cfg(heimdal)]
+            Self::HeimdalClient(_) => KAdm5Variant::HeimdalClient,
+            #[cfg(heimdal)]
+            Self::HeimdalServer(_) => KAdm5Variant::HeimdalServer,
+        }
+    }
+
     /// Check if this [`Library`] is for MIT krb5
     pub fn is_mit(&self) -> bool {
         match self {

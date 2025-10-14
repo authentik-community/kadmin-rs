@@ -82,6 +82,9 @@ pub enum Error {
     /// Failed to load the kadm5 library
     #[error("Failed to load the kadm5 library")]
     LibraryLoadError(#[from] dlopen2::Error),
+    /// The library is not compatible with the current operation
+    #[error("The library is not compatible with the current operation")]
+    LibraryMismatch(&'static str),
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {
