@@ -14,6 +14,10 @@ use libc::EINVAL;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
+#[cfg(heimdal)]
+use crate::conv::unparse_name_heimdal;
+#[cfg(mit)]
+use crate::conv::unparse_name_mit;
 use crate::{
     context::Context,
     conv::{c_string_to_string, parse_name},
@@ -59,8 +63,39 @@ impl Default for KAdminApiVersion {
 }
 
 impl KAdminApiVersion {
-    fn to_raw(self, _variant: KAdm5Variant) -> Result<u32> {
-        todo!()
+    fn to_raw(self, variant: KAdm5Variant) -> Result<u32> {
+        match self {
+            Self::Version2 => match variant {
+                #[cfg(mit)]
+                KAdm5Variant::MitClient | KAdm5Variant::MitServer => {
+                    Ok(sys::mit::KADM5_API_VERSION_2)
+                }
+                #[cfg(heimdal)]
+                KAdm5Variant::HeimdalClient | KAdm5Variant::HeimdalServer => {
+                    Ok(sys::heimdal::KADM5_API_VERSION_2)
+                }
+            },
+            #[cfg(mit)]
+            Self::Version3 => match variant {
+                #[cfg(mit)]
+                KAdm5Variant::MitClient | KAdm5Variant::MitServer => {
+                    Ok(sys::mit::KADM5_API_VERSION_2)
+                }
+                _ => Err(Error::LibraryMismatch(
+                    "Version 3 is only available for MIT kadm5",
+                )),
+            },
+            #[cfg(mit)]
+            Self::Version4 => match variant {
+                #[cfg(mit)]
+                KAdm5Variant::MitClient | KAdm5Variant::MitServer => {
+                    Ok(sys::mit::KADM5_API_VERSION_2)
+                }
+                _ => Err(Error::LibraryMismatch(
+                    "Version 3 is only available for MIT kadm5",
+                )),
+            },
+        }
     }
 }
 
@@ -431,15 +466,14 @@ impl KAdminImpl for KAdmin {
                 )
             },
             #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-                (unsafe {
-                    cont.kadm5_rename_principal(
-                        self.server_handle,
-                        old_princ.raw as sys::heimdal::krb5_principal,
-                        new_princ.raw as sys::heimdal::krb5_principal,
-                    )
-                }) as i64
-            }
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
+                cont.kadm5_rename_principal(
+                    self.server_handle,
+                    old_princ.raw as sys::heimdal::krb5_principal,
+                    new_princ.raw as sys::heimdal::krb5_principal,
+                )
+            })
+            .into(),
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
@@ -456,14 +490,13 @@ impl KAdminImpl for KAdmin {
                 )
             },
             #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-                (unsafe {
-                    cont.kadm5_delete_principal(
-                        self.server_handle,
-                        princ.raw as sys::heimdal::krb5_principal,
-                    )
-                }) as i64
-            }
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
+                cont.kadm5_delete_principal(
+                    self.server_handle,
+                    princ.raw as sys::heimdal::krb5_principal,
+                )
+            })
+            .into(),
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         Ok(())
@@ -675,16 +708,15 @@ impl KAdminImpl for KAdmin {
                 )
             },
             #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-                (unsafe {
-                    cont.kadm5_get_principals(
-                        self.server_handle,
-                        query.as_ptr().cast_mut(),
-                        &mut princs,
-                        &mut count,
-                    )
-                }) as i64
-            }
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
+                cont.kadm5_get_principals(
+                    self.server_handle,
+                    query.as_ptr().cast_mut(),
+                    &mut princs,
+                    &mut count,
+                )
+            })
+            .into(),
         };
         kadm5_ret_t_escape_hatch(&self.context, code)?;
         let mut result = Vec::with_capacity(count as usize);
@@ -1209,7 +1241,7 @@ impl KAdminBuilder {
     }
 
     /// Construct a [`KAdmin`] object that isn't initialized yet from the builder inputs
-    fn get_kadmin(self) -> Result<(KAdmin, ParamsGuard, DbArgs, KAdminApiVersion)> {
+    fn get_kadmin(self) -> Result<(KAdmin, ParamsGuard, DbArgs, u32, CString, u32)> {
         if self.library.is_some() && self.context.is_some() {
             return Err(Error::LibraryMismatch(
                 "Both library and context cannot be set at the same time",
@@ -1241,26 +1273,9 @@ impl KAdminBuilder {
             context,
             server_handle: null_mut(),
         };
-        Ok((kadmin, params, db_args, api_version))
-    }
 
-    /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
-    /// name) and a password
-    ///
-    /// Can only be used with client-side libraries.
-    pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
-        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+        let api_version = api_version.to_raw(kadmin.context.library.variant())?;
 
-        let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
-
-        if !kadmin.context.library.is_client() {
-            return Err(Error::LibraryMismatch(
-                "with_password can only be used with client-side libraries",
-            ));
-        }
-
-        let client_name = CString::new(client_name)?;
-        let password = CString::new(password)?;
         let service_name = match &kadmin.context.library {
             #[cfg(mit)]
             Library::MitClient(_) | Library::MitServer(_) => sys::mit::KADM5_ADMIN_SERVICE,
@@ -1279,6 +1294,35 @@ impl KAdminBuilder {
             }
         };
 
+        Ok((
+            kadmin,
+            params,
+            db_args,
+            api_version,
+            service_name,
+            struct_version,
+        ))
+    }
+
+    /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
+    /// name) and a password
+    ///
+    /// Can only be used with client-side libraries.
+    pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+
+        let (mut kadmin, params, db_args, api_version, service_name, struct_version) =
+            self.get_kadmin()?;
+
+        if !kadmin.context.library.is_client() {
+            return Err(Error::LibraryMismatch(
+                "with_password can only be used with client-side libraries",
+            ));
+        }
+
+        let client_name = CString::new(client_name)?;
+        let password = CString::new(password)?;
+
         let code = match &kadmin.context.library {
             #[cfg(mit)]
             Library::MitClient(cont) => unsafe {
@@ -1289,25 +1333,315 @@ impl KAdminBuilder {
                     service_name.as_ptr().cast_mut(),
                     &mut params.params_mit.unwrap(),
                     struct_version,
-                    api_version.to_raw(kadmin.context.library.variant())?,
+                    api_version,
                     db_args.db_args,
                     &mut kadmin.server_handle,
                 )
             },
             #[cfg(heimdal)]
+            Library::HeimdalClient(cont) => (unsafe {
+                cont.kadm5_init_with_password_ctx(
+                    kadmin.context.context as sys::heimdal::krb5_context,
+                    client_name.as_ptr().cast_mut(),
+                    password.as_ptr().cast_mut(),
+                    service_name.as_ptr().cast_mut(),
+                    &mut params.params_heimdal.unwrap(),
+                    struct_version.into(),
+                    api_version.into(),
+                    &mut kadmin.server_handle,
+                )
+            })
+            .into(),
+            _ => unreachable!(),
+        };
+
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
+
+        Ok(kadmin)
+    }
+
+    /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
+    /// principal name) and an optional keytab
+    ///
+    /// If no client name is provided, `host/hostname` will be used
+    ///
+    /// If no keytab is provided, the default keytab will be used
+    pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+
+        let (mut kadmin, params, db_args, api_version, service_name, struct_version) =
+            self.get_kadmin()?;
+
+        if !kadmin.context.library.is_client() {
+            return Err(Error::LibraryMismatch(
+                "with_keytab can only be used with client-side libraries",
+            ));
+        }
+
+        let client_name = if let Some(client_name) = client_name {
+            CString::new(client_name)?
+        } else {
+            match &kadmin.context.library {
+                #[cfg(mit)]
+                Library::MitClient(cont) | Library::MitServer(cont) => {
+                    let mut princ_ptr: MaybeUninit<sys::mit::krb5_principal> =
+                        MaybeUninit::zeroed();
+                    let code = unsafe {
+                        cont.krb5_sname_to_principal(
+                            kadmin.context.context as sys::mit::krb5_context,
+                            null_mut(),
+                            CString::new("host")?.as_ptr().cast_mut(),
+                            sys::mit::KRB5_NT_SRV_HST as i32,
+                            princ_ptr.as_mut_ptr(),
+                        )
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    let princ = unsafe { princ_ptr.assume_init() };
+                    let princ_name = unparse_name_mit(&kadmin.context, princ);
+                    unsafe {
+                        cont.krb5_free_principal(
+                            kadmin.context.context as sys::mit::krb5_context,
+                            princ,
+                        );
+                    }
+                    CString::new(princ_name?.unwrap())?
+                }
+                #[cfg(heimdal)]
+                Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+                    let mut princ_ptr: MaybeUninit<sys::heimdal::krb5_principal> =
+                        MaybeUninit::zeroed();
+                    let code = unsafe {
+                        cont.krb5_sname_to_principal(
+                            kadmin.context.context as sys::heimdal::krb5_context,
+                            null_mut(),
+                            CString::new("host")?.as_ptr().cast_mut(),
+                            sys::heimdal::NAME_TYPE_KRB5_NT_SRV_HST,
+                            princ_ptr.as_mut_ptr(),
+                        )
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    let princ = unsafe { princ_ptr.assume_init() };
+                    let princ_name = unparse_name_heimdal(&kadmin.context, princ);
+                    unsafe {
+                        cont.krb5_free_principal(
+                            kadmin.context.context as sys::heimdal::krb5_context,
+                            princ,
+                        );
+                    }
+                    CString::new(princ_name?.unwrap())?
+                }
+            }
+        };
+        let keytab = if let Some(keytab) = keytab {
+            CString::new(keytab)?
+        } else {
+            CString::new("/etc/krb5.keytab")?
+        };
+
+        let code = match &kadmin.context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) => unsafe {
+                cont.kadm5_init_with_skey(
+                    kadmin.context.context as sys::mit::krb5_context,
+                    client_name.as_ptr().cast_mut(),
+                    keytab.as_ptr().cast_mut(),
+                    service_name.as_ptr().cast_mut(),
+                    &mut params.params_mit.unwrap(),
+                    struct_version,
+                    api_version,
+                    db_args.db_args,
+                    &mut kadmin.server_handle,
+                )
+            },
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) => (unsafe {
+                cont.kadm5_init_with_skey_ctx(
+                    kadmin.context.context as sys::heimdal::krb5_context,
+                    client_name.as_ptr().cast_mut(),
+                    keytab.as_ptr().cast_mut(),
+                    service_name.as_ptr().cast_mut(),
+                    &mut params.params_heimdal.unwrap(),
+                    struct_version.into(),
+                    api_version.into(),
+                    &mut kadmin.server_handle,
+                )
+            })
+            .into(),
+            _ => unreachable!(),
+        };
+
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
+
+        Ok(kadmin)
+    }
+
+    /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
+    /// principal name) and an optional credentials cache name
+    ///
+    /// If no client name is provided, the default principal from the credentials cache will be
+    /// used
+    ///
+    /// If no credentials cache name is provided, the default credentials cache will be used
+    pub fn with_ccache(
+        self,
+        client_name: Option<&str>,
+        ccache_name: Option<&str>,
+    ) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+
+        let (mut kadmin, params, db_args, api_version, service_name, struct_version) =
+            self.get_kadmin()?;
+
+        if !kadmin.context.library.is_client() {
+            return Err(Error::LibraryMismatch(
+                "with_ccache can only be used with client-side libraries",
+            ));
+        }
+
+        let code = match &kadmin.context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) => {
+                let ccache = {
+                    let mut ccache: MaybeUninit<sys::mit::krb5_ccache> = MaybeUninit::zeroed();
+                    let code = if let Some(ccache_name) = ccache_name {
+                        let ccache_name = CString::new(ccache_name)?;
+                        unsafe {
+                            cont.krb5_cc_resolve(
+                                kadmin.context.context as sys::mit::krb5_context,
+                                ccache_name.as_ptr().cast_mut(),
+                                ccache.as_mut_ptr(),
+                            )
+                        }
+                    } else {
+                        unsafe {
+                            cont.krb5_cc_default(
+                                kadmin.context.context as sys::mit::krb5_context,
+                                ccache.as_mut_ptr(),
+                            )
+                        }
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    unsafe { ccache.assume_init() }
+                };
+
+                let client_name = if let Some(client_name) = client_name {
+                    CString::new(client_name)?
+                } else {
+                    let mut princ_ptr: MaybeUninit<sys::mit::krb5_principal> =
+                        MaybeUninit::zeroed();
+                    let code = unsafe {
+                        cont.krb5_cc_get_principal(
+                            kadmin.context.context as sys::mit::krb5_context,
+                            ccache,
+                            princ_ptr.as_mut_ptr(),
+                        )
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    let princ = unsafe { princ_ptr.assume_init() };
+                    let princ_name = unparse_name_mit(&kadmin.context, princ);
+                    unsafe {
+                        cont.krb5_free_principal(
+                            kadmin.context.context as sys::mit::krb5_context,
+                            princ,
+                        );
+                    }
+                    CString::new(princ_name?.unwrap())?
+                };
+
+                let code = unsafe {
+                    cont.kadm5_init_with_creds(
+                        kadmin.context.context as sys::mit::krb5_context,
+                        client_name.as_ptr().cast_mut(),
+                        ccache,
+                        service_name.as_ptr().cast_mut(),
+                        &mut params.params_mit.unwrap(),
+                        struct_version,
+                        api_version,
+                        db_args.db_args,
+                        &mut kadmin.server_handle,
+                    )
+                };
+
+                unsafe {
+                    cont.krb5_cc_close(kadmin.context.context as sys::mit::krb5_context, ccache);
+                }
+
+                code
+            }
+            #[cfg(heimdal)]
             Library::HeimdalClient(cont) => {
-                (unsafe {
-                    cont.kadm5_init_with_password_ctx(
+                let ccache = {
+                    let mut ccache: MaybeUninit<sys::heimdal::krb5_ccache> = MaybeUninit::zeroed();
+                    let code = if let Some(ccache_name) = ccache_name {
+                        let ccache_name = CString::new(ccache_name)?;
+                        unsafe {
+                            cont.krb5_cc_resolve(
+                                kadmin.context.context as sys::heimdal::krb5_context,
+                                ccache_name.as_ptr().cast_mut(),
+                                ccache.as_mut_ptr(),
+                            )
+                        }
+                    } else {
+                        unsafe {
+                            cont.krb5_cc_default(
+                                kadmin.context.context as sys::heimdal::krb5_context,
+                                ccache.as_mut_ptr(),
+                            )
+                        }
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    unsafe { ccache.assume_init() }
+                };
+
+                let client_name = if let Some(client_name) = client_name {
+                    CString::new(client_name)?
+                } else {
+                    let mut princ_ptr: MaybeUninit<sys::heimdal::krb5_principal> =
+                        MaybeUninit::zeroed();
+                    let code = unsafe {
+                        cont.krb5_cc_get_principal(
+                            kadmin.context.context as sys::heimdal::krb5_context,
+                            ccache,
+                            princ_ptr.as_mut_ptr(),
+                        )
+                    };
+                    krb5_error_code_escape_hatch(&kadmin.context, code.into())?;
+                    let princ = unsafe { princ_ptr.assume_init() };
+                    let princ_name = unparse_name_heimdal(&kadmin.context, princ);
+                    unsafe {
+                        cont.krb5_free_principal(
+                            kadmin.context.context as sys::heimdal::krb5_context,
+                            princ,
+                        );
+                    }
+                    CString::new(princ_name?.unwrap())?
+                };
+
+                let code = unsafe {
+                    cont.kadm5_init_with_creds_ctx(
                         kadmin.context.context as sys::heimdal::krb5_context,
                         client_name.as_ptr().cast_mut(),
-                        password.as_ptr().cast_mut(),
+                        ccache,
                         service_name.as_ptr().cast_mut(),
                         &mut params.params_heimdal.unwrap(),
                         struct_version.into(),
-                        api_version.to_raw(kadmin.context.library.variant())?.into(),
+                        api_version.into(),
                         &mut kadmin.server_handle,
                     )
-                }) as i64
+                };
+
+                unsafe {
+                    cont.krb5_cc_close(
+                        kadmin.context.context as sys::heimdal::krb5_context,
+                        ccache,
+                    );
+                }
+
+                code.into()
             }
             _ => unreachable!(),
         };
@@ -1319,205 +1653,73 @@ impl KAdminBuilder {
         Ok(kadmin)
     }
 
-    // /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
-    // /// principal name) and an optional keytab
-    // ///
-    // /// If no client name is provided, `host/hostname` will be used
-    // ///
-    // /// If no keytab is provided, the default keytab will be used
-    // pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) ->
-    // Result<KAdmin<'a>> {     let _guard = KADMIN_INIT_LOCK.lock().map_err(|_|
-    // Error::LockError)?;
-    //
-    //     let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
-    //
-    //     let client_name = if let Some(client_name) = client_name {
-    //         CString::new(client_name)?
-    //     } else {
-    //         let mut princ_ptr: MaybeUninit<krb5_principal> = MaybeUninit::zeroed();
-    //         let code = unsafe {
-    //             krb5_sname_to_principal(
-    //                 kadmin.context.context,
-    //                 null_mut(),
-    //                 CString::new("host")?.as_ptr().cast_mut(),
-    //                 KRB5_NT_SRV_HST as krb5_int32,
-    //                 princ_ptr.as_mut_ptr(),
-    //             )
-    //         };
-    //         krb5_error_code_escape_hatch(&kadmin.context, code)?;
-    //         let princ = unsafe { princ_ptr.assume_init() };
-    //         let mut raw_client_name: *mut c_char = null_mut();
-    //         let code =
-    //             unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name)
-    // };         krb5_error_code_escape_hatch(&kadmin.context, code)?;
-    //         unsafe {
-    //             krb5_free_principal(kadmin.context.context, princ);
-    //         }
-    //         let client_name = unsafe { CStr::from_ptr(raw_client_name) }.to_owned();
-    //         unsafe {
-    //             krb5_free_unparsed_name(kadmin.context.context, raw_client_name);
-    //         }
-    //         client_name
-    //     };
-    //     let keytab = if let Some(keytab) = keytab {
-    //         CString::new(keytab)?
-    //     } else {
-    //         CString::new("/etc/krb5.keytab")?
-    //     };
-    //     let service_name = KADM5_ADMIN_SERVICE.to_owned();
-    //
-    //     let mut params = params;
-    //
-    //     let code = unsafe {
-    //         kadm5_init_with_skey(
-    //             kadmin.context.context,
-    //             client_name.as_ptr().cast_mut(),
-    //             keytab.as_ptr().cast_mut(),
-    //             service_name.as_ptr().cast_mut(),
-    //             &mut params.params,
-    //             KADM5_STRUCT_VERSION,
-    //             api_version.into(),
-    //             db_args.db_args,
-    //             &mut kadmin.server_handle,
-    //         )
-    //     };
-    //
-    //     drop(_guard);
-    //
-    //     kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
-    //
-    //     Ok(kadmin)
-    // }
-
-    // /// Construct a [`KAdmin`] object from this builder using an optional client name (usually a
-    // /// principal name) and an optional credentials cache name
-    // ///
-    // /// If no client name is provided, the default principal from the credentials cache will be
-    // /// used
-    // ///
-    // /// If no credentials cache name is provided, the default credentials cache will be used
-    // pub fn with_ccache(
-    //     self,
-    //     client_name: Option<&str>,
-    //     ccache_name: Option<&str>,
-    // ) -> Result<KAdmin> {
-    //     let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
-    //
-    //     let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
-    //
-    //     let ccache = {
-    //         let mut ccache: MaybeUninit<krb5_ccache> = MaybeUninit::zeroed();
-    //         let code = if let Some(ccache_name) = ccache_name {
-    //             let ccache_name = CString::new(ccache_name)?;
-    //             unsafe {
-    //                 krb5_cc_resolve(
-    //                     kadmin.context.context,
-    //                     ccache_name.as_ptr().cast_mut(),
-    //                     ccache.as_mut_ptr(),
-    //                 )
-    //             }
-    //         } else {
-    //             unsafe { krb5_cc_default(kadmin.context.context, ccache.as_mut_ptr()) }
-    //         };
-    //         krb5_error_code_escape_hatch(&kadmin.context, code)?;
-    //         unsafe { ccache.assume_init() }
-    //     };
-    //
-    //     let client_name = if let Some(client_name) = client_name {
-    //         CString::new(client_name)?
-    //     } else {
-    //         let mut princ_ptr: MaybeUninit<krb5_principal> = MaybeUninit::zeroed();
-    //         let code = unsafe {
-    //             krb5_cc_get_principal(kadmin.context.context, ccache, princ_ptr.as_mut_ptr())
-    //         };
-    //         krb5_error_code_escape_hatch(&kadmin.context, code)?;
-    //         let princ = unsafe { princ_ptr.assume_init() };
-    //         let mut raw_client_name: *mut c_char = null_mut();
-    //         let code =
-    //             unsafe { krb5_unparse_name(kadmin.context.context, princ, &mut raw_client_name)
-    // };         krb5_error_code_escape_hatch(&kadmin.context, code)?;
-    //         unsafe {
-    //             krb5_free_principal(kadmin.context.context, princ);
-    //         }
-    //         let client_name = unsafe { CStr::from_ptr(raw_client_name) }.to_owned();
-    //         unsafe {
-    //             krb5_free_unparsed_name(kadmin.context.context, raw_client_name);
-    //         }
-    //         client_name
-    //     };
-    //     let service_name = KADM5_ADMIN_SERVICE.to_owned();
-    //
-    //     let mut params = params;
-    //
-    //     let code = unsafe {
-    //         kadm5_init_with_creds(
-    //             kadmin.context.context,
-    //             client_name.as_ptr().cast_mut(),
-    //             ccache,
-    //             service_name.as_ptr().cast_mut(),
-    //             &mut params.params,
-    //             KADM5_STRUCT_VERSION,
-    //             api_version.into(),
-    //             db_args.db_args,
-    //             &mut kadmin.server_handle,
-    //         )
-    //     };
-    //
-    //     unsafe {
-    //         krb5_cc_close(kadmin.context.context, ccache);
-    //     }
-    //
-    //     drop(_guard);
-    //
-    //     kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
-    //
-    //     Ok(kadmin)
-    // }
-
     /// Not implemented
     pub fn with_anonymous(self, _client_name: &str) -> Result<KAdmin> {
         let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
-        let (mut _kadmin, _params, _db_args, _api_version) = self.get_kadmin()?;
+        let (mut _kadmin, _params, _db_args, _api_version, _service_name, _struct_version) =
+            self.get_kadmin()?;
 
         unimplemented!();
     }
 
-    // /// Construct a [`KAdmin`] object from this builder for local database manipulation.
-    // pub fn with_local(self) -> Result<KAdmin> {
-    //     let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
-    //
-    //     let (mut kadmin, params, db_args, api_version) = self.get_kadmin()?;
-    //
-    //     let client_name = if let Some(default_realm) = &kadmin.context.default_realm {
-    //         let mut concat = CString::new("root/admin@")?.into_bytes();
-    //         concat.extend_from_slice(default_realm.to_bytes_with_nul());
-    //         CString::from_vec_with_nul(concat)?
-    //     } else {
-    //         CString::new("root/admin")?
-    //     };
-    //     let service_name = KADM5_ADMIN_SERVICE.to_owned();
-    //
-    //     let mut params = params;
-    //
-    //     let code = unsafe {
-    //         kadm5_init_with_creds(
-    //             kadmin.context.context,
-    //             client_name.as_ptr().cast_mut(),
-    //             null_mut(),
-    //             service_name.as_ptr().cast_mut(),
-    //             &mut params.params,
-    //             KADM5_STRUCT_VERSION,
-    //             api_version.into(),
-    //             db_args.db_args,
-    //             &mut kadmin.server_handle,
-    //         )
-    //     };
-    //
-    //     drop(_guard);
-    //
-    //     kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
-    //
-    //     Ok(kadmin)
-    // }
+    /// Construct a [`KAdmin`] object from this builder for local database manipulation.
+    pub fn with_local(self) -> Result<KAdmin> {
+        let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
+
+        let (mut kadmin, params, db_args, api_version, service_name, struct_version) =
+            self.get_kadmin()?;
+
+        if !kadmin.context.library.is_server() {
+            return Err(Error::LibraryMismatch(
+                "with_local can only be used with server-side libraries",
+            ));
+        }
+
+        let client_name = if let Some(default_realm) = &kadmin.context.default_realm {
+            let mut concat = CString::new("root/admin@")?.into_bytes();
+            concat.extend_from_slice(default_realm.to_bytes_with_nul());
+            CString::from_vec_with_nul(concat)?
+        } else {
+            CString::new("root/admin")?
+        };
+
+        let code = match &kadmin.context.library {
+            #[cfg(mit)]
+            Library::MitServer(cont) => unsafe {
+                cont.kadm5_init_with_creds(
+                    kadmin.context.context as sys::mit::krb5_context,
+                    client_name.as_ptr().cast_mut(),
+                    null_mut(),
+                    service_name.as_ptr().cast_mut(),
+                    &mut params.params_mit.unwrap(),
+                    struct_version,
+                    api_version,
+                    db_args.db_args,
+                    &mut kadmin.server_handle,
+                )
+            },
+            #[cfg(heimdal)]
+            Library::HeimdalServer(cont) => unsafe {
+                cont.kadm5_init_with_creds_ctx(
+                    kadmin.context.context as sys::heimdal::krb5_context,
+                    client_name.as_ptr().cast_mut(),
+                    null_mut(),
+                    service_name.as_ptr().cast_mut(),
+                    &mut params.params_heimdal.unwrap(),
+                    struct_version.into(),
+                    api_version.into(),
+                    &mut kadmin.server_handle,
+                )
+            }
+            .into(),
+            _ => unreachable!(),
+        };
+
+        drop(_guard);
+
+        kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
+
+        Ok(kadmin)
+    }
 }
