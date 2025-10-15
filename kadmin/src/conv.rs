@@ -9,10 +9,6 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
-#[cfg(all(heimdal, not(mit)))]
-use crate::sys::heimdal::{krb5_deltat, krb5_timestamp};
-#[cfg(mit)]
-use crate::sys::mit::{krb5_deltat, krb5_timestamp};
 use crate::{
     context::Context,
     error::{Error, Result, krb5_error_code_escape_hatch},
@@ -32,7 +28,7 @@ pub(crate) fn c_string_to_string(c_string: *const c_char) -> Result<String> {
 }
 
 /// Convert a [`krb5_timestamp`] to a [`DateTime<Utc>`]
-pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
+pub(crate) fn ts_to_dt(ts: i32) -> Result<Option<DateTime<Utc>>> {
     if ts == 0 {
         return Ok(None);
     }
@@ -42,16 +38,9 @@ pub(crate) fn ts_to_dt(ts: krb5_timestamp) -> Result<Option<DateTime<Utc>>> {
 }
 
 /// Convert a [`DateTime<Utc>`] to a [`krb5_timestamp`]
-pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<krb5_timestamp> {
+pub(crate) fn dt_to_ts(dt: Option<DateTime<Utc>>) -> Result<i32> {
     if let Some(dt) = dt {
-        #[cfg(mit)]
-        {
-            dt.timestamp().try_into().map_err(Error::DateTimeConversion)
-        }
-        #[cfg(all(heimdal, not(mit)))]
-        {
-            Ok(dt.timestamp())
-        }
+        dt.timestamp().try_into().map_err(Error::DateTimeConversion)
     } else {
         Ok(0)
     }
@@ -66,7 +55,7 @@ pub(crate) fn delta_to_dur(delta: i64) -> Option<Duration> {
 }
 
 /// Convert a [`Duration`] to a [`krb5_deltat`]
-pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<krb5_deltat> {
+pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<i32> {
     if let Some(dur) = dur {
         dur.as_secs().try_into().map_err(Error::DateTimeConversion)
     } else {

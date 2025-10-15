@@ -6,7 +6,6 @@ use std::{
 };
 
 use getset::{CopyGetters, Getters};
-use kadmin_sys::*;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
@@ -14,8 +13,13 @@ use crate::{
     conv::{c_string_to_string, delta_to_dur, dur_to_delta},
     error::Result,
     kadmin::KAdminImpl,
-    keysalt::KeySalts,
-    tl_data::{TlData, TlDataRaw},
+    sys::mit::{
+        _kadm5_policy_ent_t, KADM5_POLICY_ATTRIBUTES, KADM5_POLICY_MAX_LIFE,
+        KADM5_POLICY_MAX_RLIFE, KADM5_POLICY_TL_DATA, KADM5_PW_FAILURE_COUNT_INTERVAL,
+        KADM5_PW_HISTORY_NUM, KADM5_PW_LOCKOUT_DURATION, KADM5_PW_MAX_FAILURE, KADM5_PW_MAX_LIFE,
+        KADM5_PW_MIN_CLASSES, KADM5_PW_MIN_LENGTH, KADM5_PW_MIN_LIFE,
+    },
+    tl_data::{TlData, TlDataRawMit},
 };
 
 /// A kadm5 policy
@@ -31,22 +35,22 @@ pub struct Policy {
     /// Maximum lifetime of a password
     password_max_life: Option<Duration>,
     /// Minimum length of a password
-    password_min_length: c_long,
+    password_min_length: i64,
     /// Minimum number of character classes required in a password. The five character classes are
     /// lower case, upper case, numbers, punctuation, and whitespace/unprintable characters
-    password_min_classes: c_long,
+    password_min_classes: i64,
     /// Number of past keys kept for a principal. May not be filled if used with other database
     /// modules such as the MIT krb5 LDAP KDC database module
-    password_history_num: c_long,
+    password_history_num: i64,
     /// How many principals use this policy. Not filled for at least MIT krb5
-    policy_refcnt: c_long,
+    policy_refcnt: i64,
     /// Number of authentication failures before the principal is locked. Authentication failures
     /// are only tracked for principals which require preauthentication. The counter of failed
     /// attempts resets to 0 after a successful attempt to authenticate. A value of 0 disables
     /// lock‐out
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 3 and above
-    password_max_fail: krb5_kvno,
+    password_max_fail: u32,
     /// Allowable time between authentication failures. If an authentication failure happens after
     /// this duration has elapsed since the previous failure, the number of authentication failures
     /// is reset to 1. A value of `None` means forever
@@ -62,7 +66,7 @@ pub struct Policy {
     /// Policy attributes
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    attributes: krb5_flags,
+    attributes: i32,
     /// Maximum ticket life
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
@@ -71,11 +75,12 @@ pub struct Policy {
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_renewable_life: Option<Duration>,
-    /// Allowed keysalts
-    ///
-    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    #[getset(skip)]
-    allowed_keysalts: Option<KeySalts>,
+    // TODO: this
+    // /// Allowed keysalts
+    // ///
+    // /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    // #[getset(skip)]
+    // allowed_keysalts: Option<KeySalts>,
     /// TL-data
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
@@ -100,14 +105,14 @@ impl Policy {
             attributes: entry.attributes,
             max_life: delta_to_dur(entry.max_life.into()),
             max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
-            allowed_keysalts: if !entry.allowed_keysalts.is_null() {
-                Some(KeySalts::from_str(&c_string_to_string(
-                    entry.allowed_keysalts,
-                )?)?)
-            } else {
-                None
-            },
-            tl_data: TlData::from_raw(entry.n_tl_data, entry.tl_data),
+            // allowed_keysalts: if !entry.allowed_keysalts.is_null() {
+            //     Some(KeySalts::from_str(&c_string_to_string(
+            //         entry.allowed_keysalts,
+            //     )?)?)
+            // } else {
+            //     None
+            // },
+            tl_data: TlData::from_raw_mit(entry.n_tl_data, entry.tl_data),
         })
     }
 
@@ -116,12 +121,13 @@ impl Policy {
         &self.name
     }
 
-    /// Allowed keysalts
-    ///
-    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
-        self.allowed_keysalts.as_ref()
-    }
+    // TODO: this
+    // /// Allowed keysalts
+    // ///
+    // /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    // pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
+    //     self.allowed_keysalts.as_ref()
+    // }
 
     /// TL-data
     ///
@@ -196,13 +202,13 @@ macro_rules! policy_doer_struct {
             pub(crate) password_min_length: Option<c_long>,
             pub(crate) password_min_classes: Option<c_long>,
             pub(crate) password_history_num: Option<c_long>,
-            pub(crate) password_max_fail: Option<krb5_kvno>,
+            pub(crate) password_max_fail: Option<u32>,
             pub(crate) password_failcount_interval: Option<Option<Duration>>,
             pub(crate) password_lockout_duration: Option<Option<Duration>>,
-            pub(crate) attributes: Option<krb5_flags>,
+            pub(crate) attributes: Option<i32>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
-            pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
+            // pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
             pub(crate) tl_data: Option<TlData>,
             $($manual_fields)*
         }
@@ -265,7 +271,7 @@ macro_rules! policy_doer_impl {
         /// disables lock‐out
         ///
         /// Defaults to not set
-        pub fn password_max_fail(mut self, password_max_fail: krb5_kvno) -> Self {
+        pub fn password_max_fail(mut self, password_max_fail: u32) -> Self {
             self.password_max_fail = Some(password_max_fail);
             self.mask |= KADM5_PW_MAX_FAILURE as c_long;
             self
@@ -300,7 +306,7 @@ macro_rules! policy_doer_impl {
         }
 
         /// Set policy attributes
-        pub fn attributes(mut self, attributes: krb5_flags) -> Self {
+        pub fn attributes(mut self, attributes: i32) -> Self {
             self.attributes = Some(attributes);
             self.mask |= KADM5_POLICY_ATTRIBUTES as c_long;
             self
@@ -320,14 +326,15 @@ macro_rules! policy_doer_impl {
             self
         }
 
-        /// Set the allowed keysalts
-        ///
-        /// Pass `None` to clear it. Defaults to not set
-        pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
-            self.allowed_keysalts = Some(allowed_keysalts);
-            self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as c_long;
-            self
-        }
+        // TODO: this
+        // /// Set the allowed keysalts
+        // ///
+        // /// Pass `None` to clear it. Defaults to not set
+        // pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
+        //     self.allowed_keysalts = Some(allowed_keysalts);
+        //     self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as c_long;
+        //     self
+        // }
 
         /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
@@ -374,21 +381,21 @@ macro_rules! policy_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 policy.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
-            let allowed_keysalts = if let Some(allowed_keysalts) = &self.allowed_keysalts {
-                if let Some(allowed_keysalts) = allowed_keysalts {
-                    let raw_allowed_keysalts = allowed_keysalts.to_cstring()?;
-                    policy.allowed_keysalts = raw_allowed_keysalts.as_ptr().cast_mut();
-                    Some(raw_allowed_keysalts)
-                } else {
-                    policy.allowed_keysalts = null_mut();
-                    None
-                }
-            } else {
-                None
-            };
+            // let allowed_keysalts = if let Some(allowed_keysalts) = &self.allowed_keysalts {
+            //     if let Some(allowed_keysalts) = allowed_keysalts {
+            //         let raw_allowed_keysalts = allowed_keysalts.to_cstring()?;
+            //         policy.allowed_keysalts = raw_allowed_keysalts.as_ptr().cast_mut();
+            //         Some(raw_allowed_keysalts)
+            //     } else {
+            //         policy.allowed_keysalts = null_mut();
+            //         None
+            //     }
+            // } else {
+            //     None
+            // };
             let tl_data = if let Some(tl_data) = &self.tl_data {
-                let raw_tl_data = tl_data.to_raw();
-                policy.n_tl_data = tl_data.entries.len() as krb5_int16;
+                let raw_tl_data = tl_data.to_raw_mit();
+                policy.n_tl_data = tl_data.entries.len() as i16;
                 policy.tl_data = raw_tl_data.raw;
                 Some(raw_tl_data)
             } else {
@@ -397,7 +404,7 @@ macro_rules! policy_doer_impl {
             Ok(PolicyEntryRaw {
                 raw: policy,
                 _raw_name: name,
-                _raw_allowed_keysalts: allowed_keysalts,
+                // _raw_allowed_keysalts: allowed_keysalts,
                 _raw_tl_data: tl_data,
             })
         }
@@ -492,6 +499,6 @@ impl PolicyModifier {
 pub(crate) struct PolicyEntryRaw {
     pub(crate) raw: _kadm5_policy_ent_t,
     _raw_name: CString,
-    _raw_allowed_keysalts: Option<CString>,
-    _raw_tl_data: Option<TlDataRaw>,
+    // _raw_allowed_keysalts: Option<CString>,
+    _raw_tl_data: Option<TlDataRawMit>,
 }

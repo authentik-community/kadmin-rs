@@ -415,7 +415,11 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
     if config.variant == KAdm5Variant::Mit {
         builder = builder
             .allowlist_function("kadm5_delete_policy")
-            .allowlist_function("kadm5_get_policies");
+            .allowlist_function("kadm5_modify_policy")
+            .allowlist_function("kadm5_get_policies")
+            .allowlist_function("kadm5_get_policy")
+            .allowlist_function("kadm5_free_policy_ent")
+            .allowlist_function("kadm5_create_policy");
     }
 
     for include_path in &config.include_paths {

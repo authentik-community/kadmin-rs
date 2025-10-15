@@ -73,10 +73,12 @@ pub mod kadmin;
 pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl}; //, KAdminPrivileges};
 
 // pub mod sync;
-//
-// pub mod policy;
-// pub use policy::Policy;
-//
+
+#[cfg(mit)]
+pub mod policy;
+#[cfg(mit)]
+pub use policy::Policy;
+
 // pub mod principal;
 // pub use principal::{Principal, PrincipalAttributes};
 
