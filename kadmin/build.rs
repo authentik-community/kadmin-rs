@@ -377,14 +377,15 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
         .allowlist_function("kadm5_free_name_list")
         .allowlist_function("kadm5_free_strings")
         .allowlist_function("kadm5_get_principals")
+        .allowlist_function("kadm5_get_privs")
         .allowlist_function("kadm5_get_strings")
         .allowlist_function("kadm5_init_krb5_context")
+        .allowlist_function("kadm5_init_with_creds")
+        .allowlist_function("kadm5_init_with_creds_ctx")
         .allowlist_function("kadm5_init_with_password")
         .allowlist_function("kadm5_init_with_password_ctx")
         .allowlist_function("kadm5_init_with_skey")
         .allowlist_function("kadm5_init_with_skey_ctx")
-        .allowlist_function("kadm5_init_with_creds")
-        .allowlist_function("kadm5_init_with_creds_ctx")
         .allowlist_function("kadm5_rename_principal")
         .allowlist_function("kadm5_set_string")
         .allowlist_function("krb5_cc_close")
@@ -414,12 +415,12 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
     #[cfg(feature = "mit")]
     if config.variant == KAdm5Variant::Mit {
         builder = builder
+            .allowlist_function("kadm5_create_policy")
             .allowlist_function("kadm5_delete_policy")
-            .allowlist_function("kadm5_modify_policy")
+            .allowlist_function("kadm5_free_policy_ent")
             .allowlist_function("kadm5_get_policies")
             .allowlist_function("kadm5_get_policy")
-            .allowlist_function("kadm5_free_policy_ent")
-            .allowlist_function("kadm5_create_policy");
+            .allowlist_function("kadm5_modify_policy");
     }
 
     for include_path in &config.include_paths {

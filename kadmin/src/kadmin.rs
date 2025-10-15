@@ -16,10 +16,13 @@ use pyo3::prelude::*;
 
 #[cfg(heimdal)]
 use crate::conv::unparse_name_heimdal;
-#[cfg(mit)]
-use crate::conv::unparse_name_mit;
-#[cfg(mit)]
-use crate::policy::{Policy, PolicyBuilder, PolicyModifier};
+#[cfg(heimdal)]
+use crate::sys::heimdal::{
+    KADM5_PRIV_ADD, KADM5_PRIV_CPW, KADM5_PRIV_DELETE, KADM5_PRIV_GET, KADM5_PRIV_GET_KEYS,
+    KADM5_PRIV_LIST, KADM5_PRIV_MODIFY,
+};
+#[cfg(all(mit, not(heimdal)))]
+use crate::sys::mit::{KADM5_PRIV_ADD, KADM5_PRIV_DELETE, KADM5_PRIV_GET, KADM5_PRIV_MODIFY};
 use crate::{
     context::Context,
     conv::{c_string_to_string, parse_name},
@@ -28,6 +31,11 @@ use crate::{
     // keysalt::KeySalts,
     // principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
     sys::{self, KAdm5Variant, Library},
+};
+#[cfg(mit)]
+use crate::{
+    conv::unparse_name_mit,
+    policy::{Policy, PolicyBuilder, PolicyModifier},
 };
 
 /// Lock acquired when creating or dropping a [`KAdmin`] instance
@@ -101,25 +109,34 @@ impl KAdminApiVersion {
 }
 
 /// KAdmin privileges
-// #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-// #[repr(transparent)]
-// #[cfg_attr(feature = "python", pyclass(eq))]
-// pub struct KAdminPrivileges(c_long);
-//
-// bitflags! {
-//     impl KAdminPrivileges: c_long {
-//         /// Inquire privilege
-//         const Inquire = KADM5_PRIV_GET as c_long;
-//         /// Add privilege
-//         const Add = KADM5_PRIV_ADD as c_long;
-//         /// Modify privilege
-//         const Modify = KADM5_PRIV_MODIFY as c_long;
-//         /// Delete privilege
-//         const Delete = KADM5_PRIV_DELETE as c_long;
-//
-//         const _ = !0;
-//     }
-// }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[cfg_attr(feature = "python", pyclass(eq))]
+pub struct KAdminPrivileges(i64);
+
+bitflags! {
+    impl KAdminPrivileges: c_long {
+        /// Inquire privilege
+        const Inquire = KADM5_PRIV_GET as i64;
+        /// Add privilege
+        const Add = KADM5_PRIV_ADD as i64;
+        /// Modify privilege
+        const Modify = KADM5_PRIV_MODIFY as i64;
+        /// Delete privilege
+        const Delete = KADM5_PRIV_DELETE as i64;
+        #[cfg(heimdal)]
+        /// List privilege
+        const List = KADM5_PRIV_LIST as i64;
+        #[cfg(heimdal)]
+        /// Change password privilege
+        const ChangePassword = KADM5_PRIV_CPW as i64;
+        #[cfg(heimdal)]
+        /// Get keys privilege
+        const GetKeys = KADM5_PRIV_GET_KEYS as i64;
+
+        const _ = !0;
+    }
+}
 
 /// Interface to kadm5
 ///
@@ -330,8 +347,8 @@ pub trait KAdminImpl {
     #[doc(alias("listpols", "get_policies", "getpols"))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;
 
-    // /// Get current privileges
-    // fn get_privileges(&self) -> Result<KAdminPrivileges>;
+    /// Get current privileges
+    fn get_privileges(&self) -> Result<KAdminPrivileges>;
 }
 
 impl KAdmin {
@@ -802,6 +819,7 @@ impl KAdminImpl for KAdmin {
         Ok(())
     }
 
+    #[cfg(mit)]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
         if !self.context.library.is_mit() {
             return Err(Error::LibraryMismatch(
@@ -874,12 +892,24 @@ impl KAdminImpl for KAdmin {
         Ok(result)
     }
 
-    // fn get_privileges(&self) -> Result<KAdminPrivileges> {
-    //     let mut privs = 0;
-    //     let code = unsafe { kadm5_get_privs(self.server_handle, &mut privs) };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(KAdminPrivileges::from_bits_retain(privs))
-    // }
+    fn get_privileges(&self) -> Result<KAdminPrivileges> {
+        let (privs, code) = match &self.context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) | Library::MitServer(cont) => {
+                let mut privs = 0;
+                let code = unsafe { cont.kadm5_get_privs(self.server_handle, &mut privs) };
+                (privs, code)
+            }
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+                let mut privs = 0;
+                let code = unsafe { cont.kadm5_get_privs(self.server_handle, &mut privs) };
+                (privs.into(), code.into())
+            }
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(KAdminPrivileges::from_bits_retain(privs))
+    }
 }
 
 impl Drop for KAdmin {
@@ -1756,5 +1786,19 @@ impl KAdminBuilder {
         kadm5_ret_t_escape_hatch(&kadmin.context, code)?;
 
         Ok(kadmin)
+    }
+}
+
+#[cfg(test)]
+mod tests_sys {
+    use crate::sys;
+
+    #[cfg(all(mit, heimdal))]
+    #[test]
+    fn test_kadmin_privileges_are_same() {
+        assert_eq!(sys::mit::KADM5_PRIV_GET, sys::heimdal::KADM5_PRIV_GET);
+        assert_eq!(sys::mit::KADM5_PRIV_ADD, sys::heimdal::KADM5_PRIV_ADD);
+        assert_eq!(sys::mit::KADM5_PRIV_MODIFY, sys::heimdal::KADM5_PRIV_MODIFY);
+        assert_eq!(sys::mit::KADM5_PRIV_DELETE, sys::heimdal::KADM5_PRIV_DELETE);
     }
 }

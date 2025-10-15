@@ -70,7 +70,7 @@ pub use tl_data::{TlData, TlDataEntry};
 // pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
 pub mod kadmin;
-pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl}; //, KAdminPrivileges};
+pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
 
 // pub mod sync;
 
