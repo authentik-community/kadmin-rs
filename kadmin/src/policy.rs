@@ -10,14 +10,17 @@ use getset::{CopyGetters, Getters};
 use pyo3::prelude::*;
 
 use crate::{
+    KeySalts,
+    context::Context,
     conv::{c_string_to_string, delta_to_dur, dur_to_delta},
     error::Result,
     kadmin::KAdminImpl,
     sys::mit::{
-        _kadm5_policy_ent_t, KADM5_POLICY_ATTRIBUTES, KADM5_POLICY_MAX_LIFE,
-        KADM5_POLICY_MAX_RLIFE, KADM5_POLICY_TL_DATA, KADM5_PW_FAILURE_COUNT_INTERVAL,
-        KADM5_PW_HISTORY_NUM, KADM5_PW_LOCKOUT_DURATION, KADM5_PW_MAX_FAILURE, KADM5_PW_MAX_LIFE,
-        KADM5_PW_MIN_CLASSES, KADM5_PW_MIN_LENGTH, KADM5_PW_MIN_LIFE,
+        _kadm5_policy_ent_t, KADM5_POLICY_ALLOWED_KEYSALTS, KADM5_POLICY_ATTRIBUTES,
+        KADM5_POLICY_MAX_LIFE, KADM5_POLICY_MAX_RLIFE, KADM5_POLICY_TL_DATA,
+        KADM5_PW_FAILURE_COUNT_INTERVAL, KADM5_PW_HISTORY_NUM, KADM5_PW_LOCKOUT_DURATION,
+        KADM5_PW_MAX_FAILURE, KADM5_PW_MAX_LIFE, KADM5_PW_MIN_CLASSES, KADM5_PW_MIN_LENGTH,
+        KADM5_PW_MIN_LIFE,
     },
     tl_data::{TlData, TlDataRawMit},
 };
@@ -75,12 +78,11 @@ pub struct Policy {
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     max_renewable_life: Option<Duration>,
-    // TODO: this
-    // /// Allowed keysalts
-    // ///
-    // /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    // #[getset(skip)]
-    // allowed_keysalts: Option<KeySalts>,
+    /// Allowed keysalts
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    #[getset(skip)]
+    allowed_keysalts: Option<KeySalts>,
     /// TL-data
     ///
     /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
@@ -90,7 +92,7 @@ pub struct Policy {
 
 impl Policy {
     /// Create a [`Policy`] from [`_kadm5_policy_ent_t`]
-    pub(crate) fn from_raw(entry: &_kadm5_policy_ent_t) -> Result<Self> {
+    pub(crate) fn from_raw(context: &Context, entry: &_kadm5_policy_ent_t) -> Result<Self> {
         Ok(Self {
             name: c_string_to_string(entry.policy)?,
             password_min_life: delta_to_dur(entry.pw_min_life),
@@ -105,13 +107,14 @@ impl Policy {
             attributes: entry.attributes,
             max_life: delta_to_dur(entry.max_life.into()),
             max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
-            // allowed_keysalts: if !entry.allowed_keysalts.is_null() {
-            //     Some(KeySalts::from_str(&c_string_to_string(
-            //         entry.allowed_keysalts,
-            //     )?)?)
-            // } else {
-            //     None
-            // },
+            allowed_keysalts: if !entry.allowed_keysalts.is_null() {
+                Some(KeySalts::from_str(
+                    context,
+                    &c_string_to_string(entry.allowed_keysalts)?,
+                )?)
+            } else {
+                None
+            },
             tl_data: TlData::from_raw_mit(entry.n_tl_data, entry.tl_data),
         })
     }
@@ -121,13 +124,12 @@ impl Policy {
         &self.name
     }
 
-    // TODO: this
-    // /// Allowed keysalts
-    // ///
-    // /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
-    // pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
-    //     self.allowed_keysalts.as_ref()
-    // }
+    /// Allowed keysalts
+    ///
+    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
+        self.allowed_keysalts.as_ref()
+    }
 
     /// TL-data
     ///
@@ -208,7 +210,7 @@ macro_rules! policy_doer_struct {
             pub(crate) attributes: Option<i32>,
             pub(crate) max_life: Option<Option<Duration>>,
             pub(crate) max_renewable_life: Option<Option<Duration>>,
-            // pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
+            pub(crate) allowed_keysalts: Option<Option<KeySalts>>,
             pub(crate) tl_data: Option<TlData>,
             $($manual_fields)*
         }
@@ -326,15 +328,14 @@ macro_rules! policy_doer_impl {
             self
         }
 
-        // TODO: this
-        // /// Set the allowed keysalts
-        // ///
-        // /// Pass `None` to clear it. Defaults to not set
-        // pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
-        //     self.allowed_keysalts = Some(allowed_keysalts);
-        //     self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as c_long;
-        //     self
-        // }
+        /// Set the allowed keysalts
+        ///
+        /// Pass `None` to clear it. Defaults to not set
+        pub fn allowed_keysalts(mut self, allowed_keysalts: Option<KeySalts>) -> Self {
+            self.allowed_keysalts = Some(allowed_keysalts);
+            self.mask |= KADM5_POLICY_ALLOWED_KEYSALTS as c_long;
+            self
+        }
 
         /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
@@ -344,7 +345,7 @@ macro_rules! policy_doer_impl {
         }
 
         /// Create a [`_kadm5_policy_ent_t`] from this builder
-        pub(crate) fn make_entry(&self) -> Result<PolicyEntryRaw> {
+        pub(crate) fn make_entry(&self, context: &Context) -> Result<PolicyEntryRaw> {
             let mut policy = _kadm5_policy_ent_t::default();
             let name = CString::new(self.name.clone())?;
             policy.policy = name.as_ptr().cast_mut();
@@ -381,18 +382,18 @@ macro_rules! policy_doer_impl {
             if let Some(max_renewable_life) = self.max_renewable_life {
                 policy.max_renewable_life = dur_to_delta(max_renewable_life)?;
             }
-            // let allowed_keysalts = if let Some(allowed_keysalts) = &self.allowed_keysalts {
-            //     if let Some(allowed_keysalts) = allowed_keysalts {
-            //         let raw_allowed_keysalts = allowed_keysalts.to_cstring()?;
-            //         policy.allowed_keysalts = raw_allowed_keysalts.as_ptr().cast_mut();
-            //         Some(raw_allowed_keysalts)
-            //     } else {
-            //         policy.allowed_keysalts = null_mut();
-            //         None
-            //     }
-            // } else {
-            //     None
-            // };
+            let allowed_keysalts = if let Some(allowed_keysalts) = &self.allowed_keysalts {
+                if let Some(allowed_keysalts) = allowed_keysalts {
+                    let raw_allowed_keysalts = allowed_keysalts.to_cstring(context)?;
+                    policy.allowed_keysalts = raw_allowed_keysalts.as_ptr().cast_mut();
+                    Some(raw_allowed_keysalts)
+                } else {
+                    policy.allowed_keysalts = null_mut();
+                    None
+                }
+            } else {
+                None
+            };
             let tl_data = if let Some(tl_data) = &self.tl_data {
                 let raw_tl_data = tl_data.to_raw_mit();
                 policy.n_tl_data = tl_data.entries.len() as i16;

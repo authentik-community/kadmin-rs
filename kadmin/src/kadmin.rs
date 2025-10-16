@@ -769,7 +769,7 @@ impl KAdminImpl for KAdmin {
             ));
         }
 
-        let mut entry = builder.make_entry()?;
+        let mut entry = builder.make_entry(&self.context)?;
         let mask = builder.mask | sys::mit::KADM5_POLICY as c_long;
         let code = match &self.context.library {
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
@@ -789,7 +789,7 @@ impl KAdminImpl for KAdmin {
             ));
         }
 
-        let mut entry = modifier.make_entry()?;
+        let mut entry = modifier.make_entry(&self.context)?;
         let code = match &self.context.library {
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.kadm5_modify_policy(self.server_handle, &mut entry.raw, modifier.mask)
@@ -843,7 +843,7 @@ impl KAdminImpl for KAdmin {
             return Ok(None);
         }
         kadm5_ret_t_escape_hatch(&self.context, code)?;
-        let policy = Policy::from_raw(&policy_ent)?;
+        let policy = Policy::from_raw(&self.context, &policy_ent)?;
         match &self.context.library {
             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
                 cont.kadm5_free_policy_ent(self.server_handle, &mut policy_ent)

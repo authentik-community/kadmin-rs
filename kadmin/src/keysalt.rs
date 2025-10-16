@@ -1,14 +1,18 @@
 //! Kerberos keysalt lists
 use std::{
     collections::HashSet,
-    ffi::{CStr, CString, c_char},
-    str::FromStr,
+    ffi::{CStr, CString, c_char, c_void},
+    ptr::null_mut,
 };
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
-use crate::error::{Error, Result};
+use crate::{
+    context::Context,
+    error::{Error, Result, krb5_error_code_escape_hatch},
+    sys::{self, Library},
+};
 
 /// Kerberos encryption type
 // In MIT krb5: src/lib/crypto/krb/etypes.c
@@ -30,45 +34,72 @@ impl From<i32> for EncryptionType {
     }
 }
 
-// impl FromStr for EncryptionType {
-//     type Err = Error;
-//
-//     fn from_str(s: &str) -> Result<Self> {
-//         let s = CString::new(s)?;
-//         let mut enctype = -1;
-//         let code = unsafe { krb5_string_to_enctype(s.as_ptr().cast_mut(), &mut enctype) };
-//         if code != KRB5_OK {
-//             Err(Error::EncryptionTypeConversion)
-//         } else {
-//             enctype.try_into()
-//         }
-//     }
-// }
+impl EncryptionType {
+    fn from_str(context: &Context, s: &str) -> Result<Self> {
+        let s = CString::new(s)?;
+        let mut enctype = -1;
+        let code = match &context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
+                cont.krb5_string_to_enctype(s.as_ptr().cast_mut(), &mut enctype)
+            },
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
+                cont.krb5_string_to_enctype(
+                    context.context as sys::heimdal::krb5_context,
+                    s.as_ptr().cast_mut(),
+                    &mut enctype,
+                )
+            },
+        };
+        if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+            Err(Error::EncryptionTypeConversion)
+        } else {
+            Ok(enctype.into())
+        }
+    }
 
-// impl TryFrom<&str> for EncryptionType {
-//     type Error = Error;
-//
-//     fn try_from(s: &str) -> Result<Self> {
-//         Self::from_str(s)
-//     }
-// }
-
-// impl TryFrom<EncryptionType> for String {
-//     type Error = Error;
-//
-//     fn try_from(enctype: EncryptionType) -> Result<Self> {
-//         let buffer = [0; 100];
-//         let code = unsafe {
-//             let mut b: [c_char; 100] = std::mem::transmute(buffer);
-//             krb5_enctype_to_string(enctype.into(), b.as_mut_ptr(), 100)
-//         };
-//         if code != KRB5_OK {
-//             return Err(Error::EncryptionTypeConversion);
-//         }
-//         let s = CStr::from_bytes_until_nul(&buffer).map_err(|_|
-// Error::EncryptionTypeConversion)?;         Ok(s.to_owned().into_string()?)
-//     }
-// }
+    fn to_string(self, context: &Context) -> Result<String> {
+        match &context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) | Library::MitServer(cont) => {
+                let buffer = [0; 100];
+                let code = unsafe {
+                    let mut b: [c_char; 100] = std::mem::transmute(buffer);
+                    cont.krb5_enctype_to_string(self.into(), b.as_mut_ptr(), 100)
+                };
+                if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+                    return Err(Error::EncryptionTypeConversion);
+                }
+                let s = CStr::from_bytes_until_nul(&buffer)
+                    .map_err(|_| Error::EncryptionTypeConversion)?;
+                Ok(s.to_owned().into_string()?)
+            }
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+                let mut raw: *mut i8 = null_mut();
+                let code = unsafe {
+                    cont.krb5_enctype_to_string(
+                        context.context as sys::heimdal::krb5_context,
+                        self.into(),
+                        &mut raw,
+                    )
+                };
+                if raw.is_null() {
+                    return Err(Error::EncryptionTypeConversion);
+                }
+                let s = unsafe { CStr::from_ptr(raw) };
+                if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+                    unsafe { libc::free(raw as *mut c_void) };
+                    return Err(Error::EncryptionTypeConversion);
+                }
+                let res = s.to_owned().into_string()?;
+                unsafe { libc::free(raw as *mut c_void) };
+                Ok(res)
+            }
+        }
+    }
+}
 
 /// Kerberos salt type
 // In MIT krb5: src/lib/krb5/krb/str_conv.c
@@ -90,60 +121,80 @@ impl From<i32> for SaltType {
     }
 }
 
-// impl FromStr for SaltType {
-//     type Err = Error;
-//
-//     fn from_str(s: &str) -> Result<Self> {
-//         if s.is_empty() {
-//             return Ok(SaltType::Normal);
-//         }
-//         let s = CString::new(s)?;
-//         let mut salttype = 0;
-//         let code = unsafe { krb5_string_to_salttype(s.as_ptr().cast_mut(), &mut salttype) };
-//         if code != KRB5_OK {
-//             Err(Error::SaltTypeConversion)
-//         } else {
-//             salttype.try_into()
-//         }
-//     }
-// }
+impl SaltType {
+    fn from_str(context: &Context, enctype: EncryptionType, s: &str) -> Result<Self> {
+        let s = CString::new(s)?;
+        let (salttype, code) = match &context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) | Library::MitServer(cont) => {
+                let mut salttype = -1;
+                let code =
+                    unsafe { cont.krb5_string_to_salttype(s.as_ptr().cast_mut(), &mut salttype) };
+                (salttype, code)
+            }
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+                let mut salttype = 0;
+                let code = unsafe {
+                    cont.krb5_string_to_salttype(
+                        context.context as sys::heimdal::krb5_context,
+                        enctype.into(),
+                        s.as_ptr().cast_mut(),
+                        &mut salttype,
+                    )
+                };
+                (salttype as i32, code)
+            }
+        };
+        if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+            Err(Error::EncryptionTypeConversion)
+        } else {
+            Ok(salttype.into())
+        }
+    }
 
-// impl TryFrom<&str> for SaltType {
-//     type Error = Error;
-//
-//     fn try_from(s: &str) -> Result<Self> {
-//         Self::from_str(s)
-//     }
-// }
-
-// impl TryFrom<Option<&str>> for SaltType {
-//     type Error = Error;
-//
-//     fn try_from(s: Option<&str>) -> Result<Self> {
-//         if let Some(s) = s {
-//             s.try_into()
-//         } else {
-//             Ok(SaltType::Normal)
-//         }
-//     }
-// }
-
-// impl TryFrom<SaltType> for String {
-//     type Error = Error;
-//
-//     fn try_from(salttype: SaltType) -> Result<Self> {
-//         let buffer = [0; 100];
-//         let code = unsafe {
-//             let mut b: [c_char; 100] = std::mem::transmute(buffer);
-//             krb5_enctype_to_string(salttype.into(), b.as_mut_ptr(), 100)
-//         };
-//         if code != KRB5_OK {
-//             return Err(Error::SaltTypeConversion);
-//         }
-//         let s = CStr::from_bytes_until_nul(&buffer).map_err(|_| Error::SaltTypeConversion)?;
-//         Ok(s.to_owned().into_string()?)
-//     }
-// }
+    fn to_string(self, context: &Context, enctype: EncryptionType) -> Result<String> {
+        match &context.library {
+            #[cfg(mit)]
+            Library::MitClient(cont) | Library::MitServer(cont) => {
+                let buffer = [0; 100];
+                let code = unsafe {
+                    let mut b: [c_char; 100] = std::mem::transmute(buffer);
+                    cont.krb5_salttype_to_string(self.into(), b.as_mut_ptr(), 100)
+                };
+                if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+                    return Err(Error::SaltTypeConversion);
+                }
+                let s =
+                    CStr::from_bytes_until_nul(&buffer).map_err(|_| Error::SaltTypeConversion)?;
+                Ok(s.to_owned().into_string()?)
+            }
+            #[cfg(heimdal)]
+            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+                let mut raw: *mut i8 = null_mut();
+                let code = unsafe {
+                    cont.krb5_salttype_to_string(
+                        context.context as sys::heimdal::krb5_context,
+                        enctype.into(),
+                        Into::<i32>::into(self) as u32,
+                        &mut raw,
+                    )
+                };
+                if raw.is_null() {
+                    return Err(Error::SaltTypeConversion);
+                }
+                let s = unsafe { CStr::from_ptr(raw) };
+                if krb5_error_code_escape_hatch(context, code.into()).is_err() {
+                    unsafe { libc::free(raw as *mut c_void) };
+                    return Err(Error::SaltTypeConversion);
+                }
+                let res = s.to_owned().into_string()?;
+                unsafe { libc::free(raw as *mut c_void) };
+                Ok(res)
+            }
+        }
+    }
+}
 
 /// Kerberos keysalt
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -156,16 +207,26 @@ pub struct KeySalt {
     pub salttype: SaltType,
 }
 
-// impl TryFrom<KeySalt> for String {
-//     type Error = Error;
-//
-//     fn try_from(ks: KeySalt) -> Result<Self> {
-//         let enctype: String = ks.enctype.try_into()?;
-//         let salttype: String = ks.salttype.try_into()?;
-//         Ok(enctype + ":" + &salttype)
-//     }
-// }
-//
+impl KeySalt {
+    fn from_str(context: &Context, s: &str) -> Result<Self> {
+        let (enctype, salttype) = if let Some((enctype, salttype)) = s.split_once(":") {
+            let enctype = EncryptionType::from_str(context, enctype)?;
+            let salttype = SaltType::from_str(context, enctype, salttype)?;
+            (enctype, salttype)
+        } else {
+            let enctype = EncryptionType::from_str(context, s)?;
+            (enctype, Default::default())
+        };
+        Ok(Self { enctype, salttype })
+    }
+
+    fn to_string(self, context: &Context) -> Result<String> {
+        let enctype = self.enctype.to_string(context)?;
+        let salttype = self.salttype.to_string(context, self.enctype)?;
+        Ok(enctype + ":" + &salttype)
+    }
+}
+
 // impl From<KeySalt> for krb5_key_salt_tuple {
 //     fn from(ks: KeySalt) -> Self {
 //         Self {
@@ -198,24 +259,28 @@ pub struct KeySalts {
 // }
 
 impl KeySalts {
-    // pub(crate) fn from_str(s: &str) -> Result<Self> {
-    //     let mut keysalts = HashSet::new();
-    //     for ks in s.split([',', ' ', '\t']) {
-    //         let (enctype, salttype) = if let Some((enctype, salttype)) = ks.split_once(":") {
-    //             (enctype.try_into()?, salttype.try_into()?)
-    //         } else {
-    //             (ks.try_into()?, Default::default())
-    //         };
-    //         keysalts.insert(KeySalt { enctype, salttype });
-    //     }
-    //
-    //     Ok(Self { keysalts })
-    // }
+    pub(crate) fn from_str(context: &Context, s: &str) -> Result<Self> {
+        let mut keysalts = HashSet::new();
+        for ks in s.split([',', ' ', '\t']) {
+            keysalts.insert(KeySalt::from_str(context, ks)?);
+        }
 
-    // pub(crate) fn to_cstring(&self) -> Result<CString> {
-    //     let s: String = self.try_into()?;
-    //     Ok(CString::new(s)?)
-    // }
+        Ok(Self { keysalts })
+    }
+
+    pub(crate) fn to_string(&self, context: &Context) -> Result<String> {
+        Ok(self
+            .keysalts
+            .iter()
+            .map(|ks| ks.to_string(context))
+            .collect::<Result<Vec<String>>>()?
+            .join(","))
+    }
+
+    pub(crate) fn to_cstring(&self, context: &Context) -> Result<CString> {
+        let s: String = self.to_string(context)?;
+        Ok(CString::new(s)?)
+    }
 
     // pub(crate) fn to_raw(&self) -> Vec<krb5_key_salt_tuple> {
     //     self.keysalts.iter().map(|ks| (*ks).into()).collect()
