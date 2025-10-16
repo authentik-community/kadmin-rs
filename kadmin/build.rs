@@ -345,6 +345,8 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
     let mut builder = bindgen::Builder::default()
         .header("src/wrapper.h")
         .allowlist_type("(_|)kadm5.*")
+        .allowlist_type("krb5_key_salt_tuple")
+        .allowlist_type("krb5_enctype")
         .allowlist_var("KADM5_.*")
         // Principal attributes
         .allowlist_var("KRB5_KDB_DISALLOW_POSTDATED")

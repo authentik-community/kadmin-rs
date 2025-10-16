@@ -7,66 +7,26 @@ use std::{
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
-use strum::FromRepr;
 
 use crate::error::{Error, Result};
-#[cfg(all(heimdal, not(mit)))]
-use crate::sys::heimdal::{
-    ENCTYPE_AES128_CTS_HMAC_SHA1_96, ENCTYPE_AES128_CTS_HMAC_SHA256_128,
-    ENCTYPE_AES256_CTS_HMAC_SHA1_96, ENCTYPE_AES256_CTS_HMAC_SHA384_192, ENCTYPE_ARCFOUR_HMAC,
-    ENCTYPE_ARCFOUR_HMAC_EXP, ENCTYPE_CAMELLIA128_CTS_CMAC, ENCTYPE_CAMELLIA256_CTS_CMAC,
-    ENCTYPE_DES3_CBC_RAW, ENCTYPE_DES3_CBC_SHA1, KRB5_OK, krb5_enctype,
-};
-#[cfg(mit)]
-use crate::sys::mit::{
-    ENCTYPE_AES128_CTS_HMAC_SHA1_96, ENCTYPE_AES128_CTS_HMAC_SHA256_128,
-    ENCTYPE_AES256_CTS_HMAC_SHA1_96, ENCTYPE_AES256_CTS_HMAC_SHA384_192, ENCTYPE_ARCFOUR_HMAC,
-    ENCTYPE_ARCFOUR_HMAC_EXP, ENCTYPE_CAMELLIA128_CTS_CMAC, ENCTYPE_CAMELLIA256_CTS_CMAC,
-    ENCTYPE_DES3_CBC_RAW, ENCTYPE_DES3_CBC_SHA1, KRB5_KDB_SALTTYPE_NOREALM,
-    KRB5_KDB_SALTTYPE_NORMAL, KRB5_KDB_SALTTYPE_ONLYREALM, KRB5_KDB_SALTTYPE_SPECIAL, KRB5_OK,
-    krb5_enctype, krb5_key_salt_tuple,
-};
 
 /// Kerberos encryption type
 // In MIT krb5: src/lib/crypto/krb/etypes.c
-#[derive(Copy, Clone, Debug, FromRepr, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
-#[repr(i32)]
+#[repr(transparent)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
-pub enum EncryptionType {
-    /// Triple DES cbc mode raw (weak, deprecated)
-    Des3CbcRaw = ENCTYPE_DES3_CBC_RAW as krb5_enctype,
-    /// Triple DES cbc mode with HMAC/sha1 (deprecated)
-    Des3CbcSha1 = ENCTYPE_DES3_CBC_SHA1 as krb5_enctype,
-    /// ArcFour with HMAC/md5 (deprecated)
-    ArcfourHmac = ENCTYPE_ARCFOUR_HMAC as krb5_enctype,
-    /// Exportable ArcFour with HMAC/md5 (weak, deprecated)
-    ArcfourHmacExp = ENCTYPE_ARCFOUR_HMAC_EXP as krb5_enctype,
-    /// AES-128 CTS mode with 96-bit SHA-1 HMAC
-    Aes128CtsHmacSha196 = ENCTYPE_AES128_CTS_HMAC_SHA1_96 as krb5_enctype,
-    /// AES-256 CTS mode with 96-bit SHA-1 HMAC
-    Aes256CtsHmacSha196 = ENCTYPE_AES256_CTS_HMAC_SHA1_96 as krb5_enctype,
-    /// Camellia-128 CTS mode with CMAC
-    Camellia128CtsCmac = ENCTYPE_CAMELLIA128_CTS_CMAC as krb5_enctype,
-    /// Camellia-256 CTS mode with CMAC
-    Camellia256CtsCmac = ENCTYPE_CAMELLIA256_CTS_CMAC as krb5_enctype,
-    /// AES-128 CTS mode with 128-bit SHA-256 HMAC
-    Aes128CtsHmacSha256128 = ENCTYPE_AES128_CTS_HMAC_SHA256_128 as krb5_enctype,
-    /// AES-256 CTS mode with 192-bit SHA-384 HMAC
-    Aes256CtsHmacSha384192 = ENCTYPE_AES256_CTS_HMAC_SHA384_192 as krb5_enctype,
-}
+pub struct EncryptionType(i32);
 
-impl From<EncryptionType> for krb5_enctype {
+impl From<EncryptionType> for i32 {
     fn from(enctype: EncryptionType) -> Self {
-        enctype as Self
+        enctype.0
     }
 }
 
-impl TryFrom<krb5_enctype> for EncryptionType {
-    type Error = Error;
-
-    fn try_from(enctype: krb5_enctype) -> Result<Self> {
-        Self::from_repr(enctype).ok_or(Error::EncryptionTypeConversion)
+impl From<i32> for EncryptionType {
+    fn from(enctype: i32) -> Self {
+        Self(enctype)
     }
 }
 
@@ -112,38 +72,21 @@ impl TryFrom<krb5_enctype> for EncryptionType {
 
 /// Kerberos salt type
 // In MIT krb5: src/lib/krb5/krb/str_conv.c
-#[derive(Copy, Clone, Debug, FromRepr, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
-#[repr(i32)]
+#[repr(transparent)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
-pub enum SaltType {
-    /// Default for Kerberos Version 5
-    Normal = KRB5_KDB_SALTTYPE_NORMAL as i32,
-    /// Same as the default, without using realm information
-    NoRealm = KRB5_KDB_SALTTYPE_NOREALM as i32,
-    /// Uses only realm information as the salt
-    OnlyRealm = KRB5_KDB_SALTTYPE_ONLYREALM as i32,
-    /// Generate a random salt
-    Special = KRB5_KDB_SALTTYPE_SPECIAL as i32,
-}
-
-impl Default for SaltType {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
+pub struct SaltType(i32);
 
 impl From<SaltType> for i32 {
     fn from(salttype: SaltType) -> Self {
-        salttype as Self
+        salttype.0
     }
 }
 
-impl TryFrom<i32> for SaltType {
-    type Error = Error;
-
-    fn try_from(salttype: i32) -> Result<Self> {
-        Self::from_repr(salttype).ok_or(Error::SaltTypeConversion)
+impl From<i32> for SaltType {
+    fn from(salttype: i32) -> Self {
+        Self(salttype)
     }
 }
 
