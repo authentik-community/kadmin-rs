@@ -465,7 +465,7 @@ impl KAdminImpl for KAdmin {
                         )
                     }
                 };
-                let code = if code == EINVAL.into() && builder.key == PrincipalBuilderKey::RandKey {
+                let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
                     let pass = prepare_dummy_pass()?;
                     let raw_pass = pass.as_ptr().cast_mut();
                     // The server doesn't support randkey creation. Create the principal with a
@@ -723,7 +723,7 @@ impl KAdminImpl for KAdmin {
                         temp_princ,
                     );
                 }
-                if code == sys::mit::KADM5_UNK_PRINC.into() {
+                if code == sys::mit::KADM5_UNK_PRINC as i64 {
                     return Ok(None);
                 }
                 kadm5_ret_t_escape_hatch(&self.context, code)?;
@@ -926,7 +926,7 @@ impl KAdminImpl for KAdmin {
             Library::HeimdalClient(_) | Library::HeimdalServer(_) => 42,
         };
 
-        let code = if code == rpc_error.into() && !keepold && keysalts.is_none() {
+        let code = if code == rpc_error as i64 && !keepold && keysalts.is_none() {
             match &self.context.library {
                 #[cfg(mit)]
                 Library::MitClient(cont) | Library::MitServer(cont) => unsafe {

@@ -3,6 +3,8 @@
 use std::ffi::OsStr;
 
 use dlopen2::wrapper::{Container, WrapperApi};
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::error::Result;
 

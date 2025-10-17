@@ -16,13 +16,12 @@ categories = ["api-bindings", "authentication"]
 mit = []
 heimdal = []
 default = ["mit", "heimdal"]
-python = ["dep:pyo3", "dep:indoc", "dep:either"]
+python = ["dep:pyo3", "dep:indoc"]
 
 [dependencies]
 bitflags = "2.9"
 chrono = "0.4"
 dlopen2 = "0.8"
-either = { version = "1.15", optional = true }
 getset = "0.1"
 indoc = { version = "2", optional = true }
 # kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
@@ -31,7 +30,6 @@ pyo3 = { version = "0.26", features = [
   "extension-module",
   "chrono",
   "chrono-tz",
-  "either",
 ], optional = true }
 thiserror = "2"
 

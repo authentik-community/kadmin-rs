@@ -4,25 +4,24 @@ use std::{
     collections::{HashMap, HashSet},
     ffi::{c_int, c_long},
     ops::{BitAndAssign, BitOrAssign, BitXorAssign},
-    str::FromStr,
 };
 
-use either::Either;
-use kadmin_sys::{krb5_enctype, krb5_flags, krb5_int16, krb5_int32, krb5_octet};
 use pyo3::{
     prelude::*,
     types::{PyDict, PyString, PyTuple},
 };
 
+#[cfg(mit)]
+use crate::policy::Policy;
 use crate::{
     db_args::DbArgs,
     error::Result,
     kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
     keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
-    policy::Policy,
-    principal::{Principal, PrincipalAttributes, PrincipalBuilderKey},
+    principal::{Principal, PrincipalBuilderKey},
     sync::{KAdmin, KAdminBuilder},
+    sys::KAdm5Variant,
     tl_data::{TlData, TlDataEntry},
 };
 
@@ -30,6 +29,7 @@ use crate::{
 fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_class::<KAdminApiVersion>()?;
+    m.add_class::<KAdm5Variant>()?;
     m.add_class::<Params>()?;
     m.add_class::<DbArgs>()?;
     m.add_class::<TlDataEntry>()?;
@@ -39,9 +39,9 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<KeySalt>()?;
     m.add_class::<KeySalts>()?;
     m.add_class::<KAdmin>()?;
-    m.add_class::<PrincipalAttributes>()?;
     m.add_class::<PyPrincipalBuilderKey>()?;
     m.add_class::<Principal>()?;
+    #[cfg(mit)]
     m.add_class::<Policy>()?;
     m.add_class::<KAdminPrivileges>()?;
     exceptions::init(m)?;
@@ -62,33 +62,33 @@ impl Params {
         acl_file: Option<&str>,
         dict_file: Option<&str>,
         stash_file: Option<&str>,
-    ) -> Result<Self> {
-        let mut builder = Params::builder();
+    ) -> Self {
+        let mut params = Params::new();
         if let Some(realm) = realm {
-            builder = builder.realm(realm);
+            params = params.realm(realm);
         }
         if let Some(kadmind_port) = kadmind_port {
-            builder = builder.kadmind_port(kadmind_port);
+            params = params.kadmind_port(kadmind_port);
         }
         if let Some(kpasswd_port) = kpasswd_port {
-            builder = builder.kpasswd_port(kpasswd_port);
+            params = params.kpasswd_port(kpasswd_port);
         }
         if let Some(admin_server) = admin_server {
-            builder = builder.admin_server(admin_server);
+            params = params.admin_server(admin_server);
         }
         if let Some(dbname) = dbname {
-            builder = builder.dbname(dbname);
+            params = params.dbname(dbname);
         }
         if let Some(acl_file) = acl_file {
-            builder = builder.acl_file(acl_file);
+            params = params.acl_file(acl_file);
         }
         if let Some(dict_file) = dict_file {
-            builder = builder.dict_file(dict_file);
+            params = params.dict_file(dict_file);
         }
         if let Some(stash_file) = stash_file {
-            builder = builder.stash_file(stash_file);
+            params = params.stash_file(stash_file);
         }
-        builder.build()
+        params
     }
 }
 
@@ -128,11 +128,8 @@ impl DbArgs {
 #[pymethods]
 impl EncryptionType {
     #[new]
-    fn py_new(enctype: Either<krb5_enctype, String>) -> Result<Self> {
-        Ok(match enctype {
-            Either::Left(i) => i.try_into()?,
-            Either::Right(s) => EncryptionType::from_str(&s)?,
-        })
+    fn py_new(enctype: i32) -> Self {
+        enctype.into()
     }
 }
 
@@ -140,14 +137,11 @@ impl EncryptionType {
 impl SaltType {
     #[new]
     #[pyo3(signature = (salttype = None))]
-    fn py_new(salttype: Option<Either<krb5_int32, String>>) -> Result<Self> {
-        Ok(match salttype {
+    fn py_new(salttype: Option<i32>) -> Self {
+        match salttype {
             None => Default::default(),
-            Some(salttype) => match salttype {
-                Either::Left(i) => i.try_into()?,
-                Either::Right(s) => SaltType::from_str(&s)?,
-            },
-        })
+            Some(salttype) => salttype.into(),
+        }
     }
 }
 
@@ -174,7 +168,7 @@ impl KeySalts {
 #[pymethods]
 impl TlDataEntry {
     #[new]
-    fn py_new(data_type: krb5_int16, contents: Vec<krb5_octet>) -> Self {
+    fn py_new(data_type: i16, contents: Vec<u8>) -> Self {
         Self {
             data_type,
             contents,
@@ -190,118 +184,14 @@ impl TlData {
     }
 }
 
-#[pymethods]
-#[allow(non_upper_case_globals)]
-impl PrincipalAttributes {
-    #[classattr]
-    #[pyo3(name = "DisallowAllTix")]
-    const PyDisallowAllTix: Self = Self::DisallowAllTix;
-    #[classattr]
-    #[pyo3(name = "DisallowDupSkey")]
-    const PyDisallowDupSkey: Self = Self::DisallowDupSkey;
-    #[classattr]
-    #[pyo3(name = "DisallowForwardable")]
-    const PyDisallowForwardable: Self = Self::DisallowForwardable;
-    #[classattr]
-    #[pyo3(name = "DisallowPostdated")]
-    const PyDisallowPostdated: Self = Self::DisallowPostdated;
-    #[classattr]
-    #[pyo3(name = "DisallowProxiable")]
-    const PyDisallowProxiable: Self = Self::DisallowProxiable;
-    #[classattr]
-    #[pyo3(name = "DisallowRenewable")]
-    const PyDisallowRenewable: Self = Self::DisallowRenewable;
-    #[classattr]
-    #[pyo3(name = "DisallowSvr")]
-    const PyDisallowSvr: Self = Self::DisallowSvr;
-    #[classattr]
-    #[pyo3(name = "DisallowTgtBased")]
-    const PyDisallowTgtBased: Self = Self::DisallowTgtBased;
-    #[classattr]
-    #[pyo3(name = "LockdownKeys")]
-    const PyLockdownKeys: Self = Self::LockdownKeys;
-    #[classattr]
-    #[pyo3(name = "NewPrinc")]
-    const PyNewPrinc: Self = Self::NewPrinc;
-    #[classattr]
-    #[pyo3(name = "NoAuthDataRequired")]
-    const PyNoAuthDataRequired: Self = Self::NoAuthDataRequired;
-    #[classattr]
-    #[pyo3(name = "OkAsDelegate")]
-    const PyOkAsDelegate: Self = Self::OkAsDelegate;
-    #[classattr]
-    #[pyo3(name = "OkToAuthAsDelegate")]
-    const PyOkToAuthAsDelegate: Self = Self::OkToAuthAsDelegate;
-    #[classattr]
-    #[pyo3(name = "PwChangeService")]
-    const PyPwChangeService: Self = Self::PwChangeService;
-    #[classattr]
-    #[pyo3(name = "RequiresHwAuth")]
-    const PyRequiresHwAuth: Self = Self::RequiresHwAuth;
-    #[classattr]
-    #[pyo3(name = "RequiresPreAuth")]
-    const PyRequiresPreAuth: Self = Self::RequiresPreAuth;
-    #[classattr]
-    #[pyo3(name = "RequiresPwChange")]
-    const PyRequiresPwChange: Self = Self::RequiresPwChange;
-    #[classattr]
-    #[pyo3(name = "SupportDesMd5")]
-    const PySupportDesMd5: Self = Self::SupportDesMd5;
-
-    #[new]
-    fn py_new(bits: krb5_flags) -> Self {
-        Self::from_bits_retain(bits)
-    }
-
-    #[pyo3(name = "bits")]
-    fn py_bits(&self) -> krb5_flags {
-        self.bits()
-    }
-
-    fn __contains__(&self, other: Self) -> bool {
-        self.contains(other)
-    }
-
-    fn __and__(&self, other: Self) -> Self {
-        *self & other
-    }
-
-    fn __iand__(&mut self, other: Self) {
-        Self::bitand_assign(self, other);
-    }
-
-    fn __xor__(&self, other: Self) -> Self {
-        *self ^ other
-    }
-
-    fn __ixor__(&mut self, other: Self) {
-        Self::bitxor_assign(self, other);
-    }
-
-    fn __or__(&self, other: Self) -> Self {
-        *self | other
-    }
-
-    fn __ior__(&mut self, other: Self) {
-        Self::bitor_assign(self, other);
-    }
-
-    fn __invert__(&self) -> Self {
-        self.complement()
-    }
-
-    fn __int__(&self) -> krb5_flags {
-        self.bits()
-    }
-}
-
 impl KAdmin {
     fn py_get_builder(
+        variant: KAdm5Variant,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> KAdminBuilder {
-        let mut builder = KAdminBuilder::default();
+        let mut builder = KAdminBuilder::new(variant);
         if let Some(params) = params {
             builder = builder.params(params);
         }
@@ -500,66 +390,68 @@ impl KAdmin {
         self.get_privileges()
     }
 
-    #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_password", signature = (client_name, password, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_password", signature = (variant, client_name, password, params=None, db_args=None, api_version=None))]
     fn py_with_password(
+        variant: KAdm5Variant,
         client_name: &str,
         password: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args, api_version).with_password(client_name, password)
+        Self::py_get_builder(variant, params, db_args, api_version)
+            .with_password(client_name, password)
     }
 
-    #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_keytab", signature = (client_name=None, keytab=None, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_keytab", signature = (variant, client_name=None, keytab=None, params=None, db_args=None, api_version=None))]
     fn py_with_keytab(
+        variant: KAdm5Variant,
         client_name: Option<&str>,
         keytab: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args, api_version).with_keytab(client_name, keytab)
+        Self::py_get_builder(variant, params, db_args, api_version).with_keytab(client_name, keytab)
     }
 
-    #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_ccache", signature = (client_name=None, ccache_name=None, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_ccache", signature = (variant, client_name=None, ccache_name=None, params=None, db_args=None, api_version=None))]
     fn py_with_ccache(
+        variant: KAdm5Variant,
         client_name: Option<&str>,
         ccache_name: Option<&str>,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args, api_version).with_ccache(client_name, ccache_name)
+        Self::py_get_builder(variant, params, db_args, api_version)
+            .with_ccache(client_name, ccache_name)
     }
 
-    #[cfg(feature = "client")]
     #[staticmethod]
-    #[pyo3(name = "with_anonymous", signature = (client_name, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_anonymous", signature = (variant, client_name, params=None, db_args=None, api_version=None))]
     fn py_with_anonymous(
+        variant: KAdm5Variant,
         client_name: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args, api_version).with_anonymous(client_name)
+        Self::py_get_builder(variant, params, db_args, api_version).with_anonymous(client_name)
     }
 
-    #[cfg(feature = "local")]
     #[staticmethod]
-    #[pyo3(name = "with_local", signature = (params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_local", signature = (variant, params=None, db_args=None, api_version=None))]
     fn py_with_local(
+        variant: KAdm5Variant,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
     ) -> Result<Self> {
-        Self::py_get_builder(params, db_args, api_version).with_local()
+        Self::py_get_builder(variant, params, db_args, api_version).with_local()
     }
 }
 
@@ -797,7 +689,6 @@ impl KAdminPrivileges {
 /// python-kadmin-rs exceptions
 mod exceptions {
     use indoc::indoc;
-    use kadmin_sys::kadm5_ret_t;
     use pyo3::{create_exception, exceptions::PyException, intern, prelude::*};
 
     use crate::error::Error;
@@ -840,6 +731,9 @@ mod exceptions {
             "DurationConversion",
             m.py().get_type::<DurationConversion>(),
         )?;
+        m.add("LockError", m.py().get_type::<LockError>())?;
+        m.add("LibraryLoadError", m.py().get_type::<LibraryLoadError>())?;
+        m.add("LibraryMismatch", m.py().get_type::<LibraryMismatch>())?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -938,13 +832,31 @@ mod exceptions {
         PyKAdminException,
         "Failed to convert a `Duration` to a `krb5_deltat`"
     );
+    create_exception!(
+        exceptions,
+        LockError,
+        PyKAdminException,
+        "Failed to acquire the kadmin initialisation lock"
+    );
+    create_exception!(
+        exceptions,
+        LibraryLoadError,
+        PyKAdminException,
+        "Failed to load the kadm5 library"
+    );
+    create_exception!(
+        exceptions,
+        LibraryMismatch,
+        PyKAdminException,
+        "The library is not compatible with the current operation"
+    );
 
     impl From<Error> for PyErr {
         fn from(error: Error) -> Self {
             let (exc, extras) = match &error {
                 Error::Kerberos { code, message } => (
                     KerberosException::new_err(error.to_string()),
-                    Some((*code as kadm5_ret_t, message)),
+                    Some((*code as i64, message)),
                 ),
                 Error::KAdmin { code, message } => (
                     KAdminException::new_err(error.to_string()),
@@ -975,6 +887,9 @@ mod exceptions {
                 Error::DurationConversion(_) => {
                     (DurationConversion::new_err(error.to_string()), None)
                 }
+                Error::LockError => (LockError::new_err(error.to_string()), None),
+                Error::LibraryLoadError(_) => (LibraryLoadError::new_err(error.to_string()), None),
+                Error::LibraryMismatch(_) => (LibraryMismatch::new_err(error.to_string()), None),
             };
 
             Python::attach(|py| {

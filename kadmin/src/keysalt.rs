@@ -15,11 +15,10 @@ use crate::{
 };
 
 /// Kerberos encryption type
-// In MIT krb5: src/lib/crypto/krb/etypes.c
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(transparent)]
-#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct EncryptionType(i32);
 
 impl From<EncryptionType> for i32 {
@@ -106,7 +105,7 @@ impl EncryptionType {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(transparent)]
-#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct SaltType(i32);
 
 impl From<SaltType> for i32 {
@@ -255,19 +254,6 @@ pub struct KeySalts {
     /// Keysalt list
     pub keysalts: HashSet<KeySalt>,
 }
-
-// impl TryFrom<&KeySalts> for String {
-//     type Error = Error;
-//
-//     fn try_from(ksl: &KeySalts) -> Result<Self> {
-//         Ok(ksl
-//             .keysalts
-//             .iter()
-//             .map(|ks| (*ks).try_into())
-//             .collect::<Result<Vec<String>>>()?
-//             .join(","))
-//     }
-// }
 
 impl KeySalts {
     pub(crate) fn from_str(context: &Context, s: &str) -> Result<Self> {
