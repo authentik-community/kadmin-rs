@@ -8,10 +8,6 @@ use std::{
     sync::Mutex,
 };
 
-#[cfg(all(heimdal, not(mit)))]
-use crate::sys::heimdal::krb5_error_code;
-#[cfg(mit)]
-use crate::sys::mit::krb5_error_code;
 use crate::{
     Error,
     conv::c_string_to_string,

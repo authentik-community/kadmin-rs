@@ -43,12 +43,6 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-// #[cfg(all(feature = "client", feature = "local", not(doc)))]
-// compile_error!("Feature \"client\" and feature \"local\" cannot be enabled at the same time.");
-//
-// #[cfg(all(not(feature = "client"), not(feature = "local"), not(doc)))]
-// compile_error!("Exactly one of feature \"client\" or feature \"local\" must be selected.");
-
 mod conv;
 
 pub mod error;
@@ -72,15 +66,15 @@ pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 pub mod kadmin;
 pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
 
-// pub mod sync;
+pub mod sync;
 
 #[cfg(mit)]
 pub mod policy;
 #[cfg(mit)]
 pub use policy::Policy;
 
-// pub mod principal;
-// pub use principal::{Principal, PrincipalAttributes};
+pub mod principal;
+pub use principal::Principal;
 
 pub mod sys;
 

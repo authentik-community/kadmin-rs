@@ -405,7 +405,7 @@ macro_rules! policy_doer_impl {
             Ok(PolicyEntryRaw {
                 raw: policy,
                 _raw_name: name,
-                // _raw_allowed_keysalts: allowed_keysalts,
+                _raw_allowed_keysalts: allowed_keysalts,
                 _raw_tl_data: tl_data,
             })
         }
@@ -500,6 +500,6 @@ impl PolicyModifier {
 pub(crate) struct PolicyEntryRaw {
     pub(crate) raw: _kadm5_policy_ent_t,
     _raw_name: CString,
-    // _raw_allowed_keysalts: Option<CString>,
+    _raw_allowed_keysalts: Option<CString>,
     _raw_tl_data: Option<TlDataRawMit>,
 }

@@ -28,7 +28,7 @@ pub(crate) fn c_string_to_string(c_string: *const c_char) -> Result<String> {
 }
 
 /// Convert a [`krb5_timestamp`] to a [`DateTime<Utc>`]
-pub(crate) fn ts_to_dt(ts: i32) -> Result<Option<DateTime<Utc>>> {
+pub(crate) fn ts_to_dt(ts: i64) -> Result<Option<DateTime<Utc>>> {
     if ts == 0 {
         return Ok(None);
     }

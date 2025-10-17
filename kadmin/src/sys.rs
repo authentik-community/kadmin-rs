@@ -94,6 +94,7 @@ pub enum Library {
 }
 
 impl Library {
+    /// Which [`KAdm5Variant`] this library implements
     pub fn variant(&self) -> KAdm5Variant {
         match self {
             #[cfg(mit)]
@@ -230,25 +231,6 @@ impl Library {
             #[cfg(heimdal)]
             KAdm5Variant::HeimdalServer => {
                 Library::HeimdalServer(unsafe { Container::load(path) }?)
-            }
-        })
-    }
-
-    /// Create a new [`Library`] instance from a [`KAdm5Variant`] and symbols from the program
-    /// itself.
-    pub fn from_self(variant: KAdm5Variant) -> Result<Self> {
-        Ok(match variant {
-            #[cfg(mit)]
-            KAdm5Variant::MitClient => Library::MitClient(unsafe { Container::load_self() }?),
-            #[cfg(mit)]
-            KAdm5Variant::MitServer => Library::MitServer(unsafe { Container::load_self() }?),
-            #[cfg(heimdal)]
-            KAdm5Variant::HeimdalClient => {
-                Library::HeimdalClient(unsafe { Container::load_self() }?)
-            }
-            #[cfg(heimdal)]
-            KAdm5Variant::HeimdalServer => {
-                Library::HeimdalServer(unsafe { Container::load_self() }?)
             }
         })
     }

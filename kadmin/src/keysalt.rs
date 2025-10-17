@@ -227,14 +227,25 @@ impl KeySalt {
     }
 }
 
-// impl From<KeySalt> for krb5_key_salt_tuple {
-//     fn from(ks: KeySalt) -> Self {
-//         Self {
-//             ks_enctype: ks.enctype.into(),
-//             ks_salttype: ks.salttype.into(),
-//         }
-//     }
-// }
+#[cfg(mit)]
+impl From<KeySalt> for sys::mit::krb5_key_salt_tuple {
+    fn from(ks: KeySalt) -> Self {
+        Self {
+            ks_enctype: ks.enctype.into(),
+            ks_salttype: ks.salttype.into(),
+        }
+    }
+}
+
+#[cfg(heimdal)]
+impl From<KeySalt> for sys::heimdal::krb5_key_salt_tuple {
+    fn from(ks: KeySalt) -> Self {
+        Self {
+            ks_enctype: ks.enctype.into(),
+            ks_salttype: ks.salttype.into(),
+        }
+    }
+}
 
 /// Kerberos keysalt list
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -282,7 +293,13 @@ impl KeySalts {
         Ok(CString::new(s)?)
     }
 
-    // pub(crate) fn to_raw(&self) -> Vec<krb5_key_salt_tuple> {
-    //     self.keysalts.iter().map(|ks| (*ks).into()).collect()
-    // }
+    #[cfg(mit)]
+    pub(crate) fn to_raw_mit(&self) -> Vec<sys::mit::krb5_key_salt_tuple> {
+        self.keysalts.iter().map(|ks| (*ks).into()).collect()
+    }
+
+    #[cfg(heimdal)]
+    pub(crate) fn to_raw_heimdal(&self) -> Vec<sys::heimdal::krb5_key_salt_tuple> {
+        self.keysalts.iter().map(|ks| (*ks).into()).collect()
+    }
 }

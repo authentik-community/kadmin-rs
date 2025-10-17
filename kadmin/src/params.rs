@@ -288,7 +288,7 @@ impl ParamsGuard {
     pub(crate) fn build_heimdal(params: &Params) -> Result<Self> {
         let mut guard = Self::build_base(params)?;
         let params_heimdal = sys::heimdal::kadm5_config_params {
-            mask: params.mask_mit as u32,
+            mask: params.mask_heimdal as u32,
 
             realm: if let Some(realm) = &guard.realm {
                 realm.as_ptr().cast_mut()
