@@ -1,8 +1,10 @@
 //! [`Error`] type for various errors this library can encounter
 
-use kadmin_sys::*;
-
 use crate::context::Context;
+#[cfg(all(heimdal, not(mit)))]
+use crate::sys::heimdal::{KADM5_OK, KRB5_OK};
+#[cfg(mit)]
+use crate::sys::mit::{self, KADM5_OK, KRB5_OK};
 
 /// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
@@ -15,7 +17,7 @@ pub enum Error {
     #[error("Kerberos error: {message} (code: {code})")]
     Kerberos {
         /// Kerberos error code
-        code: krb5_error_code,
+        code: i64,
         /// Kerberos error message
         message: String,
     },
@@ -27,7 +29,7 @@ pub enum Error {
     #[error("KAdmin error: {message} (code: {code})")]
     KAdmin {
         /// kadm5 error code
-        code: kadm5_ret_t,
+        code: i64,
         /// kadm5 error message
         message: String,
     },
@@ -35,7 +37,6 @@ pub enum Error {
     /// Conversion to an encryption type failed
     #[error("Conversion to encryption type failed")]
     EncryptionTypeConversion,
-
     /// Conversion to a salt type failed
     #[error("Conversion to salt type failed")]
     SaltTypeConversion,
@@ -55,12 +56,14 @@ pub enum Error {
     /// byte was found
     #[error(transparent)]
     StringConversion(#[from] std::ffi::NulError),
+
     /// Failed to send an operation to the sync executor
     #[error("Failed to send operation to executor")]
     ThreadSendError,
     /// Failed to receive the result from an operatior from the sync executor
     #[error("Failed to receive result from executor")]
     ThreadRecvError(#[from] std::sync::mpsc::RecvError),
+
     /// Failed to convert a [`krb5_timestamp`] to a [`chrono::DateTime`]
     #[error("Failed to convert krb5 timestamp to chrono DateTime")]
     TimestampConversion,
@@ -70,6 +73,18 @@ pub enum Error {
     /// Failed to convert a [`Duration`][`std::time::Duration`] to a [`krb5_deltat`]
     #[error("Failed to convert Duration to a krb5 deltat")]
     DurationConversion(std::num::TryFromIntError),
+
+    /// Failed to acquire [`crate::kadmin::KADMIN_INIT_LOCK`] or
+    /// [`crate::context::CONTEXT_INIT_LOCK`]
+    #[error("Failed to acquire the kadmin initialisation lock")]
+    LockError,
+
+    /// Failed to load the kadm5 library
+    #[error("Failed to load the kadm5 library")]
+    LibraryLoadError(#[from] dlopen2::Error),
+    /// The library is not compatible with the current operation
+    #[error("The library is not compatible with the current operation")]
+    LibraryMismatch(&'static str),
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for Error {
@@ -82,8 +97,8 @@ impl<T> From<std::sync::mpsc::SendError<T>> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Helper function to "raise" an error from a [`krb5_error_code`]
-pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: krb5_error_code) -> Result<()> {
-    if code == KRB5_OK {
+pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: i64) -> Result<()> {
+    if code == KRB5_OK as i64 {
         Ok(())
     } else {
         Err(Error::Kerberos {
@@ -94,97 +109,112 @@ pub(crate) fn krb5_error_code_escape_hatch(context: &Context, code: krb5_error_c
 }
 
 /// Helper function to "raise" an error from a [`kadm5_ret_t`]
-pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: kadm5_ret_t) -> Result<()> {
-    if code == KADM5_OK as kadm5_ret_t {
+pub(crate) fn kadm5_ret_t_escape_hatch(context: &Context, code: i64) -> Result<()> {
+    if code == KADM5_OK as i64 {
         return Ok(());
     }
-    let message = match code as u32 {
-        KADM5_FAILURE => "Operation failed for unspecified reason",
-        KADM5_AUTH_GET => "Operation requires ``get'' privilege",
-        KADM5_AUTH_ADD => "Operation requires ``add'' privilege",
-        KADM5_AUTH_MODIFY => "Operation requires ``modify'' privilege",
-        KADM5_AUTH_DELETE => "Operation requires ``delete'' privilege",
-        KADM5_AUTH_INSUFFICIENT => "Insufficient authorization for operation",
-        KADM5_BAD_DB => "Database inconsistency detected",
-        KADM5_DUP => "Principal or policy already exists",
-        KADM5_RPC_ERROR => "Communication failure with server",
-        KADM5_NO_SRV => "No administration server found for realm",
-        KADM5_BAD_HIST_KEY => "Password history principal key version mismatch",
-        KADM5_NOT_INIT => "Connection to server not initialized",
-        KADM5_UNK_PRINC => "Principal does not exist",
-        KADM5_UNK_POLICY => "Policy does not exist",
-        KADM5_BAD_MASK => "Invalid field mask for operation",
-        KADM5_BAD_CLASS => "Invalid number of character classes",
-        KADM5_BAD_LENGTH => "Invalid password length",
-        KADM5_BAD_POLICY => "Illegal policy name",
-        KADM5_BAD_PRINCIPAL => "Illegal principal name",
-        KADM5_BAD_AUX_ATTR => "Invalid auxillary attributes",
-        KADM5_BAD_HISTORY => "Invalid password history count",
-        KADM5_BAD_MIN_PASS_LIFE => "Password minimum life is greater then password maximum life",
-        KADM5_PASS_Q_TOOSHORT => "Password is too short",
-        KADM5_PASS_Q_CLASS => "Password does not contain enough character classes",
-        KADM5_PASS_Q_DICT => "Password is in the password dictionary",
-        KADM5_PASS_REUSE => "Cannot reuse password",
-        KADM5_PASS_TOOSOON => "Current password's minimum life has not expired",
-        KADM5_POLICY_REF => "Policy is in use",
-        KADM5_INIT => "Connection to server already initialized",
-        KADM5_BAD_PASSWORD => "Incorrect password",
-        KADM5_PROTECT_PRINCIPAL => "Cannot change protected principal",
-        KADM5_BAD_SERVER_HANDLE => "Programmer error! Bad Admin server handle",
-        KADM5_BAD_STRUCT_VERSION => "Programmer error! Bad API structure version",
-        KADM5_OLD_STRUCT_VERSION => {
-            "API structure version specified by application is no longer supported (to fix, \
-             recompile application against current Admin API header files and libraries)"
-        }
-        KADM5_NEW_STRUCT_VERSION => {
-            "API structure version specified by application is unknown to libraries (to fix, \
-             obtain current Admin API header files and libraries and recompile application)"
-        }
-        KADM5_BAD_API_VERSION => "Programmer error! Bad API version",
-        KADM5_OLD_LIB_API_VERSION => {
-            "API version specified by application is no longer supported by libraries (to fix, \
-             update application to adhere to current API version and recompile)"
-        }
-        KADM5_OLD_SERVER_API_VERSION => {
-            "API version specified by application is no longer supported by server (to fix, update \
-             application to adhere to current API version and recompile)"
-        }
-        KADM5_NEW_LIB_API_VERSION => {
-            "API version specified by application is unknown to libraries (to fix, obtain current \
-             Admin API header files and libraries and recompile application)"
-        }
-        KADM5_NEW_SERVER_API_VERSION => {
-            "API version specified by application is unknown to server (to fix, obtain and install \
-             newest Admin Server)"
-        }
-        KADM5_SECURE_PRINC_MISSING => "Database error! Required principal missing",
-        KADM5_NO_RENAME_SALT => {
-            "The salt type of the specified principal does not support renaming"
-        }
-        KADM5_BAD_CLIENT_PARAMS => "Illegal configuration parameter for remote KADM5 client",
-        KADM5_BAD_SERVER_PARAMS => "Illegal configuration parameter for local KADM5 client.",
-        KADM5_AUTH_LIST => "Operation requires ``list'' privilege",
-        KADM5_AUTH_CHANGEPW => "Operation requires ``change-password'' privilege",
-        KADM5_GSS_ERROR => "GSS-API (or Kerberos) error",
-        KADM5_BAD_TL_TYPE => "Programmer error! Illegal tagged data list element type",
-        KADM5_MISSING_CONF_PARAMS => "Required parameters in kdc.conf missing",
-        KADM5_BAD_SERVER_NAME => "Bad krb5 admin server hostname",
-        KADM5_AUTH_SETKEY => "Operation requires ``set-key'' privilege",
-        KADM5_SETKEY_DUP_ENCTYPES => "Multiple values for single or folded enctype",
-        KADM5_SETV4KEY_INVAL_ENCTYPE => "Invalid enctype for setv4key",
-        KADM5_SETKEY3_ETYPE_MISMATCH => "Mismatched enctypes for setkey3",
-        KADM5_MISSING_KRB5_CONF_PARAMS => {
-            "Missing parameters in krb5.conf required for kadmin client"
-        }
-        KADM5_XDR_FAILURE => "XDR encoding error",
-        KADM5_CANT_RESOLVE => "",
-        KADM5_PASS_Q_GENERIC => "Database synchronization failed",
-        _ => "Unknown error",
+
+    if context.library.is_heimdal() {
+        return krb5_error_code_escape_hatch(context, code);
     }
-    .to_owned();
-    if message != "Unknown error" {
+
+    #[cfg(mit)]
+    {
+        let message = match code as u32 {
+            mit::KADM5_FAILURE => "Operation failed for unspecified reason",
+            mit::KADM5_AUTH_GET => "Operation requires ``get'' privilege",
+            mit::KADM5_AUTH_ADD => "Operation requires ``add'' privilege",
+            mit::KADM5_AUTH_MODIFY => "Operation requires ``modify'' privilege",
+            mit::KADM5_AUTH_DELETE => "Operation requires ``delete'' privilege",
+            mit::KADM5_AUTH_INSUFFICIENT => "Insufficient authorization for operation",
+            mit::KADM5_BAD_DB => "Database inconsistency detected",
+            mit::KADM5_DUP => "Principal or policy already exists",
+            mit::KADM5_RPC_ERROR => "Communication failure with server",
+            mit::KADM5_NO_SRV => "No administration server found for realm",
+            mit::KADM5_BAD_HIST_KEY => "Password history principal key version mismatch",
+            mit::KADM5_NOT_INIT => "Connection to server not initialized",
+            mit::KADM5_UNK_PRINC => "Principal does not exist",
+            mit::KADM5_UNK_POLICY => "Policy does not exist",
+            mit::KADM5_BAD_MASK => "Invalid field mask for operation",
+            mit::KADM5_BAD_CLASS => "Invalid number of character classes",
+            mit::KADM5_BAD_LENGTH => "Invalid password length",
+            mit::KADM5_BAD_POLICY => "Illegal policy name",
+            mit::KADM5_BAD_PRINCIPAL => "Illegal principal name",
+            mit::KADM5_BAD_AUX_ATTR => "Invalid auxillary attributes",
+            mit::KADM5_BAD_HISTORY => "Invalid password history count",
+            mit::KADM5_BAD_MIN_PASS_LIFE => {
+                "Password minimum life is greater then password maximum life"
+            }
+            mit::KADM5_PASS_Q_TOOSHORT => "Password is too short",
+            mit::KADM5_PASS_Q_CLASS => "Password does not contain enough character classes",
+            mit::KADM5_PASS_Q_DICT => "Password is in the password dictionary",
+            mit::KADM5_PASS_REUSE => "Cannot reuse password",
+            mit::KADM5_PASS_TOOSOON => "Current password's minimum life has not expired",
+            mit::KADM5_POLICY_REF => "Policy is in use",
+            mit::KADM5_INIT => "Connection to server already initialized",
+            mit::KADM5_BAD_PASSWORD => "Incorrect password",
+            mit::KADM5_PROTECT_PRINCIPAL => "Cannot change protected principal",
+            mit::KADM5_BAD_SERVER_HANDLE => "Programmer error! Bad Admin server handle",
+            mit::KADM5_BAD_STRUCT_VERSION => "Programmer error! Bad API structure version",
+            mit::KADM5_OLD_STRUCT_VERSION => {
+                "API structure version specified by application is no longer supported (to fix, \
+                 recompile application against current Admin API header files and libraries)"
+            }
+            mit::KADM5_NEW_STRUCT_VERSION => {
+                "API structure version specified by application is unknown to libraries (to fix, \
+                 obtain current Admin API header files and libraries and recompile application)"
+            }
+            mit::KADM5_BAD_API_VERSION => "Programmer error! Bad API version",
+            mit::KADM5_OLD_LIB_API_VERSION => {
+                "API version specified by application is no longer supported by libraries (to fix, \
+                 update application to adhere to current API version and recompile)"
+            }
+            mit::KADM5_OLD_SERVER_API_VERSION => {
+                "API version specified by application is no longer supported by server (to fix, \
+                 update application to adhere to current API version and recompile)"
+            }
+            mit::KADM5_NEW_LIB_API_VERSION => {
+                "API version specified by application is unknown to libraries (to fix, obtain \
+                 current Admin API header files and libraries and recompile application)"
+            }
+            mit::KADM5_NEW_SERVER_API_VERSION => {
+                "API version specified by application is unknown to server (to fix, obtain and \
+                 install newest Admin Server)"
+            }
+            mit::KADM5_SECURE_PRINC_MISSING => "Database error! Required principal missing",
+            mit::KADM5_NO_RENAME_SALT => {
+                "The salt type of the specified principal does not support renaming"
+            }
+            mit::KADM5_BAD_CLIENT_PARAMS => {
+                "Illegal configuration parameter for remote KADM5 client"
+            }
+            mit::KADM5_BAD_SERVER_PARAMS => {
+                "Illegal configuration parameter for local KADM5 client."
+            }
+            mit::KADM5_AUTH_LIST => "Operation requires ``list'' privilege",
+            mit::KADM5_AUTH_CHANGEPW => "Operation requires ``change-password'' privilege",
+            mit::KADM5_GSS_ERROR => "GSS-API (or Kerberos) error",
+            mit::KADM5_BAD_TL_TYPE => "Programmer error! Illegal tagged data list element type",
+            mit::KADM5_MISSING_CONF_PARAMS => "Required parameters in kdc.conf missing",
+            mit::KADM5_BAD_SERVER_NAME => "Bad krb5 admin server hostname",
+            mit::KADM5_AUTH_SETKEY => "Operation requires ``set-key'' privilege",
+            mit::KADM5_SETKEY_DUP_ENCTYPES => "Multiple values for single or folded enctype",
+            mit::KADM5_SETV4KEY_INVAL_ENCTYPE => "Invalid enctype for setv4key",
+            mit::KADM5_SETKEY3_ETYPE_MISMATCH => "Mismatched enctypes for setkey3",
+            mit::KADM5_MISSING_KRB5_CONF_PARAMS => {
+                "Missing parameters in krb5.conf required for kadmin client"
+            }
+            mit::KADM5_XDR_FAILURE => "XDR encoding error",
+            mit::KADM5_CANT_RESOLVE => "",
+            mit::KADM5_PASS_Q_GENERIC => "Database synchronization failed",
+            _ => return krb5_error_code_escape_hatch(context, code),
+        }
+        .to_owned();
         Err(Error::KAdmin { code, message })
-    } else {
-        krb5_error_code_escape_hatch(context, code as krb5_error_code)
+    }
+
+    #[cfg(not(mit))]
+    {
+        krb5_error_code_escape_hatch(context, code)
     }
 }
