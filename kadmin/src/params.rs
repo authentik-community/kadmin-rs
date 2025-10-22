@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 use crate::{
     context::Context,
     error::Result,
-    sys::{self, cfg_match, library_match},
+    sys::{cfg_match, library_match},
 };
 
 /// kadm5 config options
@@ -169,6 +169,7 @@ pub(crate) struct ParamsGuard<'a> {
 }
 
 impl<'a> ParamsGuard<'a> {
+    #[allow(clippy::field_reassign_with_default)]
     pub(crate) fn build(context: &'a Context, params: &Params) -> Result<Self> {
         let realm = params
             .realm
