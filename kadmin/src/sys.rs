@@ -397,6 +397,32 @@ macro_rules! library_match {
 }
 pub(crate) use library_match;
 
+macro_rules! cfg_match {
+    (|$lib:ident| $code:expr) => {
+        cfg_match!(
+            mit_client => |$lib| $code,
+            mit_server => |$lib| $code,
+            heimdal_client => |$lib| $code,
+            heimdal_server => |$lib| $code
+        )
+    };
+
+    ($($($libname:ident),+ => |$lib:ident| $code:expr),+) => {
+        $(
+            $(
+                #[cfg($libname)]
+                {
+                    macro_rules! $lib {
+                        ($ty:ident) => { crate::sys::$libname::$ty };
+                    }
+                    $code
+                };
+            )+
+        )+
+    };
+}
+pub(crate) use cfg_match;
+
 #[cfg(test)]
 mod tests {
     use super::*;

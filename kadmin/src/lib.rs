@@ -51,8 +51,8 @@ pub use error::Error;
 pub mod context;
 pub use context::Context;
 
-// pub mod params;
-// pub use params::Params;
+pub mod params;
+pub use params::Params;
 
 // pub mod db_args;
 // pub use db_args::DbArgs;
