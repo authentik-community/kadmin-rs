@@ -123,36 +123,21 @@ impl ContextBuilder {
 
         let _guard = CONTEXT_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
-        let (context, code) = match &library {
-            #[cfg(mit_client)]
-            Library::MitClient(cont) => {
-                let mut context_ptr: MaybeUninit<sys::mit_client::krb5_context> =
+        let (context, code) = library_match!(
+            &library;
+            mit_client, mit_server => |cont, lib| {
+                let mut context_ptr: MaybeUninit<lib!(krb5_context)> =
                     MaybeUninit::zeroed();
                 let code = unsafe { cont.kadm5_init_krb5_context(context_ptr.as_mut_ptr()) };
                 (unsafe { context_ptr.assume_init() } as *mut c_void, code)
-            }
-            #[cfg(mit_server)]
-            Library::MitServer(cont) => {
-                let mut context_ptr: MaybeUninit<sys::mit_server::krb5_context> =
-                    MaybeUninit::zeroed();
-                let code = unsafe { cont.kadm5_init_krb5_context(context_ptr.as_mut_ptr()) };
-                (unsafe { context_ptr.assume_init() } as *mut c_void, code)
-            }
-            #[cfg(heimdal_client)]
-            Library::HeimdalClient(cont) => {
-                let mut context_ptr: MaybeUninit<sys::heimdal_client::krb5_context> =
+            },
+            heimdal_client, heimdal_server => |cont, lib| {
+                let mut context_ptr: MaybeUninit<lib!(krb5_context)> =
                     MaybeUninit::zeroed();
                 let code = unsafe { cont.krb5_init_context(context_ptr.as_mut_ptr()) };
                 (unsafe { context_ptr.assume_init() } as *mut c_void, code)
             }
-            #[cfg(heimdal_server)]
-            Library::HeimdalServer(cont) => {
-                let mut context_ptr: MaybeUninit<sys::heimdal_server::krb5_context> =
-                    MaybeUninit::zeroed();
-                let code = unsafe { cont.krb5_init_context(context_ptr.as_mut_ptr()) };
-                (unsafe { context_ptr.assume_init() } as *mut c_void, code)
-            }
-        };
+        );
 
         drop(_guard);
         let mut context = Context {

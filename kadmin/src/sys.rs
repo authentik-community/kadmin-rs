@@ -357,19 +357,27 @@ pub mod heimdal_server {
 
 macro_rules! library_match {
     ($expr:expr; |$cont:ident, $lib:ident| $code:expr) => {
-        library_match!($expr; mit_client, mit_server, heimdal_client, heimdal_server => |$cont, $lib| $code)
+        library_match!(
+            $expr;
+            mit_client => |$cont, $lib| $code,
+            mit_server => |$cont, $lib| $code,
+            heimdal_client => |$cont, $lib| $code,
+            heimdal_server => |$cont, $lib| $code
+        )
     };
 
-    ($expr:expr; $($libname:ident),+ => |$cont:ident, $lib:ident| $code:expr) => {
+    ($expr:expr; $($($libname:ident),+ => |$cont:ident, $lib:ident| $code:expr),+) => {
         match $expr {
             $(
-                #[cfg($libname)]
-                library_match!(@variant $libname, $cont) => {
-                    macro_rules! $lib {
-                        ($ty:ident) => { crate::sys::$libname::$ty };
+                $(
+                    #[cfg($libname)]
+                    library_match!(@variant $libname, $cont) => {
+                        macro_rules! $lib {
+                            ($ty:ident) => { crate::sys::$libname::$ty };
+                        }
+                        $code
                     }
-                    $code
-                }
+                )+
             )+
         }
     };
