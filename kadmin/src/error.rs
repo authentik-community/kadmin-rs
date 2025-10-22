@@ -6,6 +6,9 @@ use crate::sys::heimdal::{KADM5_OK, KRB5_OK};
 #[cfg(mit)]
 use crate::sys::mit::{self, KADM5_OK, KRB5_OK};
 
+const KADM5_OK: i32 = 0;
+const KRB5_OK: i32 = 0;
+
 /// Errors this library can encounter
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]

@@ -12,7 +12,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     context::Context,
     error::{Error, Result, krb5_error_code_escape_hatch},
-    sys::{self, Library},
+    sys::library_match,
 };
 
 /// Convert a `*const c_char` to a [`String`]
@@ -63,125 +63,54 @@ pub(crate) fn dur_to_delta(dur: Option<Duration>) -> Result<i32> {
     }
 }
 
-/// Convert a [`sys::mit::krb5_principal`] to a [`String`]
-#[cfg(mit)]
-pub(crate) fn unparse_name_mit(
-    context: &Context,
-    principal: sys::mit::krb5_principal,
-) -> Result<Option<String>> {
+/// Convert a `krb5_principal` to a [`String`]
+pub(crate) fn unparse_name(context: &Context, principal: *const c_void) -> Result<Option<String>> {
     if principal.is_null() {
         return Ok(None);
     }
     let mut raw_name: *mut c_char = null_mut();
-    let code = match &context.library {
-        #[cfg(mit)]
-        Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-            cont.krb5_unparse_name(
-                context.context as sys::mit::krb5_context,
-                principal,
-                &mut raw_name,
-            )
-        },
-        #[allow(unreachable_patterns)]
-        _ => unreachable!(),
-    };
+    let code = library_match!(&context.library; |cont, lib| unsafe {
+        cont.krb5_unparse_name(
+            context.context as lib!(krb5_context),
+            principal as lib!(krb5_const_principal),
+            &mut raw_name
+        )
+    });
     krb5_error_code_escape_hatch(context, code.into())?;
     let name = c_string_to_string(raw_name)?;
-    match &context.library {
-        #[cfg(mit)]
-        Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-            cont.krb5_free_unparsed_name(context.context as sys::mit::krb5_context, raw_name);
-        },
-        #[allow(unreachable_patterns)]
-        _ => unreachable!(),
-    };
-    Ok(Some(name))
-}
-
-/// Convert a [`sys::heimdal::krb5_principal`] to a [`String`]
-#[cfg(heimdal)]
-pub(crate) fn unparse_name_heimdal(
-    context: &Context,
-    principal: sys::heimdal::krb5_principal,
-) -> Result<Option<String>> {
-    if principal.is_null() {
-        return Ok(None);
-    }
-    let mut raw_name: *mut c_char = null_mut();
-    // let code = unsafe { krb5_unparse_name(context.context, principal, &mut raw_name) };
-    let code = match &context.library {
-        #[cfg(heimdal)]
-        Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-            cont.krb5_unparse_name(
-                context.context as sys::heimdal::krb5_context,
-                principal,
-                &mut raw_name,
-            )
-        },
-        #[allow(unreachable_patterns)]
-        _ => unreachable!(),
-    };
-    krb5_error_code_escape_hatch(context, code.into())?;
-    let name = c_string_to_string(raw_name)?;
-    match &context.library {
-        #[cfg(heimdal)]
-        Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-            cont.krb5_free_unparsed_name(context.context as sys::heimdal::krb5_context, raw_name);
-        },
-        #[allow(unreachable_patterns)]
-        _ => unreachable!(),
-    };
+    library_match!(&context.library; |cont, lib| unsafe {
+        cont.krb5_free_unparsed_name(
+            context.context as lib!(krb5_context),
+            raw_name,
+        );
+    });
     Ok(Some(name))
 }
 
 pub(crate) fn parse_name<'a>(context: &'a Context, name: &str) -> Result<ParsedName<'a>> {
     let name = CString::new(name)?;
 
-    let (raw, code) = match &context.library {
-        #[cfg(mit)]
-        Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-            let mut raw: sys::mit::krb5_principal = null_mut();
-            let code = cont.krb5_parse_name(
-                context.context as sys::mit::krb5_context,
-                name.as_ptr().cast_mut(),
-                &mut raw,
-            );
-            (raw as *mut c_void, code)
-        },
-        #[cfg(heimdal)]
-        Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-            let mut raw: sys::heimdal::krb5_principal = null_mut();
-            let code = cont.krb5_parse_name(
-                context.context as sys::heimdal::krb5_context,
-                name.as_ptr().cast_mut(),
-                &mut raw,
-            );
-            (raw as *mut c_void, code)
-        },
-    };
+    let (raw, code) = library_match!(&context.library; |cont, lib| {
+        let mut raw: lib!(krb5_principal) = null_mut();
+        let code = unsafe { cont.krb5_parse_name(
+            context.context as lib!(krb5_context),
+            name.as_ptr().cast_mut(),
+            &mut raw,
+        ) };
+        (raw as *mut c_void, code)
+    });
 
     let parsed_name = ParsedName { raw, context };
 
     krb5_error_code_escape_hatch(context, code.into())?;
     let mut canon = null_mut();
-    let code = match &context.library {
-        #[cfg(mit)]
-        Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-            cont.krb5_unparse_name(
-                context.context as sys::mit::krb5_context,
-                parsed_name.raw as sys::mit::krb5_principal,
-                &mut canon,
-            )
-        },
-        #[cfg(heimdal)]
-        Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-            cont.krb5_unparse_name(
-                context.context as sys::heimdal::krb5_context,
-                parsed_name.raw as sys::heimdal::krb5_principal,
-                &mut canon,
-            )
-        },
-    };
+    let code = library_match!(&context.library; |cont, lib| unsafe {
+        cont.krb5_unparse_name(
+            context.context as lib!(krb5_context),
+            parsed_name.raw as lib!(krb5_principal),
+            &mut canon,
+        )
+    });
     krb5_error_code_escape_hatch(context, code.into())?;
     Ok(parsed_name)
 }
@@ -196,21 +125,11 @@ impl Drop for ParsedName<'_> {
         if self.raw.is_null() {
             return;
         }
-        match &self.context.library {
-            #[cfg(mit)]
-            Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-                cont.krb5_free_principal(
-                    self.context.context as sys::mit::krb5_context,
-                    self.raw as sys::mit::krb5_principal,
-                );
-            },
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-                cont.krb5_free_principal(
-                    self.context.context as sys::heimdal::krb5_context,
-                    self.raw as sys::heimdal::krb5_principal,
-                );
-            },
-        };
+        library_match!(&self.context.library; |cont, lib| unsafe {
+            cont.krb5_free_principal(
+                self.context.context as lib!(krb5_context),
+                self.raw as lib!(krb5_principal),
+            );
+        });
     }
 }

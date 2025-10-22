@@ -58,10 +58,15 @@
           RUSTC_WRAPPER = "sccache";
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-          KADMIN_MIT_INCLUDES = "${pkgs.krb5.dev}/include";
-          KADMIN_HEIMDAL_INCLUDES = "${pkgs.heimdal.dev}/include";
-          KADMIN_MIT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
-          KADMIN_HEIMDAL_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+          KADMIN_MIT_CLIENT_INCLUDES = "${pkgs.krb5.dev}/include";
+          KADMIN_MIT_SERVER_INCLUDES = "${pkgs.krb5.dev}/include";
+          KADMIN_HEIMDAL_CLIENT_INCLUDES = "${pkgs.heimdal.dev}/include";
+          KADMIN_HEIMDAL_SERVER_INCLUDES = "${pkgs.heimdal.dev}/include";
+          KADMIN_MIT_CLIENT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
+          KADMIN_MIT_SERVER_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
+          KADMIN_HEIMDAL_CLIENT_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+          KADMIN_HEIMDAL_SERVER_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+
           SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
           SYSTEM_DEPS_KRB5_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
           SYSTEM_DEPS_KRB5_LIB = "krb5";
