@@ -1,25 +1,20 @@
 //! Test policies
-#[cfg(feature = "client")]
 use anyhow::Result;
-#[cfg(feature = "client")]
-use kadmin::{KAdmin, KAdminImpl, Policy};
-#[cfg(feature = "client")]
+use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};
+// use kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
 use serial_test::serial;
 mod k5test;
-#[cfg(feature = "client")]
 use k5test::K5Test;
 mod util;
-#[cfg(feature = "client")]
 use util::random_string;
 
 macro_rules! gen_tests {
     () => {
-        #[cfg(feature = "client")]
         #[test]
         #[serial]
         fn list_policies() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder()
+            let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let policies = kadmin.list_policies(Some("*"))?;
             assert!(policies.is_empty());
@@ -89,18 +84,12 @@ macro_rules! gen_tests {
 
 gen_tests!();
 
-mod sync {
-    #[cfg(feature = "client")]
-    use anyhow::Result;
-    #[cfg(feature = "client")]
-    use kadmin::{KAdminImpl, Policy, sync::KAdmin};
-    #[cfg(feature = "client")]
-    use serial_test::serial;
-
-    #[cfg(feature = "client")]
-    use crate::K5Test;
-    #[cfg(feature = "client")]
-    use crate::random_string;
-
-    gen_tests!();
-}
+// mod sync {
+//     use anyhow::Result;
+//     use kadmin::{KAdminImpl, Policy, sync::KAdmin};
+//     use serial_test::serial;
+//
+//     use crate::{K5Test, random_string};
+//
+//     gen_tests!();
+// }
