@@ -9,7 +9,7 @@ use crate::{context::Context, sys::library_match};
 
 /// A single TL-data entry
 #[allow(clippy::exhaustive_structs)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlDataEntry {
     /// TL-data type
@@ -19,7 +19,7 @@ pub struct TlDataEntry {
 }
 
 /// TL-data entries
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 #[allow(clippy::exhaustive_structs)]
 #[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct TlData {
@@ -29,13 +29,13 @@ pub struct TlData {
 
 impl TlData {
     /// Create a [`TlData`] from `_krb5_tl_data`
-    pub(crate) fn from_raw(context: &Context, n_tl_data: i16, tl_data: *mut c_void) -> Self {
+    pub(crate) fn from_raw(context: &Context, n_tl_data: i16, tl_data: *const c_void) -> Self {
         let mut entries = Vec::with_capacity(n_tl_data as usize);
 
         library_match!(
             &context.library;
             mit_client, mit_server => |_cont, lib| {
-                let mut tl_data = tl_data as *mut lib!(_krb5_tl_data);
+                let mut tl_data = tl_data as *const lib!(_krb5_tl_data);
                 while !tl_data.is_null() {
                     // We've checked above that the pointer is not null
                     let data_type = unsafe { (*tl_data).tl_data_type };

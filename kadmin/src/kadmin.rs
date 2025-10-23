@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     ffi::{CString, c_void},
     mem::MaybeUninit,
+    ptr,
     ptr::{null, null_mut},
     sync::Mutex,
 };
@@ -12,6 +13,8 @@ use libc::EINVAL;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
+#[cfg(any(mit_client, mit_server, heimdal_server))]
+use crate::policy::{Policy, PolicyBuilder, PolicyModifier};
 use crate::{
     context::Context,
     conv::{c_string_to_string, parse_name, unparse_name},
@@ -233,56 +236,66 @@ pub trait KAdminImpl {
     #[doc(alias("listprincs", "get_principals", "getprincs"))]
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// Add a policy
-    // ///
-    // /// Don't use this method directly. Instead, use a [`PolicyBuilder`], via [`Policy::builder`]
-    // #[doc(alias = "addpol")]
-    // fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// Add a policy
+    ///
+    /// Don't use this method directly. Instead, use a [`PolicyBuilder`], via [`Policy::builder`]
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    #[doc(alias = "addpol")]
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()>;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// Modify a policy
-    // ///
-    // /// Don't use this method directly. Instead, use a [`PolicyModifier`], via
-    // /// [`Policy::modifier`] #[doc(alias = "modpol")]
-    // fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()>;
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// Modify a policy
+    ///
+    /// Don't use this method directly. Instead, use a [`PolicyModifier`], via
+    /// [`Policy::modifier`] #[doc(alias = "modpol")]
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()>;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// Delete a policy
-    // ///
-    // /// [`Policy::delete`] is also available
-    // #[doc(alias = "delpol")]
-    // fn delete_policy(&self, name: &str) -> Result<()>;
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// Delete a policy
+    ///
+    /// [`Policy::delete`] is also available
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    #[doc(alias = "delpol")]
+    fn delete_policy(&self, name: &str) -> Result<()>;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// Retrieve a policy
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// let polname = String::from("mypol");
-    // /// let policy = kadm.get_policy(&polname).unwrap();
-    // /// assert!(policy.is_some());
-    // /// # }
-    // /// ```
-    // #[doc(alias = "getpol")]
-    // fn get_policy(&self, name: &str) -> Result<Option<Policy>>;
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// Retrieve a policy
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mypol");
+    /// let policy = kadm.get_policy(&polname).unwrap();
+    /// assert!(policy.is_some());
+    /// # }
+    /// ```
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    #[doc(alias = "getpol")]
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>>;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// Check if a policy exists
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// let polname = String::from("mypol");
-    // /// assert!(kadm.policy_exists(&polname).unwrap());
-    // /// # }
-    // /// ```
-    // fn policy_exists(&self, name: &str) -> Result<bool> {
-    //     Ok(self.get_policy(name)?.is_some())
-    // }
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// Check if a policy exists
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let polname = String::from("mypol");
+    /// assert!(kadm.policy_exists(&polname).unwrap());
+    /// # }
+    /// ```
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    fn policy_exists(&self, name: &str) -> Result<bool> {
+        Ok(self.get_policy(name)?.is_some())
+    }
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// List policies
@@ -1007,97 +1020,129 @@ impl KAdminImpl for KAdmin {
         if let Some(ret) = ret { ret } else { Ok(result) }
     }
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Policy operations are only available for MIT kadm5",
-    //         ));
-    //     }
-    //
-    //     let mut entry = builder.make_entry(&self.context)?;
-    //     let mask = builder.mask | sys::mit::KADM5_POLICY as i64;
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_create_policy(self.server_handle, &mut entry.raw, mask)
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
+        library_match!(
+            &self.context.library;
+            heimdal_client => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Policy operations are only available for MIT and Heimdal server-side libraries",
+                ))
+            },
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let (entry, mask) = builder.make_entry(&self.context)?;
+                let mask = mask | lib!(KADM5_POLICY) as i64;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Policy operations are only available for MIT kadm5",
-    //         ));
-    //     }
-    //
-    //     let mut entry = modifier.make_entry(&self.context)?;
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_modify_policy(self.server_handle, &mut entry.raw, modifier.mask)
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+                let code = unsafe {
+                    cont.kadm5_create_policy(
+                        self.server_handle,
+                        entry.raw as *mut lib!(_kadm5_policy_ent_t),
+                        mask,
+                    ).into()
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+                Ok(())
+            }
+        )
+    }
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // fn delete_policy(&self, name: &str) -> Result<()> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Policy operations are only available for MIT kadm5",
-    //         ));
-    //     }
-    //
-    //     let name = CString::new(name)?;
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_delete_policy(self.server_handle, name.as_ptr().cast_mut())
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
+        library_match!(
+            &self.context.library;
+            heimdal_client => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Policy operations are only available for MIT and Heimdal server-side libraries",
+                ))
+            },
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let (entry, mask) = modifier.make_entry(&self.context)?;
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Policy operations are only available for MIT kadm5",
-    //         ));
-    //     }
-    //
-    //     let name = CString::new(name)?;
-    //     let mut policy_ent = sys::mit::_kadm5_policy_ent_t::default();
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_get_policy(
-    //                 self.server_handle,
-    //                 name.as_ptr().cast_mut(),
-    //                 &mut policy_ent,
-    //             )
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     if code == sys::mit::KADM5_UNK_POLICY as i64 {
-    //         return Ok(None);
-    //     }
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     let policy = Policy::from_raw(&self.context, &policy_ent)?;
-    //     match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_free_policy_ent(self.server_handle, &mut policy_ent)
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     Ok(Some(policy))
-    // }
+                let code = unsafe {
+                    cont.kadm5_modify_policy(
+                        self.server_handle,
+                        entry.raw as *mut lib!(_kadm5_policy_ent_t),
+                        (mask as u32).into(),
+                    ).into()
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+                Ok(())
+            }
+        )
+    }
+
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    fn delete_policy(&self, name: &str) -> Result<()> {
+        library_match!(
+            &self.context.library;
+            heimdal_client => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Policy operations are only available on MIT and Heimdal server-side libraries.",
+                ))
+            },
+            mit_client, mit_server, heimdal_server => |cont, _lib| {
+                let code = unsafe {
+                    cont.kadm5_delete_policy(
+                        self.server_handle,
+                        name.as_ptr().cast_mut().cast()
+                    ).into()
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+                Ok(())
+            }
+        )
+    }
+
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
+        let unk_policy = library_match!(
+            &self.context.library;
+            mit_client, mit_server => |_cont, lib| lib!(KADM5_UNK_POLICY),
+            heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_UNK_POLICY)
+        );
+        let (res, policy_ptr) = library_match!(
+            &self.context.library;
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let name = CString::new(name)?;
+                // let mut policy_ent: Box<lib!(_kadm5_policy_ent_t)> = Box::new(Default::default());
+                let mut policy_ent: lib!(_kadm5_policy_ent_t) = Default::default();
+                let policy_ptr = ptr::from_mut(&mut policy_ent);
+
+                let code = unsafe {
+                    cont.kadm5_get_policy(
+                        self.server_handle,
+                        name.as_ptr().cast_mut(),
+                        policy_ptr,
+                    ).into()
+                };
+                if code == unk_policy as i64 {
+                    return Ok(None);
+                }
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+                let policy = Policy::from_raw(&self.context, policy_ptr as *const c_void)?;
+                (Ok(Some(policy)), policy_ptr as *const c_void)
+            },
+            heimdal_client => |_cont, _lib| {
+                (Err(Error::LibraryMismatch(
+                    "Policy operations are only available for MIT and Heimdal server libraries",
+                )), null())
+            }
+        );
+        if !policy_ptr.is_null() {
+            library_match!(
+                &self.context.library;
+                mit_client, mit_server => |cont, lib| unsafe {
+                    cont.kadm5_free_policy_ent(self.server_handle, policy_ptr as *mut lib!(_kadm5_policy_ent_t));
+                },
+                heimdal_server => |cont, lib| unsafe {
+                    cont.kadm5_free_policy_ent(policy_ptr as *mut lib!(_kadm5_policy_ent_t));
+                },
+                heimdal_client => |_cont, _lib| {}
+            );
+        }
+        res
+    }
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
@@ -1162,8 +1207,8 @@ impl KAdminImpl for KAdmin {
     fn get_privileges(&self) -> Result<i64> {
         library_match!(&self.context.library; |cont, _lib| {
             let mut privs = 0;
-            let code = unsafe { cont.kadm5_get_privs(self.server_handle, &mut privs) };
-            kadm5_ret_t_escape_hatch(&self.context, code.into())?;
+            let code = unsafe { cont.kadm5_get_privs(self.server_handle, &mut privs).into() };
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
             Ok(privs.into())
         })
     }

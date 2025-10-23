@@ -1,7 +1,6 @@
 //! Test policies
 use anyhow::Result;
-use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};
-// use kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
+use kadmin::{KAdm5Variant, KAdmin, KAdminImpl, Policy};
 use serial_test::serial;
 mod k5test;
 use k5test::K5Test;
@@ -21,12 +20,11 @@ macro_rules! gen_tests {
             Ok(())
         }
 
-        #[cfg(feature = "client")]
         #[test]
         #[serial]
         fn policy_exists() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder()
+            let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let polname = random_string(16);
             Policy::builder(&polname).create(&kadmin)?;
@@ -34,12 +32,11 @@ macro_rules! gen_tests {
             Ok(())
         }
 
-        #[cfg(feature = "client")]
         #[test]
         #[serial]
         fn create_policy() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder()
+            let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let polname = random_string(16);
             let policy = Policy::builder(&polname).create(&kadmin)?;
@@ -49,12 +46,11 @@ macro_rules! gen_tests {
             Ok(())
         }
 
-        #[cfg(feature = "client")]
         #[test]
         #[serial]
         fn delete_policy() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder()
+            let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let polname = random_string(16);
             let policy = Policy::builder(&polname).create(&kadmin)?;
@@ -64,12 +60,11 @@ macro_rules! gen_tests {
             Ok(())
         }
 
-        #[cfg(feature = "client")]
         #[test]
         #[serial]
         fn modify_policy() -> Result<()> {
             let realm = K5Test::new()?;
-            let kadmin = KAdmin::builder()
+            let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
                 .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
             let polname = random_string(16);
             let policy = Policy::builder(&polname).create(&kadmin)?;

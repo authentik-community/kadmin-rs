@@ -95,22 +95,12 @@ impl KAdm5Variant {
         }
     }
 
-    fn includes_override_env_var(&self) -> &'static str {
-        match self {
-            #[cfg(feature = "mit_client")]
-            Self::MitClient => "KADMIN_MIT_CLIENT_INCLUDES",
-            #[cfg(feature = "mit_server")]
-            Self::MitServer => "KADMIN_MIT_SERVER_INCLUDES",
-            #[cfg(feature = "heimdal_client")]
-            Self::HeimdalClient => "KADMIN_HEIMDAL_CLIENT_INCLUDES",
-            #[cfg(feature = "heimdal_server")]
-            Self::HeimdalServer => "KADMIN_HEIMDAL_SERVER_INCLUDES",
-        }
+    fn includes_override_env_var(&self) -> String {
+        format!("KADMIN_{}_INCLUDES", self.name().to_uppercase())
     }
 
     fn bins(&self) -> Vec<&'static str> {
         match self {
-            #[cfg(any(feature = "mit_client", feature = "mit_server"))]
             #[cfg(feature = "mit_client")]
             Self::MitClient => vec!["krb5-config.mit", "krb5-config"],
             #[cfg(feature = "mit_server")]
@@ -135,17 +125,8 @@ impl KAdm5Variant {
         }
     }
 
-    fn bin_override_env_var(&self) -> &'static str {
-        match self {
-            #[cfg(feature = "mit_client")]
-            Self::MitClient => "KADMIN_MIT_CLIENT_KRB5_CONFIG",
-            #[cfg(feature = "mit_server")]
-            Self::MitServer => "KADMIN_MIT_SERVER_KRB5_CONFIG",
-            #[cfg(feature = "heimdal_client")]
-            Self::HeimdalClient => "KADMIN_HEIMDAL_CLIENT_KRB5_CONFIG",
-            #[cfg(feature = "heimdal_server")]
-            Self::HeimdalServer => "KADMIN_HEIMDAL_SERVER_KRB5_CONFIG",
-        }
+    fn bin_override_env_var(&self) -> String {
+        format!("KADMIN_{}_KRB5_CONFIG", self.name().to_uppercase())
     }
 
     fn pkg_config_names(&self) -> Vec<&'static str> {
@@ -455,7 +436,8 @@ fn probe_from_pkg_config(lib: pkg_config::Library, variant: KAdm5Variant) -> Opt
 fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
     config.outputs();
 
-    let mut builder = bindgen::Builder::default()
+    let mut builder = bindgen::builder()
+        .clang_arg(format!("-DKADMIN_RS_{}", config.name().to_uppercase()))
         .header("src/wrapper.h")
         .allowlist_type("(_|)kadm5.*")
         .allowlist_type("krb5_key_salt_tuple")

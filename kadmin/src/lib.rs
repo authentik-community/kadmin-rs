@@ -68,10 +68,10 @@ pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 
 // pub mod sync;
 
-// #[cfg(any(mit_client, mit_server, heimdal_server))]
-// pub mod policy;
-// #[cfg(any(mit_client, mit_server, heimdal_server))]
-// pub use policy::Policy;
+#[cfg(any(mit_client, mit_server, heimdal_server))]
+pub mod policy;
+#[cfg(any(mit_client, mit_server, heimdal_server))]
+pub use policy::Policy;
 
 // pub mod principal;
 // pub use principal::Principal;
