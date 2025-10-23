@@ -1160,13 +1160,12 @@ impl KAdminImpl for KAdmin {
     }
 
     fn get_privileges(&self) -> Result<i64> {
-        let (privs, code) = library_match!(&self.context.library; |cont, _lib| {
+        library_match!(&self.context.library; |cont, _lib| {
             let mut privs = 0;
             let code = unsafe { cont.kadm5_get_privs(self.server_handle, &mut privs) };
-            (privs.into(), code.into())
-        });
-        kadm5_ret_t_escape_hatch(&self.context, code)?;
-        Ok(privs)
+            kadm5_ret_t_escape_hatch(&self.context, code.into())?;
+            Ok(privs.into())
+        })
     }
 }
 
@@ -1196,7 +1195,7 @@ pub struct KAdminBuilder {
     api_version: KAdminApiVersion,
 }
 
-impl<'a> KAdminBuilder {
+impl KAdminBuilder {
     /// Create a new [`KAdminBuilder`] instance
     pub fn new(variant: KAdm5Variant) -> Self {
         Self {
