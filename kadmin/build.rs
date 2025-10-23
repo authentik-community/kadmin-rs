@@ -51,6 +51,32 @@ impl KAdm5Variant {
         }
     }
 
+    fn is_heimdal(&self) -> bool {
+        match self {
+            #[cfg(feature = "mit_client")]
+            Self::MitClient => false,
+            #[cfg(feature = "mit_server")]
+            Self::MitServer => false,
+            #[cfg(feature = "heimdal_client")]
+            Self::HeimdalClient => true,
+            #[cfg(feature = "heimdal_server")]
+            Self::HeimdalServer => true,
+        }
+    }
+
+    fn is_server(&self) -> bool {
+        match self {
+            #[cfg(feature = "mit_client")]
+            Self::MitClient => false,
+            #[cfg(feature = "mit_server")]
+            Self::MitServer => true,
+            #[cfg(feature = "heimdal_client")]
+            Self::HeimdalClient => false,
+            #[cfg(feature = "heimdal_server")]
+            Self::HeimdalServer => true,
+        }
+    }
+
     fn cargo_callbacks() {
         // Those are hardcoded because we need to handle them even if disabled
         println!("cargo:rustc-check-cfg=cfg(mit_client)");
@@ -460,7 +486,7 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
         .allowlist_var("ENCTYPE_.*")
         .allowlist_var("KRB5_KDB_SALTTYPE_.*")
         .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
-        // .allowlist_function("kadm5_delete_principal")
+        .allowlist_function("kadm5_delete_principal")
         // .allowlist_function("kadm5_modify_principal")
         // .allowlist_function("kadm5_get_principal")
         // .allowlist_function("kadm5_free_principal_ent")
@@ -510,7 +536,7 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
         .generate_cstr(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
 
-    if config.variant.is_mit() {
+    if config.variant.is_mit() || config.variant.is_heimdal() && config.variant.is_server() {
         builder = builder
             .allowlist_function("kadm5_create_policy")
             .allowlist_function("kadm5_delete_policy")

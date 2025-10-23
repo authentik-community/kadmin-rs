@@ -77,6 +77,7 @@ pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 // pub use principal::Principal;
 
 pub mod sys;
+pub use sys::KAdm5Variant;
 
 #[cfg(feature = "python")]
 mod python;

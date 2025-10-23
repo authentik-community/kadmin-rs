@@ -123,24 +123,24 @@ pub trait KAdminImpl {
     // #[doc(alias = "modprinc")]
     // fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
 
-    // /// Rename a principal
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// kadm.rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
-    // ///     .unwrap();
-    // /// # }
-    // /// ```
-    // #[doc(alias = "renprinc")]
-    // fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
+    /// Rename a principal
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// kadm.rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
+    ///     .unwrap();
+    /// # }
+    /// ```
+    #[doc(alias = "renprinc")]
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
 
-    // /// Delete a principal
-    // ///
-    // /// [`Principal::delete`] is also available
-    // #[doc(alias = "delprinc")]
-    // fn delete_principal(&self, name: &str) -> Result<()>;
+    /// Delete a principal
+    ///
+    /// [`Principal::delete`] is also available
+    #[doc(alias = "delprinc")]
+    fn delete_principal(&self, name: &str) -> Result<()>;
 
     // /// Retrieve a principal
     // ///
@@ -202,38 +202,36 @@ pub trait KAdminImpl {
     //     keysalts: Option<&KeySalts>,
     // ) -> Result<()>;
 
-    // #[cfg(any(mit_client, mit_server))]
-    // /// Retrieve string attributes on a principal
-    // ///
-    // /// [`Principal::get_strings`] is also available
-    // fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>>;
+    #[cfg(any(mit_client, mit_server))]
+    /// Retrieve string attributes on a principal
+    ///
+    /// [`Principal::get_strings`] is also available
+    fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>>;
 
-    // #[cfg(any(mit_client, mit_server))]
-    // /// Set string attribute on a principal
-    // ///
-    // /// Set `value` to None to remove the string
-    // ///
-    // /// [`Principal::set_string`] is also available
-    // fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()>;
+    #[cfg(any(mit_client, mit_server))]
+    /// Set string attribute on a principal
+    ///
+    /// Set `value` to None to remove the string
+    ///
+    /// [`Principal::set_string`] is also available
+    fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()>;
 
-    // /// List principals
-    // ///
-    // /// `query` is a shell-style glob expression that can contain the wild-card characters `?`,
-    // `*`, /// and `[]`. All principal names matching the expression are retuned. If the
-    // expression /// does not contain an `@` character, an `@` character followed by the local
-    // realm is /// appended to the expression. If no query is provided, all principals are
-    // returned. ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// for princ in kadm.list_principals(None).unwrap() {
-    // ///     println!("{princ}");
-    // /// }
-    // /// # }
-    // /// ```
-    // #[doc(alias("listprincs", "get_principals", "getprincs"))]
-    // fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
+    /// List principals
+    ///
+    /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
+    /// and `[]`. All principal names matching the expression are retuned. If the expression ///
+    /// does not contain an `@` character, an `@` character followed by the local realm is appended
+    /// to the expression. If no query is provided, all principals are returned. ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// for princ in kadm.list_principals(None).unwrap() {
+    ///     println!("{princ}");
+    /// }
+    /// # }
+    /// ```
+    #[doc(alias("listprincs", "get_principals", "getprincs"))]
+    fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
 
     // #[cfg(any(mit_client, mit_server, heimdal_server))]
     // /// Add a policy
@@ -286,24 +284,26 @@ pub trait KAdminImpl {
     //     Ok(self.get_policy(name)?.is_some())
     // }
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // /// List policies
-    // ///
-    // /// `query` is a shell-style glob expression that can contain the wild-card characters `?`,
-    // `*`, /// and `[]`. All policy names matching the expression are returned. If no query is
-    // provided, /// all existing policy names are returned.
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// for princ in kadm.list_principals(None).unwrap() {
-    // ///     println!("{princ}");
-    // /// }
-    // /// # }
-    // /// ```
-    // #[doc(alias("listpols", "get_policies", "getpols"))]
-    // fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    /// List policies
+    ///
+    /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
+    /// and `[]`. All policy names matching the expression are returned. If no query is provided,
+    /// all existing policy names are returned.
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// for pol in kadm.list_policies(None).unwrap() {
+    ///     println!("{pol}");
+    /// }
+    /// # }
+    /// ```
+    ///
+    /// Only available for MIT and Heimdal server-side libraries.
+    #[doc(alias("listpols", "get_policies", "getpols"))]
+    fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>>;
 
     /// Get current privileges
     fn get_privileges(&self) -> Result<i64>;
@@ -589,54 +589,31 @@ impl KAdminImpl for KAdmin {
     //     Ok(())
     // }
 
-    // fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
-    //     let old_princ = parse_name(&self.context, old_name)?;
-    //     let new_princ = parse_name(&self.context, new_name)?;
-    //     let code = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_rename_principal(
-    //                 self.server_handle,
-    //                 old_princ.raw as sys::mit::krb5_principal,
-    //                 new_princ.raw as sys::mit::krb5_principal,
-    //             )
-    //         },
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
-    //             cont.kadm5_rename_principal(
-    //                 self.server_handle,
-    //                 old_princ.raw as sys::heimdal::krb5_principal,
-    //                 new_princ.raw as sys::heimdal::krb5_principal,
-    //             )
-    //         })
-    //         .into(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+    fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
+        let old_princ = parse_name(&self.context, old_name)?;
+        let new_princ = parse_name(&self.context, new_name)?;
+        let code = library_match!(&self.context.library; |cont, lib| unsafe {
+            cont.kadm5_rename_principal(
+                self.server_handle,
+                old_princ.raw as lib!(krb5_principal),
+                new_princ.raw as lib!(krb5_principal),
+            ).into()
+        });
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
 
-    // fn delete_principal(&self, name: &str) -> Result<()> {
-    //     let princ = parse_name(&self.context, name)?;
-    //     let code = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_delete_principal(
-    //                 self.server_handle,
-    //                 princ.raw as sys::mit::krb5_principal,
-    //             )
-    //         },
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
-    //             cont.kadm5_delete_principal(
-    //                 self.server_handle,
-    //                 princ.raw as sys::heimdal::krb5_principal,
-    //             )
-    //         })
-    //         .into(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+    fn delete_principal(&self, name: &str) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let code = library_match!(&self.context.library; |cont, lib| unsafe {
+            cont.kadm5_delete_principal(
+                self.server_handle,
+                princ.raw as lib!(krb5_principal),
+            ).into()
+        });
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
 
     // fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
     //     let principal = match &self.context.library {
@@ -911,127 +888,124 @@ impl KAdminImpl for KAdmin {
     //     Ok(())
     // }
 
-    // #[cfg(any(mit_client, mit_server))]
-    // fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Principal strings are only available on MIT libraries.",
-    //         ));
-    //     }
-    //     let princ = parse_name(&self.context, name)?;
-    //
-    //     let mut count = 0;
-    //     let mut raw_strings = null_mut();
-    //
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_get_strings(
-    //                 self.server_handle,
-    //                 princ.raw as sys::mit::krb5_principal,
-    //                 &mut raw_strings,
-    //                 &mut count,
-    //             )
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //
-    //     let mut strings = HashMap::with_capacity(count as usize);
-    //
-    //     if raw_strings.is_null() {
-    //         return Ok(strings);
-    //     }
-    //
-    //     for raw in unsafe { std::slice::from_raw_parts(raw_strings, count as usize) }.iter() {
-    //         strings.insert(c_string_to_string(raw.key)?, c_string_to_string(raw.value)?);
-    //     }
-    //
-    //     match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_free_strings(self.server_handle, raw_strings, count)
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //
-    //     Ok(strings)
-    // }
+    #[cfg(any(mit_client, mit_server))]
+    fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
+        library_match!(
+            &self.context.library;
+            heimdal_client, heimdal_server => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Principal strings are only available on MIT libraries.",
+                ))
+            },
+            mit_client, mit_server => |cont, lib| {
+                let princ = parse_name(&self.context, name)?;
 
-    // #[cfg(any(mit_client, mit_server))]
-    // fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Principal strings are only available on MIT libraries.",
-    //         ));
-    //     }
-    //
-    //     let princ = parse_name(&self.context, name)?;
-    //     let key = CString::new(key)?;
-    //     let value = value.map(CString::new).transpose()?;
-    //
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_set_string(
-    //                 self.server_handle,
-    //                 princ.raw as sys::mit::krb5_principal,
-    //                 key.as_ptr(),
-    //                 if let Some(value) = &value {
-    //                     value.as_ptr()
-    //                 } else {
-    //                     null()
-    //                 },
-    //             )
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+                let mut count = 0;
+                let mut raw_strings = null_mut();
 
-    // fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
-    //     let query = CString::new(query.unwrap_or("*"))?;
-    //     let mut count = 0;
-    //     let mut princs: *mut *mut i8 = null_mut();
-    //     let code = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_get_principals(
-    //                 self.server_handle,
-    //                 query.as_ptr().cast_mut(),
-    //                 &mut princs,
-    //                 &mut count,
-    //             )
-    //         },
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => (unsafe {
-    //             cont.kadm5_get_principals(
-    //                 self.server_handle,
-    //                 query.as_ptr().cast_mut(),
-    //                 &mut princs,
-    //                 &mut count,
-    //             )
-    //         })
-    //         .into(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     let mut result = Vec::with_capacity(count as usize);
-    //     if count == 0 {
-    //         return Ok(result);
-    //     }
-    //     for raw in unsafe { std::slice::from_raw_parts(princs, count as usize) }.iter() {
-    //         result.push(c_string_to_string(*raw)?);
-    //     }
-    //     match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_free_name_list(self.server_handle, princs, count);
-    //         },
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-    //             cont.kadm5_free_name_list(self.server_handle, princs, &mut count);
-    //         },
-    //     };
-    //     Ok(result)
-    // }
+                let code = unsafe {
+                    cont.kadm5_get_strings(
+                        self.server_handle,
+                        princ.raw as lib!(krb5_principal),
+                        &mut raw_strings,
+                        &mut count,
+                    )
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+                let mut strings = HashMap::with_capacity(count as usize);
+
+                if raw_strings.is_null() {
+                    return Ok(strings);
+                }
+
+                for raw in unsafe { std::slice::from_raw_parts(raw_strings, count as usize) }.iter() {
+                    strings.insert(c_string_to_string(raw.key)?, c_string_to_string(raw.value)?);
+                }
+
+                unsafe { cont.kadm5_free_strings(self.server_handle, raw_strings, count) };
+
+                Ok(strings)
+            }
+        )
+    }
+
+    #[cfg(any(mit_client, mit_server))]
+    fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
+        library_match!(
+            &self.context.library;
+            heimdal_client, heimdal_server => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Principal strings are only available on MIT libraries.",
+                ))
+            },
+            mit_client, mit_server => |cont, lib| {
+                let princ = parse_name(&self.context, name)?;
+                let key = CString::new(key)?;
+                let value = value.map(CString::new).transpose()?;
+
+                let code = unsafe {
+                    cont.kadm5_set_string(
+                        self.server_handle,
+                        princ.raw as lib!(krb5_principal),
+                        key.as_ptr(),
+                        if let Some(value) = &value {
+                            value.as_ptr()
+                        } else {
+                            null()
+                        },
+                    )
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+                Ok(())
+            }
+        )
+    }
+
+    fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
+        let query = CString::new(query.unwrap_or("*"))?;
+        let mut princs: *mut *mut i8 = null_mut();
+        let mut count = 0;
+
+        let code = library_match!(&self.context.library; |cont, _lib| unsafe {
+            cont.kadm5_get_principals(
+                self.server_handle,
+                query.as_ptr().cast_mut(),
+                &mut princs,
+                &mut count,
+            ).into()
+        });
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        let mut result = Vec::with_capacity(count as usize);
+        if count == 0 {
+            return Ok(result);
+        }
+
+        let mut ret = None;
+        for raw in unsafe { std::slice::from_raw_parts(princs, count as usize) }.iter() {
+            match c_string_to_string(*raw) {
+                Ok(princ) => result.push(princ),
+                Err(err) => {
+                    ret = Some(Err(err));
+                    break;
+                }
+            }
+        }
+
+        library_match!(
+            &self.context.library;
+            mit_client, mit_server => |cont, _lib| unsafe {
+                cont.kadm5_free_name_list(self.server_handle, princs, count);
+            },
+            heimdal_client, heimdal_server => |cont, _lib| unsafe {
+                cont.kadm5_free_name_list(self.server_handle, princs, &mut count);
+            }
+        );
+
+        if let Some(ret) = ret { ret } else { Ok(result) }
+    }
 
     // #[cfg(any(mit_client, mit_server, heimdal_server))]
     // fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
@@ -1125,44 +1099,65 @@ impl KAdminImpl for KAdmin {
     //     Ok(Some(policy))
     // }
 
-    // #[cfg(any(mit_client, mit_server, heimdal_server))]
-    // fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
-    //     if !self.context.library.is_mit() {
-    //         return Err(Error::LibraryMismatch(
-    //             "Policy operations are only available for MIT kadm5",
-    //         ));
-    //     }
-    //
-    //     let query = CString::new(query.unwrap_or("*"))?;
-    //     let mut count = 0;
-    //     let mut policies: *mut *mut i8 = null_mut();
-    //     let code = match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_get_policies(
-    //                 self.server_handle,
-    //                 query.as_ptr().cast_mut(),
-    //                 &mut policies,
-    //                 &mut count,
-    //             )
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     let mut result = Vec::with_capacity(count as usize);
-    //     if count == 0 {
-    //         return Ok(result);
-    //     }
-    //     for raw in unsafe { std::slice::from_raw_parts(policies, count as usize) }.iter() {
-    //         result.push(c_string_to_string(*raw)?);
-    //     }
-    //     match &self.context.library {
-    //         Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //             cont.kadm5_free_name_list(self.server_handle, policies, count);
-    //         },
-    //         _ => unreachable!(),
-    //     };
-    //     Ok(result)
-    // }
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
+    fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
+        let (raw, mut count, result) = library_match!(
+            &self.context.library;
+            heimdal_client => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "Principal strings are only available on MIT Heimdal server-side libraries.",
+                ))
+            },
+            mit_client, mit_server, heimdal_server => |cont, _lib| {
+                let query = CString::new(query.unwrap_or("*"))?;
+                let mut policies: *mut *mut i8 = null_mut();
+                let mut count = 0;
+
+                let code = unsafe {
+                    cont.kadm5_get_policies(
+                        self.server_handle,
+                        query.as_ptr().cast_mut(),
+                        &mut policies,
+                        &mut count,
+                    ).into()
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+                let mut result = Vec::with_capacity(count as usize);
+                if count == 0 {
+                    return Ok(result);
+                }
+                let mut ret = None;
+                for raw in unsafe { std::slice::from_raw_parts(policies, count as usize) }.iter() {
+                    match c_string_to_string(*raw) {
+                        Ok(pol) => result.push(pol),
+                        Err(err) => {
+                            ret = Some((policies, count, Err(err)));
+                            break;
+                        }
+                    }
+                }
+                if let Some(ret) = ret {
+                    Ok(ret)
+                } else {
+                    Ok((policies, count, Ok(result)))
+                }
+
+            }
+        )?;
+
+        library_match!(
+            &self.context.library;
+            mit_client, mit_server => |cont, _lib| unsafe {
+                cont.kadm5_free_name_list(self.server_handle, raw, count);
+            },
+            heimdal_client, heimdal_server => |cont, _lib| unsafe {
+                cont.kadm5_free_name_list(self.server_handle, raw, &mut count);
+            }
+        );
+
+        result
+    }
 
     fn get_privileges(&self) -> Result<i64> {
         let (privs, code) = library_match!(&self.context.library; |cont, _lib| {
@@ -1313,8 +1308,8 @@ impl<'a> KAdminBuilder {
 
         let code = library_match!(
             &kadmin.context.library;
-            mit_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_password(
+            mit_client, mit_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_password(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     password.as_ptr().cast_mut(),
@@ -1324,10 +1319,10 @@ impl<'a> KAdminBuilder {
                     api_version,
                     db_args.db_args,
                     &mut kadmin.server_handle,
-                ))
+                )
             },
-            heimdal_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_password_ctx(
+            heimdal_client, heimdal_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_password_ctx(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     password.as_ptr().cast_mut(),
@@ -1336,14 +1331,9 @@ impl<'a> KAdminBuilder {
                     struct_version.into(),
                     api_version.into(),
                     &mut kadmin.server_handle,
-                ).into())
-            },
-            mit_server, heimdal_server => |_cont, _lib| {
-                Err(Error::LibraryMismatch(
-                    "with_password can only be used with client-side libraries",
-                ))
+                ).into()
             }
-        )?;
+        );
 
         drop(params_raw);
         drop(_guard);
@@ -1406,8 +1396,8 @@ impl<'a> KAdminBuilder {
 
         let code = library_match!(
             &kadmin.context.library;
-            mit_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_skey(
+            mit_client, mit_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_skey(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     keytab.as_ptr().cast_mut(),
@@ -1417,10 +1407,10 @@ impl<'a> KAdminBuilder {
                     api_version,
                     db_args.db_args,
                     &mut kadmin.server_handle,
-                ))
+                )
             },
-            heimdal_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_skey_ctx(
+            heimdal_client, heimdal_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_skey_ctx(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     keytab.as_ptr().cast_mut(),
@@ -1429,14 +1419,9 @@ impl<'a> KAdminBuilder {
                     struct_version.into(),
                     api_version.into(),
                     &mut kadmin.server_handle,
-                ).into())
-            },
-            mit_server, heimdal_server => |_cont, _lib| {
-                Err(Error::LibraryMismatch(
-                    "with_keytab can only be used with client-side libraries",
-                ))
+                ).into()
             }
-        )?;
+        );
 
         drop(params_raw);
         drop(_guard);
@@ -1516,8 +1501,8 @@ impl<'a> KAdminBuilder {
 
         let code = library_match!(
             &kadmin.context.library;
-            mit_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_creds(
+            mit_client, mit_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_creds(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     ccache as lib!(krb5_ccache),
@@ -1527,10 +1512,10 @@ impl<'a> KAdminBuilder {
                     api_version,
                     db_args.db_args,
                     &mut kadmin.server_handle,
-                ))
+                )
             },
-            heimdal_client => |cont, lib| unsafe {
-                Ok(cont.kadm5_init_with_creds_ctx(
+            heimdal_client, heimdal_server => |cont, lib| unsafe {
+                cont.kadm5_init_with_creds_ctx(
                     kadmin.context.context as lib!(krb5_context),
                     client_name.as_ptr().cast_mut(),
                     ccache as lib!(krb5_ccache),
@@ -1539,14 +1524,9 @@ impl<'a> KAdminBuilder {
                     struct_version.into(),
                     api_version.into(),
                     &mut kadmin.server_handle,
-                ).into())
-            },
-            mit_server, heimdal_server => |_cont, _lib| {
-                Err(Error::LibraryMismatch(
-                    "with_ccache can only be used with client-side libraries",
-                ))
+                ).into()
             }
-        )?;
+        );
 
         drop(params_raw);
         drop(_guard);
@@ -1566,19 +1546,16 @@ impl<'a> KAdminBuilder {
         unimplemented!();
     }
 
+    #[cfg(any(mit_server, heimdal_server))]
     /// Construct a [`KAdmin`] object from this builder for local database manipulation.
+    ///
+    /// Only available on server-side libraries.
     pub fn with_local(self) -> Result<KAdmin> {
         let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 
         let (mut kadmin, params, db_args, api_version, service_name, struct_version) =
             self.get_kadmin()?;
         let params_raw = ParamsRaw::build(&kadmin.context, &params)?;
-
-        if !kadmin.context.library.is_server() {
-            return Err(Error::LibraryMismatch(
-                "with_local can only be used with server-side libraries",
-            ));
-        }
 
         let client_name = if let Some(default_realm) = &kadmin.context.default_realm {
             let mut concat = CString::new("root/admin@")?.into_bytes();
@@ -1590,6 +1567,11 @@ impl<'a> KAdminBuilder {
 
         let code = library_match!(
             &kadmin.context.library;
+            mit_client, heimdal_client => |_cont, _lib| {
+                Err(Error::LibraryMismatch(
+                    "with_local can only be used with server-side libraries",
+                ))
+            },
             mit_server => |cont, lib| unsafe {
                 Ok(cont.kadm5_init_with_creds(
                     kadmin.context.context as lib!(krb5_context),
@@ -1614,11 +1596,6 @@ impl<'a> KAdminBuilder {
                     api_version.into(),
                     &mut kadmin.server_handle,
                 ).into())
-            },
-            mit_client, heimdal_client => |_cont, _lib| {
-                Err(Error::LibraryMismatch(
-                    "with_local can only be used with server-side libraries",
-                ))
             }
         )?;
 

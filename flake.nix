@@ -38,8 +38,8 @@
 
             clang
             glibc
-            # krb5.out
-            # krb5.dev
+            krb5.out
+            krb5.dev
             # heimdal.dev
             libclang
             openssl
