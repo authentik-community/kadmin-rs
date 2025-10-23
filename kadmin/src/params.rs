@@ -155,8 +155,8 @@ impl Params {
     }
 }
 
-pub(crate) struct ParamsGuard<'a> {
-    pub(crate) raw: *mut c_void,
+pub(crate) struct ParamsRaw<'a> {
+    pub(crate) raw: *const c_void,
     context: &'a Context,
 
     realm: Option<CString>,
@@ -168,7 +168,7 @@ pub(crate) struct ParamsGuard<'a> {
     stash_file: Option<CString>,
 }
 
-impl<'a> ParamsGuard<'a> {
+impl<'a> ParamsRaw<'a> {
     #[allow(clippy::field_reassign_with_default)]
     pub(crate) fn build(context: &'a Context, params: &Params) -> Result<Self> {
         let realm = params
@@ -263,7 +263,7 @@ impl<'a> ParamsGuard<'a> {
                 };
 
                 let raw = Box::new(raw);
-                guard.raw = Box::into_raw(raw) as *mut c_void;
+                guard.raw = Box::into_raw(raw) as *const c_void;
             },
             heimdal_client, heimdal_server => |_cont, lib| {
                 let mut raw: lib!(kadm5_config_params) = Default::default();
@@ -297,7 +297,7 @@ impl<'a> ParamsGuard<'a> {
                 };
 
                 let raw = Box::new(raw);
-                guard.raw = Box::into_raw(raw) as *mut c_void;
+                guard.raw = Box::into_raw(raw) as *const c_void;
             }
         );
 
@@ -305,7 +305,7 @@ impl<'a> ParamsGuard<'a> {
     }
 }
 
-impl Drop for ParamsGuard<'_> {
+impl Drop for ParamsRaw<'_> {
     fn drop(&mut self) {
         if self.raw.is_null() {
             return;

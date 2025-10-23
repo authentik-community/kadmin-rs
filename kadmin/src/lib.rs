@@ -54,23 +54,23 @@ pub use context::Context;
 pub mod params;
 pub use params::Params;
 
-// pub mod db_args;
-// pub use db_args::DbArgs;
+pub mod db_args;
+pub use db_args::DbArgs;
 
-// pub mod tl_data;
-// pub use tl_data::{TlData, TlDataEntry};
+pub mod tl_data;
+pub use tl_data::{TlData, TlDataEntry};
 
-// pub mod keysalt;
-// pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
+pub mod keysalt;
+pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
-// pub mod kadmin;
-// pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
+pub mod kadmin;
+pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 
 // pub mod sync;
 
-// #[cfg(mit)]
+// #[cfg(any(mit_client, mit_server, heimdal_server))]
 // pub mod policy;
-// #[cfg(mit)]
+// #[cfg(any(mit_client, mit_server, heimdal_server))]
 // pub use policy::Policy;
 
 // pub mod principal;

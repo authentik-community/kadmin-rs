@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use crate::{
     context::Context,
     error::{Error, Result, krb5_error_code_escape_hatch},
-    sys::{self, Library},
+    sys::{self, Library, cfg_match, library_match},
 };
 
 /// Kerberos encryption type
@@ -37,20 +37,19 @@ impl EncryptionType {
     fn from_str(context: &Context, s: &str) -> Result<Self> {
         let s = CString::new(s)?;
         let mut enctype = -1;
-        let code = match &context.library {
-            #[cfg(mit)]
-            Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
+        let code = library_match!(
+            &context.library;
+            mit_client, mit_server => |cont, _lib| unsafe {
                 cont.krb5_string_to_enctype(s.as_ptr().cast_mut(), &mut enctype)
             },
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
+            heimdal_client, heimdal_server => |cont, lib| unsafe {
                 cont.krb5_string_to_enctype(
-                    context.context as sys::heimdal::krb5_context,
+                    context.context as lib!(krb5_context),
                     s.as_ptr().cast_mut(),
                     &mut enctype,
                 )
-            },
-        };
+            }
+        );
         if krb5_error_code_escape_hatch(context, code.into()).is_err() {
             Err(Error::EncryptionTypeConversion)
         } else {
@@ -59,9 +58,9 @@ impl EncryptionType {
     }
 
     fn to_string(self, context: &Context) -> Result<String> {
-        match &context.library {
-            #[cfg(mit)]
-            Library::MitClient(cont) | Library::MitServer(cont) => {
+        library_match!(
+            &context.library;
+            mit_client, mit_server => |cont, _lib| {
                 let buffer = [0; 100];
                 let code = unsafe {
                     let mut b: [c_char; 100] = std::mem::transmute(buffer);
@@ -73,13 +72,12 @@ impl EncryptionType {
                 let s = CStr::from_bytes_until_nul(&buffer)
                     .map_err(|_| Error::EncryptionTypeConversion)?;
                 Ok(s.to_owned().into_string()?)
-            }
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+            },
+            heimdal_client, heimdal_server => |cont, lib| {
                 let mut raw: *mut i8 = null_mut();
                 let code = unsafe {
                     cont.krb5_enctype_to_string(
-                        context.context as sys::heimdal::krb5_context,
+                        context.context as lib!(krb5_context),
                         self.into(),
                         &mut raw,
                     )
@@ -96,7 +94,7 @@ impl EncryptionType {
                 unsafe { libc::free(raw as *mut c_void) };
                 Ok(res)
             }
-        }
+        )
     }
 }
 
@@ -123,20 +121,19 @@ impl From<i32> for SaltType {
 impl SaltType {
     fn from_str(context: &Context, enctype: EncryptionType, s: &str) -> Result<Self> {
         let s = CString::new(s)?;
-        let (salttype, code) = match &context.library {
-            #[cfg(mit)]
-            Library::MitClient(cont) | Library::MitServer(cont) => {
+        let (salttype, code) = library_match!(
+            &context.library;
+            mit_client, mit_server => |cont, _lib| {
                 let mut salttype = -1;
                 let code =
                     unsafe { cont.krb5_string_to_salttype(s.as_ptr().cast_mut(), &mut salttype) };
                 (salttype, code)
-            }
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+            },
+            heimdal_client, heimdal_server => |cont, lib| {
                 let mut salttype = 0;
                 let code = unsafe {
                     cont.krb5_string_to_salttype(
-                        context.context as sys::heimdal::krb5_context,
+                        context.context as lib!(krb5_context),
                         enctype.into(),
                         s.as_ptr().cast_mut(),
                         &mut salttype,
@@ -144,7 +141,7 @@ impl SaltType {
                 };
                 (salttype as i32, code)
             }
-        };
+        );
         if krb5_error_code_escape_hatch(context, code.into()).is_err() {
             Err(Error::EncryptionTypeConversion)
         } else {
@@ -153,9 +150,9 @@ impl SaltType {
     }
 
     fn to_string(self, context: &Context, enctype: EncryptionType) -> Result<String> {
-        match &context.library {
-            #[cfg(mit)]
-            Library::MitClient(cont) | Library::MitServer(cont) => {
+        library_match!(
+            &context.library;
+            mit_client, mit_server => |cont, _lib| {
                 let buffer = [0; 100];
                 let code = unsafe {
                     let mut b: [c_char; 100] = std::mem::transmute(buffer);
@@ -167,13 +164,12 @@ impl SaltType {
                 let s =
                     CStr::from_bytes_until_nul(&buffer).map_err(|_| Error::SaltTypeConversion)?;
                 Ok(s.to_owned().into_string()?)
-            }
-            #[cfg(heimdal)]
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
+            },
+            heimdal_client, heimdal_server => |cont, lib| {
                 let mut raw: *mut i8 = null_mut();
                 let code = unsafe {
                     cont.krb5_salttype_to_string(
-                        context.context as sys::heimdal::krb5_context,
+                        context.context as lib!(krb5_context),
                         enctype.into(),
                         Into::<i32>::into(self) as u32,
                         &mut raw,
@@ -191,7 +187,7 @@ impl SaltType {
                 unsafe { libc::free(raw as *mut c_void) };
                 Ok(res)
             }
-        }
+        )
     }
 }
 
@@ -226,8 +222,8 @@ impl KeySalt {
     }
 }
 
-#[cfg(mit)]
-impl From<KeySalt> for sys::mit::krb5_key_salt_tuple {
+#[cfg(mit_client)]
+impl From<KeySalt> for sys::mit_client::krb5_key_salt_tuple {
     fn from(ks: KeySalt) -> Self {
         Self {
             ks_enctype: ks.enctype.into(),
@@ -236,8 +232,28 @@ impl From<KeySalt> for sys::mit::krb5_key_salt_tuple {
     }
 }
 
-#[cfg(heimdal)]
-impl From<KeySalt> for sys::heimdal::krb5_key_salt_tuple {
+#[cfg(mit_server)]
+impl From<KeySalt> for sys::mit_server::krb5_key_salt_tuple {
+    fn from(ks: KeySalt) -> Self {
+        Self {
+            ks_enctype: ks.enctype.into(),
+            ks_salttype: ks.salttype.into(),
+        }
+    }
+}
+
+#[cfg(heimdal_client)]
+impl From<KeySalt> for sys::heimdal_client::krb5_key_salt_tuple {
+    fn from(ks: KeySalt) -> Self {
+        Self {
+            ks_enctype: ks.enctype.into(),
+            ks_salttype: ks.salttype.into(),
+        }
+    }
+}
+
+#[cfg(heimdal_server)]
+impl From<KeySalt> for sys::heimdal_server::krb5_key_salt_tuple {
     fn from(ks: KeySalt) -> Self {
         Self {
             ks_enctype: ks.enctype.into(),
@@ -278,14 +294,32 @@ impl KeySalts {
         let s: String = self.to_string(context)?;
         Ok(CString::new(s)?)
     }
+}
 
-    #[cfg(mit)]
-    pub(crate) fn to_raw_mit(&self) -> Vec<sys::mit::krb5_key_salt_tuple> {
-        self.keysalts.iter().map(|ks| (*ks).into()).collect()
+#[cfg(mit_client)]
+impl From<KeySalts> for Vec<sys::mit_client::krb5_key_salt_tuple> {
+    fn from(kss: KeySalts) -> Self {
+        kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
+}
 
-    #[cfg(heimdal)]
-    pub(crate) fn to_raw_heimdal(&self) -> Vec<sys::heimdal::krb5_key_salt_tuple> {
-        self.keysalts.iter().map(|ks| (*ks).into()).collect()
+#[cfg(mit_server)]
+impl From<KeySalts> for Vec<sys::mit_server::krb5_key_salt_tuple> {
+    fn from(kss: KeySalts) -> Self {
+        kss.keysalts.iter().map(|ks| (*ks).into()).collect()
+    }
+}
+
+#[cfg(heimdal_client)]
+impl From<KeySalts> for Vec<sys::heimdal_client::krb5_key_salt_tuple> {
+    fn from(kss: KeySalts) -> Self {
+        kss.keysalts.iter().map(|ks| (*ks).into()).collect()
+    }
+}
+
+#[cfg(heimdal_server)]
+impl From<KeySalts> for Vec<sys::heimdal_server::krb5_key_salt_tuple> {
+    fn from(kss: KeySalts) -> Self {
+        kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }
