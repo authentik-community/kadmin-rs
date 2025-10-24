@@ -12,6 +12,7 @@ These libraries will only compile against MIT krb5. However, they will allow you
 
 ![Crates.io Version](https://img.shields.io/crates/v/kadmin)
 ![docs.rs](https://img.shields.io/docsrs/kadmin)
+![Maintenance](https://img.shields.io/maintenance/maintained/2025)
 
 This is a safe, idiomatic Rust interface to libkadm5.
 
@@ -46,6 +47,7 @@ As far as I can tell, libkadm5 APIs are **not** thread safe. As such, the types 
 
 ![PyPI - Version](https://img.shields.io/pypi/v/python-kadmin-rs)
 ![Read the Docs](https://img.shields.io/readthedocs/kadmin-rs)
+![Maintenance](https://img.shields.io/maintenance/maintained/2025)
 
 These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
 

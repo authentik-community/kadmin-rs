@@ -194,7 +194,7 @@ jobs:
         if: runner.os == 'Linux'
         with:
           platforms: all
-      - uses: pypa/cibuildwheel@v3.2.0
+      - uses: pypa/cibuildwheel@v3.2.1
         with:
           only: "${{ matrix.cibw-only }}"
         env:
