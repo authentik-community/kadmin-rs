@@ -106,8 +106,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - crate: kadmin-sys
-            extra_args: "--no-verify"
           - crate: kadmin
             extra_args: ""
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')

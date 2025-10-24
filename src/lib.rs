@@ -1,7 +1,6 @@
 //! Rust bindings to libkadm5
 //!
-//! This is a safe, idiomatic Rust interface to libkadm5. This crate offers two features, `client`
-//! and `local`. They are similar to how kadmin-sys behaves. You should only enable one of them.
+//! This is a safe, idiomatic Rust interface to libkadm5.
 //!
 //! With the `client` feature:
 //!
