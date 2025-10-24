@@ -322,8 +322,6 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorHeimdalClient {
-        #[error("Unspecified password quality failure")]
-        PassQGeneric = kadm5_error_enum!(heimdal_client, KADM5_PASS_Q_GENERIC),
         #[error("Key/salt tuples not supported by this function")]
         KsTupleNosupp = kadm5_error_enum!(heimdal_client, KADM5_KS_TUPLE_NOSUPP),
         #[error("Given usage of kadm5_decrypt() not supported")]
@@ -362,8 +360,6 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorHeimdalServer {
-        #[error("Unspecified password quality failure")]
-        PassQGeneric = kadm5_error_enum!(heimdal_server, KADM5_PASS_Q_GENERIC),
         #[error("Key/salt tuples not supported by this function")]
         KsTupleNosupp = kadm5_error_enum!(heimdal_server, KADM5_KS_TUPLE_NOSUPP),
         #[error("Given usage of kadm5_decrypt() not supported")]
