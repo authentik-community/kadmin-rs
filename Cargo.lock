@@ -258,7 +258,6 @@ version = "0.6.3"
 dependencies = [
  "anyhow",
  "bindgen",
- "bitflags",
  "chrono",
  "dlopen2",
  "getset",

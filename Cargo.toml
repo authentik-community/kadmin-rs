@@ -25,7 +25,6 @@ log = ["dep:log"]
 python = ["dep:pyo3", "dep:indoc"]
 
 [dependencies]
-bitflags = "2.9"
 chrono = "0.4"
 dlopen2 = "0.8"
 getset = "0.1"
