@@ -238,14 +238,10 @@ macro_rules! kadm5_error_enum {
         crate::sys::mit_server::$const as i64
     };
     (heimdal_client, $const:ident) => {
-        paste::paste! {
-            crate::sys::heimdal_client::[<kadm5_error_number_ $const>] as i64
-        }
+        crate::sys::heimdal_client::$const as i64
     };
     (heimdal_server, $const:ident) => {
-        paste::paste! {
-            crate::sys::heimdal_server::[<kadm5_error_number_ $const>] as i64
-        }
+        crate::sys::heimdal_server::$const as i64
     };
 }
 

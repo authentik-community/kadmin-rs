@@ -164,11 +164,12 @@ impl Drop for Context {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sys::KAdm5Variant;
 
     #[cfg(mit_client)]
     #[test]
     fn new_mit_client() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
+        let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
@@ -177,7 +178,7 @@ mod tests {
     #[cfg(mit_server)]
     #[test]
     fn new_mit_server() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::MitServer)?;
+        let lib = Library::from_variant(KAdm5Variant::MitServer)?;
         let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
@@ -186,7 +187,7 @@ mod tests {
     #[cfg(heimdal_client)]
     #[test]
     fn new_heimdal_client() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
+        let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
@@ -195,7 +196,7 @@ mod tests {
     #[cfg(heimdal_server)]
     #[test]
     fn new_heimdal_server() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalServer)?;
+        let lib = Library::from_variant(KAdm5Variant::HeimdalServer)?;
         let context = Context::new(lib);
         assert!(context.is_ok());
         Ok(())
@@ -204,7 +205,7 @@ mod tests {
     #[cfg(mit_client)]
     #[test]
     fn error_code_to_message_mit() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
+        let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1_765_328_384);
         assert_eq!(message, "No error");
@@ -214,7 +215,7 @@ mod tests {
     #[cfg(heimdal_client)]
     #[test]
     fn error_code_to_message_heimdal() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
+        let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1_765_328_384);
         assert_eq!(message, "No error");
@@ -224,7 +225,7 @@ mod tests {
     #[cfg(mit_client)]
     #[test]
     fn error_code_to_message_wrong_code_mit() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::MitClient)?;
+        let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
         assert_eq!(message, "Unknown code ____ 255");
@@ -234,7 +235,7 @@ mod tests {
     #[cfg(heimdal_client)]
     #[test]
     fn error_code_to_message_wrong_code_heimdal() -> Result<()> {
-        let lib = Library::from_variant(sys::KAdm5Variant::HeimdalClient)?;
+        let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
         assert_eq!(message, "Unknown error -1");

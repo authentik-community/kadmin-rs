@@ -29,7 +29,6 @@ getset = "0.1"
 indoc = { version = "2", optional = true }
 libc = "0.2"
 log = { version = "0.4", optional = true }
-paste = "1.0.15"
 pyo3 = { version = "0.26", features = [
   "extension-module",
   "chrono",

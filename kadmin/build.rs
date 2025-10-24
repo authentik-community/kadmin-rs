@@ -538,7 +538,17 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
 
     bindings.write_to_file(&bindings_path).unwrap();
 
+    patch_heimdal_error_code(&bindings_path);
     transform_bindings_functions_to_dlopen_wrapper(&bindings_path);
+}
+
+// Latest versions of heimdal are putting errors in an enum, which is good, but breaks
+// compatibility with older versions. Also, this simplifies the code a bit since we don't have to
+// differentiate between MIT and Heimdal as much.
+fn patch_heimdal_error_code(bindings_path: &Path) {
+    let content = read_to_string(bindings_path).unwrap();
+    let content = content.replace("kadm5_error_number_", "");
+    write(bindings_path, content).unwrap();
 }
 
 fn transform_bindings_functions_to_dlopen_wrapper(bindings_path: &Path) {
