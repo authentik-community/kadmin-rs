@@ -109,7 +109,7 @@ impl ContextBuilder {
 
     /// Build a [`Context`] instance
     ///
-    /// If no context was provided, a default one is created with [`kadm5_init_krb5_context`]
+    /// If no context was provided, a default one is created with `kadm5_init_krb5_context`
     pub fn build(self, library: Library) -> Result<Context> {
         if let Some(ctx) = self.context {
             let mut context = Context {

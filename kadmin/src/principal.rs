@@ -44,7 +44,7 @@ pub struct Principal {
     modified_by: Option<String>,
     /// When the principal was last modified
     modified_at: Option<DateTime<Utc>>,
-    /// See [`PrincipalAttributes`]
+    /// Principal attributes
     attributes: i32,
     /// Current key version number
     kvno: u32,
@@ -681,9 +681,9 @@ pub enum PrincipalBuilderKey {
     RandKey,
     /// A random key should be generated for the principal by the server
     ServerRandKey,
-    /// Old-style random key. Creates the principal with [`KRB5_KDB_DISALLOW_ALL_TIX`] and a
+    /// Old-style random key. Creates the principal with `KRB5_KDB_DISALLOW_ALL_TIX` and a
     /// generated dummy key, then calls `randkey` on the principal and finally removes
-    /// [`KRB5_KDB_DISALLOW_ALL_TIX`]
+    /// `KRB5_KDB_DISALLOW_ALL_TIX`
     OldStyleRandKey,
 }
 

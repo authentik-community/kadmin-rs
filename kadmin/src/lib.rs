@@ -66,7 +66,7 @@ pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 pub mod kadmin;
 pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 
-// pub mod sync;
+pub mod sync;
 
 #[cfg(any(mit_client, mit_server, heimdal_server))]
 pub mod policy;

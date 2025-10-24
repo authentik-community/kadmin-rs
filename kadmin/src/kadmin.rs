@@ -209,6 +209,8 @@ pub trait KAdminImpl {
     /// Retrieve string attributes on a principal
     ///
     /// [`Principal::get_strings`] is also available
+    ///
+    /// Only available for MIT variants
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>>;
 
     #[cfg(any(mit_client, mit_server))]
@@ -217,6 +219,8 @@ pub trait KAdminImpl {
     /// Set `value` to None to remove the string
     ///
     /// [`Principal::set_string`] is also available
+    ///
+    /// Only available for MIT variants
     fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()>;
 
     /// List principals
@@ -224,7 +228,8 @@ pub trait KAdminImpl {
     /// `query` is a shell-style glob expression that can contain the wild-card characters `?`, `*`,
     /// and `[]`. All principal names matching the expression are retuned. If the expression ///
     /// does not contain an `@` character, an `@` character followed by the local realm is appended
-    /// to the expression. If no query is provided, all principals are returned. ```no_run
+    /// to the expression. If no query is provided, all principals are returned.
+    /// ```no_run
     /// # use crate::kadmin::{KAdmin, KAdminImpl};
     /// # fn example() {
     /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
@@ -1150,8 +1155,6 @@ impl KAdminBuilder {
 
     /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
     /// name) and a password
-    ///
-    /// Can only be used with client-side libraries.
     pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
         let _guard = KADMIN_INIT_LOCK.lock().map_err(|_| Error::LockError)?;
 

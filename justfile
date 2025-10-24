@@ -129,6 +129,9 @@ _install-python:
 # Build and install wheel
 install-python: clean-python build-python _install-python
 
+docs-rust:
+  cargo doc
+
 # Generate the Python docs
 docs-python:
   cd python/docs && sphinx-build -M html . _build

@@ -20,12 +20,12 @@ use std::{
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
-#[cfg(mit)]
+#[cfg(any(mit_client, mit_server, heimdal_server))]
 use crate::policy::{Policy, PolicyBuilder, PolicyModifier};
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
+    kadmin::{KAdminApiVersion, KAdminImpl},
     keysalt::KeySalts,
     params::Params,
     principal::{Principal, PrincipalBuilder, PrincipalModifier},
@@ -54,31 +54,31 @@ enum KAdminOperation {
     ),
     /// See [`KAdminImpl::principal_randkey`]
     PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     /// See [`KAdminImpl::principal_get_strings`]
     PrincipalGetStrings(String, Sender<Result<HashMap<String, String>>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     /// See [`KAdminImpl::principal_set_string`]
     PrincipalSetString(String, String, Option<String>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::add_policy`]
     AddPolicy(PolicyBuilder, Sender<Result<()>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::modify_policy`]
     ModifyPolicy(PolicyModifier, Sender<Result<()>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::delete_policy`]
     DeletePolicy(String, Sender<Result<()>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::get_policy`]
     GetPolicy(String, Sender<Result<Option<Policy>>>),
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::list_policies`]
     ListPolicies(Option<String>, Sender<Result<Vec<String>>>),
     /// See [`KAdminImpl::get_privileges`]
-    GetPrivileges(Sender<Result<KAdminPrivileges>>),
+    GetPrivileges(Sender<Result<i64>>),
     /// Stop the kadmin thread
     Exit,
 }
@@ -113,34 +113,34 @@ impl KAdminOperation {
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server))]
             Self::PrincipalGetStrings(name, sender) => {
                 let _ = sender.send(kadmin.principal_get_strings(name));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server))]
             Self::PrincipalSetString(name, key, value, sender) => {
                 let _ = sender.send(kadmin.principal_set_string(name, key, value.as_deref()));
             }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::AddPolicy(builder, sender) => {
                 let _ = sender.send(kadmin.add_policy(builder));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::ModifyPolicy(modifier, sender) => {
                 let _ = sender.send(kadmin.modify_policy(modifier));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::DeletePolicy(name, sender) => {
                 let _ = sender.send(kadmin.delete_policy(name));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::GetPolicy(name, sender) => {
                 let _ = sender.send(kadmin.get_policy(name));
             }
-            #[cfg(mit)]
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::ListPolicies(query, sender) => {
                 let _ = sender.send(kadmin.list_policies(query.as_deref()));
             }
@@ -272,7 +272,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
         let (sender, receiver) = channel();
         self.inner
@@ -284,7 +284,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -307,7 +307,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -316,7 +316,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -325,7 +325,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn delete_policy(&self, name: &str) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -334,7 +334,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
         let (sender, receiver) = channel();
         self.inner
@@ -343,7 +343,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
         self.inner.op_sender.send(KAdminOperation::ListPolicies(
@@ -353,7 +353,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    fn get_privileges(&self) -> Result<KAdminPrivileges> {
+    fn get_privileges(&self) -> Result<i64> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
@@ -526,7 +526,10 @@ impl KAdminBuilder {
         self.build(move |builder| builder.with_anonymous(&client_name))
     }
 
+    #[cfg(any(mit_server, heimdal_server))]
     /// Construct a [`KAdmin`] object from this builder for local database manipulation.
+    ///
+    /// Only available on server-side libraries.
     pub fn with_local(self) -> Result<KAdmin> {
         self.build(move |builder| builder.with_local())
     }

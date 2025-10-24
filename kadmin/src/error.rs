@@ -12,7 +12,7 @@ pub enum Error {
     /// Represent a Kerberos error.
     ///
     /// Provided are the origin error code plus an error message as
-    /// returned by [`krb5_get_error_message`]
+    /// returned by `krb5_get_error_message`
     #[error("Kerberos error: {message} (code: {code})")]
     Kerberos {
         /// Kerberos error code
@@ -63,13 +63,13 @@ pub enum Error {
     #[error("Failed to receive result from executor")]
     ThreadRecvError(#[from] std::sync::mpsc::RecvError),
 
-    /// Failed to convert a [`krb5_timestamp`] to a [`chrono::DateTime`]
+    /// Failed to convert a `krb5_timestamp` to a [`chrono::DateTime`]
     #[error("Failed to convert krb5 timestamp to chrono DateTime")]
     TimestampConversion,
-    /// Failed to convert a [`chrono::DateTime`] to a [`krb5_timestamp`]
+    /// Failed to convert a [`chrono::DateTime`] to a `krb5_timestamp`
     #[error("Failed to convert chrono DateTime to krb5 timestamp")]
     DateTimeConversion(std::num::TryFromIntError),
-    /// Failed to convert a [`Duration`][`std::time::Duration`] to a [`krb5_deltat`]
+    /// Failed to convert a [`Duration`][`std::time::Duration`] to a `krb5_deltat`
     #[error("Failed to convert Duration to a krb5 deltat")]
     DurationConversion(std::num::TryFromIntError),
 
