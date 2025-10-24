@@ -215,8 +215,6 @@ macro_rules! kadm5_error_enum {
             BadServerName = kadm5_error_enum!($libname, KADM5_BAD_SERVER_NAME),
             #[error("Mismatched enctypes for setkey3")]
             Setkey3EtypeMismatch = kadm5_error_enum!($libname, KADM5_SETKEY3_ETYPE_MISMATCH),
-            #[error("Unspecified password quality failure")]
-            PassQGeneric = kadm5_error_enum!($libname, KADM5_PASS_Q_GENERIC),
 
             $($manual_fields)*
         }
@@ -252,6 +250,8 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorMitClient {
+        #[error("Unspecified password quality failure")]
+        PassQGeneric = kadm5_error_enum!(mit_client, KADM5_PASS_Q_GENERIC),
         #[error("GSS-API (or Kerberos) error")]
         GssError = kadm5_error_enum!(mit_client, KADM5_GSS_ERROR),
         #[error("Operation requires ``set-key'' privilege")]
@@ -286,6 +286,8 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorMitServer {
+        #[error("Unspecified password quality failure")]
+        PassQGeneric = kadm5_error_enum!(mit_server, KADM5_PASS_Q_GENERIC),
         #[error("GSS-API (or Kerberos) error")]
         GssError = kadm5_error_enum!(mit_server, KADM5_GSS_ERROR),
         #[error("Operation requires ``set-key'' privilege")]
@@ -320,6 +322,8 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorHeimdalClient {
+        #[error("Unspecified password quality failure")]
+        PassQGeneric = kadm5_error_enum!(heimdal_client, KADM5_PASS_Q_GENERIC),
         #[error("Key/salt tuples not supported by this function")]
         KsTupleNosupp = kadm5_error_enum!(heimdal_client, KADM5_KS_TUPLE_NOSUPP),
         #[error("Given usage of kadm5_decrypt() not supported")]
@@ -358,6 +362,8 @@ kadm5_error_enum!(
     #[non_exhaustive]
     #[repr(i64)]
     KAdm5ErrorHeimdalServer {
+        #[error("Unspecified password quality failure")]
+        PassQGeneric = kadm5_error_enum!(heimdal_server, KADM5_PASS_Q_GENERIC),
         #[error("Key/salt tuples not supported by this function")]
         KsTupleNosupp = kadm5_error_enum!(heimdal_server, KADM5_KS_TUPLE_NOSUPP),
         #[error("Given usage of kadm5_decrypt() not supported")]

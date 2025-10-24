@@ -64,8 +64,9 @@ build-rust:
   RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client,heimdal_server,python
 [private]
 ci-build-deps:
+  sudo apt-get remove -y --purge man-db
   sudo apt-get update
-  sudo apt-get install -y --no-install-recommends libkrb5-dev krb5-multidev heimdal-multidev python3-dev
+  sudo apt-get install -y --no-install-recommends krb5-multidev heimdal-multidev python3-dev
 [private]
 ci-build-rust: ci-build-deps
   RUSTFLAGS="-Dwarnings" just build-rust
