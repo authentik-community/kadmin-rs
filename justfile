@@ -22,9 +22,8 @@ lint-rust:
   cargo clippy --package kadmin-sys --features client
   cargo clippy --package kadmin-sys --no-default-features --features server
   cargo clippy --package kadmin
+  cargo clippy --package kadmin --features log
   cargo clippy --package kadmin --features python
-  cargo clippy --package kadmin --no-default-features --features local
-  cargo clippy --package kadmin --no-default-features --features local,python
 [private]
 ci-lint-clippy: ci-build-deps
   RUSTFLAGS="-Dwarnings" just lint-rust
