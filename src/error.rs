@@ -340,16 +340,6 @@ kadm5_error_enum!(
         LogNeedsUpgrade = kadm5_error_enum!(heimdal_client, KADM5_LOG_NEEDS_UPGRADE),
         #[error("Keep old keys option not supported")]
         KeepoldNosupp = kadm5_error_enum!(heimdal_client, KADM5_KEEPOLD_NOSUPP),
-        #[error("Bad KADM5 server hook")]
-        BadServerHook = kadm5_error_enum!(heimdal_client, KADM5_BAD_SERVER_HOOK),
-        #[error("Cannot find KADM5 server hook")]
-        ServerHookNotFound = kadm5_error_enum!(heimdal_client, KADM5_SERVER_HOOK_NOT_FOUND),
-        #[error("KADM5 server hook is too old for this version of Heimdal")]
-        OldServerHookVersion = kadm5_error_enum!(heimdal_client, KADM5_OLD_SERVER_HOOK_VERSION),
-        #[error("KADM5 server hook is too new for this version of Heimdal")]
-        NewServerHookVersion = kadm5_error_enum!(heimdal_client, KADM5_NEW_SERVER_HOOK_VERSION),
-        #[error("Database is read-only; try primary server")]
-        ReadOnly = kadm5_error_enum!(heimdal_client, KADM5_READ_ONLY),
     }
 );
 
@@ -378,16 +368,6 @@ kadm5_error_enum!(
         LogNeedsUpgrade = kadm5_error_enum!(heimdal_server, KADM5_LOG_NEEDS_UPGRADE),
         #[error("Keep old keys option not supported")]
         KeepoldNosupp = kadm5_error_enum!(heimdal_server, KADM5_KEEPOLD_NOSUPP),
-        #[error("Bad KADM5 server hook")]
-        BadServerHook = kadm5_error_enum!(heimdal_server, KADM5_BAD_SERVER_HOOK),
-        #[error("Cannot find KADM5 server hook")]
-        ServerHookNotFound = kadm5_error_enum!(heimdal_server, KADM5_SERVER_HOOK_NOT_FOUND),
-        #[error("KADM5 server hook is too old for this version of Heimdal")]
-        OldServerHookVersion = kadm5_error_enum!(heimdal_server, KADM5_OLD_SERVER_HOOK_VERSION),
-        #[error("KADM5 server hook is too new for this version of Heimdal")]
-        NewServerHookVersion = kadm5_error_enum!(heimdal_server, KADM5_NEW_SERVER_HOOK_VERSION),
-        #[error("Database is read-only; try primary server")]
-        ReadOnly = kadm5_error_enum!(heimdal_server, KADM5_READ_ONLY),
 }
 );
 
