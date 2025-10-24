@@ -28,11 +28,13 @@ getset = "0.1"
 indoc = { version = "2", optional = true }
 # kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
 libc = "0.2"
+paste = "1.0.15"
 pyo3 = { version = "0.26", features = [
   "extension-module",
   "chrono",
   "chrono-tz",
 ], optional = true }
+strum = { version = "0.27", features = ["derive"] }
 thiserror = "2"
 
 [build-dependencies]

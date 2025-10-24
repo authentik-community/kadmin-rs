@@ -185,8 +185,8 @@ pub trait KAdminImpl {
         &self,
         name: &str,
         password: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()>;
 
     /// Sets the key of the principal to a random value
@@ -957,7 +957,7 @@ impl KAdminImpl for KAdmin {
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
-        let (raw, mut count, result) = library_match!(
+        let res: Result<_> = library_match!(
             &self.context.library;
             heimdal_client => |_cont, _lib| {
                 Err(Error::LibraryMismatch(
@@ -1000,7 +1000,8 @@ impl KAdminImpl for KAdmin {
                 }
 
             }
-        )?;
+        );
+        let (raw, mut count, result) = res?;
 
         library_match!(
             &self.context.library;
@@ -1420,7 +1421,7 @@ impl KAdminBuilder {
             CString::new("root/admin")?
         };
 
-        let code = library_match!(
+        let res: Result<_> = library_match!(
             &kadmin.context.library;
             mit_client, heimdal_client => |_cont, _lib| {
                 Err(Error::LibraryMismatch(
@@ -1452,7 +1453,8 @@ impl KAdminBuilder {
                     &mut kadmin.server_handle,
                 ).into())
             }
-        )?;
+        );
+        let code = res?;
 
         drop(params_raw);
         drop(_guard);

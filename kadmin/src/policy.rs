@@ -145,16 +145,18 @@ impl Policy {
         &self.name
     }
 
+    #[cfg(any(mit_client, mit_server))]
     /// Allowed keysalts
     ///
-    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    /// Only available in MIT and [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     pub fn allowed_keysalts(&self) -> Option<&KeySalts> {
         self.allowed_keysalts.as_ref()
     }
 
+    #[cfg(any(mit_client, mit_server))]
     /// TL-data
     ///
-    /// Only available in [version][`crate::kadmin::KAdminApiVersion`] 4 and above
+    /// Only available in MIT and [version][`crate::kadmin::KAdminApiVersion`] 4 and above
     pub fn tl_data(&self) -> &TlData {
         &self.tl_data
     }
@@ -220,8 +222,11 @@ macro_rules! policy_doer_struct {
         pub struct $StructName {
             pub(crate) name: String,
 
+            #[cfg(mit_client)]
             pub(crate) mask_mit_client: c_long,
+            #[cfg(mit_server)]
             pub(crate) mask_mit_server: c_long,
+            #[cfg(heimdal_server)]
             pub(crate) mask_heimdal_server: c_long,
 
             pub(crate) password_min_life: Option<Option<Duration>>,

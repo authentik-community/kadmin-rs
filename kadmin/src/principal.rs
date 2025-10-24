@@ -181,7 +181,14 @@ impl Principal {
         #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
         #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        kadmin.principal_change_password(&self.name, password, keepold, keysalts)
+        kadmin.principal_change_password(
+            &self.name,
+            password,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     /// Sets the key of the principal to a random value
@@ -261,9 +268,13 @@ macro_rules! principal_doer_struct {
         $(#[$outer])*
         pub struct $StructName {
             pub(crate) name: String,
+            #[cfg(mit_client)]
             pub(crate) mask_mit_client: i64,
+            #[cfg(mit_server)]
             pub(crate) mask_mit_server: i64,
+            #[cfg(heimdal_client)]
             pub(crate) mask_heimdal_client: i64,
+            #[cfg(heimdal_server)]
             pub(crate) mask_heimdal_server: i64,
             pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
             pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
