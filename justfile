@@ -81,7 +81,7 @@ build: build-rust build-python
 
 alias t := test-rust
 # Test rust code
-test-rust: test-kadmin
+test-rust:
   cargo test --package kadmin
   cargo test --package kadmin --no-default-features --features local
 [private]
