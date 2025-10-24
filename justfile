@@ -19,8 +19,6 @@ ci-lint-ruff:
 
 # Lint code
 lint-rust:
-  cargo clippy --package kadmin-sys --features client
-  cargo clippy --package kadmin-sys --no-default-features --features server
   cargo clippy --package kadmin
   cargo clippy --package kadmin --features log
   cargo clippy --package kadmin --features python
@@ -45,8 +43,6 @@ lint-all: lint lint-mypy
 alias b := build-rust
 # Build all rust crates
 build-rust:
-  cargo build --package kadmin-sys --features client
-  cargo build --package kadmin-sys --no-default-features --features server
   cargo build --package kadmin
   cargo build --package kadmin --features log
   cargo build --package kadmin --features python
@@ -83,19 +79,11 @@ ci-build-python-sdist:
 # Build rust crates and python wheel
 build: build-rust build-python
 
-# Test kadmin-sys crate
-test-kadmin-sys:
-  cargo test --package kadmin-sys --features client
-  cargo test --package kadmin-sys --no-default-features --features server
-
-# Test kadmin crate
-test-kadmin:
+alias t := test-rust
+# Test rust code
+test-rust: test-kadmin
   cargo test --package kadmin
   cargo test --package kadmin --no-default-features --features local
-
-alias t := test-rust
-# Test all rust crates
-test-rust: test-kadmin-sys test-kadmin
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
