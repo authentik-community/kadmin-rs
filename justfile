@@ -19,12 +19,12 @@ ci-lint-ruff:
 
 # Lint code
 lint-rust:
-  cd kadmin-sys && cargo clippy --features client
-  cd kadmin-sys && cargo clippy --no-default-features --features server
-  cd kadmin && cargo clippy
-  cd kadmin && cargo clippy --features python
-  cd kadmin && cargo clippy --no-default-features --features local
-  cd kadmin && cargo clippy --no-default-features --features local,python
+  cargo clippy --package kadmin-sys --features client
+  cargo clippy --package kadmin-sys --no-default-features --features server
+  cargo clippy --package kadmin
+  cargo clippy --package kadmin --features python
+  cargo clippy --package kadmin --no-default-features --features local
+  cargo clippy --package kadmin --no-default-features --features local,python
 [private]
 ci-lint-clippy: ci-build-deps
   RUSTFLAGS="-Dwarnings" just lint-rust
@@ -46,12 +46,15 @@ lint-all: lint lint-mypy
 alias b := build-rust
 # Build all rust crates
 build-rust:
-  cd kadmin-sys && cargo build --features client
-  cd kadmin-sys && cargo build --no-default-features --features server
-  cd kadmin && cargo build
-  cd kadmin && cargo build --features python
-  cd kadmin && cargo build --no-default-features --features local
-  cd kadmin && cargo build --no-default-features --features local,python
+  cargo build --package kadmin-sys --features client
+  cargo build --package kadmin-sys --no-default-features --features server
+  cargo build --package kadmin
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_server
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_server
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client,mit_server
+  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client,heimdal_server
 [private]
 ci-build-deps:
   sudo apt-get update
@@ -74,13 +77,13 @@ build: build-rust build-python
 
 # Test kadmin-sys crate
 test-kadmin-sys:
-  cd kadmin-sys && cargo test --features client
-  cd kadmin-sys && cargo test --no-default-features --features server
+  cargo test --package kadmin-sys --features client
+  cargo test --package kadmin-sys --no-default-features --features server
 
 # Test kadmin crate
 test-kadmin:
-  cd kadmin && cargo test
-  cd kadmin && cargo test --no-default-features --features local
+  cargo test --package kadmin
+  cargo test --package kadmin --no-default-features --features local
 
 alias t := test-rust
 # Test all rust crates
@@ -98,12 +101,10 @@ ci-test-rust: ci-test-deps-mit
 alias ts := test-sanity
 # Test kadmin with valgrind for memory leaks
 test-sanity:
-  cd kadmin && \
-    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
-    cargo test
-  cd kadmin && \
-    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
-    cargo test --no-default-features --features local
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
+    cargo test --package kadmin
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
+    cargo test --package kadmin --no-default-features --features local
 [private]
 ci-test-sanity: ci-test-deps-mit
   just test-sanity

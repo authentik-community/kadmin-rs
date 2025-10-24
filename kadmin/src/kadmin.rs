@@ -351,7 +351,7 @@ impl KAdminImpl for KAdmin {
         let (_pass, raw_pass) = library_match!(&self.context.library; |_cont, lib| {
             if let Some(policy) = &builder.policy {
                 if policy.is_none() {
-                    mask &= !(lib!(KADM5_POLICY_CLR) as i64)
+                    mask &= !(lib!(KADM5_POLICY_CLR) as i64);
                 }
             }
 

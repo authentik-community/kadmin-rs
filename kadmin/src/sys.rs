@@ -168,9 +168,9 @@ impl Library {
             for library in libraries.iter() {
                 let full_path = format!("{}/lib{}.so", path, library);
                 let load = unsafe { Container::load(&full_path) };
-                dbg!(&full_path);
-                if let Err(e) = &load {
-                    dbg!(e);
+                #[cfg(feature = "log")]
+                if let Err(err) = &load {
+                    log::trace!("Loading library at path {full_path} resulted in an error: {err}");
                 }
                 if let Ok(cont) = load {
                     return Some(cont);

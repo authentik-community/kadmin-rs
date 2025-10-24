@@ -302,6 +302,7 @@ dependencies = [
  "getset",
  "indoc",
  "libc",
+ "log",
  "paste",
  "pkg-config",
  "prettyplease",

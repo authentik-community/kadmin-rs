@@ -18,6 +18,7 @@ mit_server = []
 heimdal_client = []
 heimdal_server = []
 default = ["mit_client", "mit_server", "heimdal_client", "heimdal_server"]
+log = ["dep:log"]
 python = ["dep:pyo3", "dep:indoc"]
 
 [dependencies]
@@ -26,8 +27,8 @@ chrono = "0.4"
 dlopen2 = "0.8"
 getset = "0.1"
 indoc = { version = "2", optional = true }
-# kadmin-sys = { path = "../kadmin-sys", version = "0.3.2", default-features = false }
 libc = "0.2"
+log = { version = "0.4", optional = true }
 paste = "1.0.15"
 pyo3 = { version = "0.26", features = [
   "extension-module",
