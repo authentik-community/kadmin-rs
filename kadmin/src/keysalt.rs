@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use crate::{
     context::Context,
     error::{Error, Result, krb5_error_code_escape_hatch},
-    sys::{self, Library, cfg_match, library_match},
+    sys::{self, library_match},
 };
 
 /// Kerberos encryption type
@@ -297,29 +297,29 @@ impl KeySalts {
 }
 
 #[cfg(mit_client)]
-impl From<KeySalts> for Vec<sys::mit_client::krb5_key_salt_tuple> {
-    fn from(kss: KeySalts) -> Self {
+impl From<&KeySalts> for Vec<sys::mit_client::krb5_key_salt_tuple> {
+    fn from(kss: &KeySalts) -> Self {
         kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }
 
 #[cfg(mit_server)]
-impl From<KeySalts> for Vec<sys::mit_server::krb5_key_salt_tuple> {
-    fn from(kss: KeySalts) -> Self {
+impl From<&KeySalts> for Vec<sys::mit_server::krb5_key_salt_tuple> {
+    fn from(kss: &KeySalts) -> Self {
         kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }
 
 #[cfg(heimdal_client)]
-impl From<KeySalts> for Vec<sys::heimdal_client::krb5_key_salt_tuple> {
-    fn from(kss: KeySalts) -> Self {
+impl From<&KeySalts> for Vec<sys::heimdal_client::krb5_key_salt_tuple> {
+    fn from(kss: &KeySalts) -> Self {
         kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }
 
 #[cfg(heimdal_server)]
-impl From<KeySalts> for Vec<sys::heimdal_server::krb5_key_salt_tuple> {
-    fn from(kss: KeySalts) -> Self {
+impl From<&KeySalts> for Vec<sys::heimdal_server::krb5_key_salt_tuple> {
+    fn from(kss: &KeySalts) -> Self {
         kss.keysalts.iter().map(|ks| (*ks).into()).collect()
     }
 }

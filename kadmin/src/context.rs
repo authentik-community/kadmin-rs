@@ -12,7 +12,7 @@ use crate::{
     Error,
     conv::c_string_to_string,
     error::{Result, krb5_error_code_escape_hatch},
-    sys::{self, Library, library_match},
+    sys::{Library, library_match},
 };
 
 /// Lock acquired when creating or dropping a [`Context`] instance

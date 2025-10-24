@@ -22,7 +22,7 @@ use crate::{
     error::{Error, Result, kadm5_ret_t_escape_hatch, krb5_error_code_escape_hatch},
     keysalt::KeySalts,
     params::{Params, ParamsRaw},
-    // principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
+    principal::{Principal, PrincipalBuilder, PrincipalBuilderKey, PrincipalModifier},
     sys::{self, KAdm5Variant, Library, library_match},
 };
 
@@ -112,19 +112,19 @@ pub trait KAdminImpl {
     /// Retrieve the kadm5 variant used
     fn variant(&self) -> KAdm5Variant;
 
-    // /// Create a principal
-    // ///
-    // /// Don't use this method directly. Instead, use a [`PrincipalBuilder`], via
-    // /// [`Principal::builder`]
-    // #[doc(alias("ank", "addprinc"))]
-    // fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()>;
+    /// Create a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalBuilder`], via
+    /// [`Principal::builder`]
+    #[doc(alias("ank", "addprinc"))]
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()>;
 
-    // /// Modify a principal
-    // ///
-    // /// Don't use this method directly. Instead, use a [`PrincipalModifier`], via
-    // /// [`Principal::modifier`]
-    // #[doc(alias = "modprinc")]
-    // fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
+    /// Modify a principal
+    ///
+    /// Don't use this method directly. Instead, use a [`PrincipalModifier`], via
+    /// [`Principal::modifier`]
+    #[doc(alias = "modprinc")]
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()>;
 
     /// Rename a principal
     ///
@@ -145,65 +145,65 @@ pub trait KAdminImpl {
     #[doc(alias = "delprinc")]
     fn delete_principal(&self, name: &str) -> Result<()>;
 
-    // /// Retrieve a principal
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// let princname = String::from("user@EXAMPLE.ORG");
-    // /// let principal = kadm.get_principal(&princname).unwrap();
-    // /// assert!(principal.is_some());
-    // /// # }
-    // /// ```
-    // #[doc(alias = "getprinc")]
-    // fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
+    /// Retrieve a principal
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = String::from("user@EXAMPLE.ORG");
+    /// let principal = kadm.get_principal(&princname).unwrap();
+    /// assert!(principal.is_some());
+    /// # }
+    /// ```
+    #[doc(alias = "getprinc")]
+    fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
 
-    // /// Check if a principal exists
-    // ///
-    // /// ```no_run
-    // /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    // /// # fn example() {
-    // /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    // /// let princname = String::from("user@EXAMPLE.ORG");
-    // /// assert!(kadm.principal_exists(&princname).unwrap());
-    // /// # }
-    // /// ```
-    // fn principal_exists(&self, name: &str) -> Result<bool> {
-    //     Ok(self.get_principal(name)?.is_some())
-    // }
+    /// Check if a principal exists
+    ///
+    /// ```no_run
+    /// # use crate::kadmin::{KAdmin, KAdminImpl};
+    /// # fn example() {
+    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// let princname = String::from("user@EXAMPLE.ORG");
+    /// assert!(kadm.principal_exists(&princname).unwrap());
+    /// # }
+    /// ```
+    fn principal_exists(&self, name: &str) -> Result<bool> {
+        Ok(self.get_principal(name)?.is_some())
+    }
 
-    // /// Change a principal password
-    // ///
-    // /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    // ///   except perhaps for krbtgt principals. Defaults to false
-    // /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
-    // ///
-    // /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
-    // #[doc(alias = "cpw")]
-    // fn principal_change_password(
-    //     &self,
-    //     name: &str,
-    //     password: &str,
-    //     keepold: Option<bool>,
-    //     keysalts: Option<&KeySalts>,
-    // ) -> Result<()>;
+    /// Change a principal password
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
+    #[doc(alias = "cpw")]
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
 
-    // /// Sets the key of the principal to a random value
-    // ///
-    // /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    // ///   except perhaps for krbtgt principals. Defaults to false
-    // /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
-    // ///
-    // /// [`Principal::randkey`] is also available
-    // // TODO: add returning newly created keys
-    // #[doc(alias = "randkey")]
-    // fn principal_randkey(
-    //     &self,
-    //     name: &str,
-    //     keepold: Option<bool>,
-    //     keysalts: Option<&KeySalts>,
-    // ) -> Result<()>;
+    /// Sets the key of the principal to a random value
+    ///
+    /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
+    ///   except perhaps for krbtgt principals. Defaults to false
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///
+    /// [`Principal::randkey`] is also available
+    // TODO: add returning newly created keys
+    #[doc(alias = "randkey")]
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()>;
 
     #[cfg(any(mit_client, mit_server))]
     /// Retrieve string attributes on a principal
@@ -334,273 +334,187 @@ impl KAdminImpl for KAdmin {
         self.context.library.variant()
     }
 
-    // fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
-    //     #[cfg(mit)]
-    //     let mut mask_mit = builder.mask_mit;
-    //     #[cfg(heimdal)]
-    //     let mut mask_heimdal = builder.mask_heimdal;
-    //
-    //     if let Some(policy) = &builder.policy {
-    //         if policy.is_none() {
-    //             match &self.context.library {
-    //                 #[cfg(mit)]
-    //                 Library::MitClient(_) | Library::MitServer(_) => {
-    //                     mask_mit &= !(sys::mit::KADM5_POLICY_CLR as i64);
-    //                 }
-    //                 #[cfg(heimdal)]
-    //                 Library::HeimdalClient(_) | Library::HeimdalServer(_) => {
-    //                     mask_heimdal &= !sys::heimdal::KADM5_POLICY_CLR;
-    //                 }
-    //             };
-    //         }
-    //     }
-    //     let prepare_dummy_pass = || {
-    //         let mut dummy_pass = String::with_capacity(256);
-    //         dummy_pass.push_str("6F a[");
-    //         for i in dummy_pass.len()..=256 {
-    //             dummy_pass.push((b'a' + ((i % 26) as u8)) as char);
-    //         }
-    //         CString::new(dummy_pass)
-    //     };
-    //
-    //     let mut old_style_randkey = false;
-    //
-    //     let pass = match &builder.key {
-    //         PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
-    //         PrincipalBuilderKey::NoKey => {
-    //             match &self.context.library {
-    //                 #[cfg(mit)]
-    //                 Library::MitClient(_) | Library::MitServer(_) => {
-    //                     mask_mit &= !(sys::mit::KADM5_KEY_DATA as i64);
-    //                 }
-    //                 #[cfg(heimdal)]
-    //                 Library::HeimdalClient(_) | Library::HeimdalServer(_) => {
-    //                     mask_heimdal &= !sys::heimdal::KADM5_KEY_DATA;
-    //                 }
-    //             };
-    //             None
-    //         }
-    //         PrincipalBuilderKey::RandKey => None,
-    //         PrincipalBuilderKey::ServerRandKey => None,
-    //         PrincipalBuilderKey::OldStyleRandKey => Some(prepare_dummy_pass()?),
-    //     };
-    //     let raw_pass = if let Some(pass) = pass {
-    //         pass.as_ptr().cast_mut()
-    //     } else {
-    //         null_mut()
-    //     };
-    //
-    //     match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => {
-    //             let mut entry = builder.make_entry_mit(&self.context)?;
-    //             if let Some(kvno) = builder.kvno {
-    //                 entry.raw.kvno = kvno;
-    //             }
-    //
-    //             if builder.key == PrincipalBuilderKey::OldStyleRandKey {
-    //                 entry.raw.attributes |= sys::mit::KRB5_KDB_DISALLOW_ALL_TIX as i32;
-    //                 mask_mit |= sys::mit::KADM5_ATTRIBUTES as i64;
-    //                 old_style_randkey = true;
-    //             }
-    //
-    //             let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw_mit());
-    //             let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                 (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //             } else {
-    //                 (0, null_mut())
-    //             };
-    //
-    //             mask_mit |= sys::mit::KADM5_PRINCIPAL as i64;
-    //             let code = if keysalts.is_none() {
-    //                 unsafe {
-    //                     cont.kadm5_create_principal(
-    //                         self.server_handle,
-    //                         &mut entry.raw,
-    //                         mask_mit,
-    //                         raw_pass,
-    //                     )
-    //                 }
-    //             } else {
-    //                 unsafe {
-    //                     cont.kadm5_create_principal_3(
-    //                         self.server_handle,
-    //                         &mut entry.raw,
-    //                         mask_mit,
-    //                         n_ks_tuple,
-    //                         ks_tuple,
-    //                         raw_pass,
-    //                     )
-    //                 }
-    //             };
-    //             let code = if code == EINVAL as i64 && builder.key ==
-    // PrincipalBuilderKey::RandKey {                 let pass = prepare_dummy_pass()?;
-    //                 let raw_pass = pass.as_ptr().cast_mut();
-    //                 // The server doesn't support randkey creation. Create the principal with a
-    //                 // dummy password and disallow tickets.
-    //                 entry.raw.attributes |= sys::mit::KRB5_KDB_DISALLOW_ALL_TIX as i32;
-    //                 mask_mit |= sys::mit::KADM5_ATTRIBUTES as i64;
-    //                 old_style_randkey = true;
-    //                 if keysalts.is_none() {
-    //                     unsafe {
-    //                         cont.kadm5_create_principal(
-    //                             self.server_handle,
-    //                             &mut entry.raw,
-    //                             mask_mit,
-    //                             raw_pass,
-    //                         )
-    //                     }
-    //                 } else {
-    //                     unsafe {
-    //                         cont.kadm5_create_principal_3(
-    //                             self.server_handle,
-    //                             &mut entry.raw,
-    //                             mask_mit,
-    //                             n_ks_tuple,
-    //                             ks_tuple,
-    //                             raw_pass,
-    //                         )
-    //                     }
-    //                 }
-    //             } else {
-    //                 code
-    //             };
-    //             kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //
-    //             if old_style_randkey {
-    //                 self.principal_randkey(&builder.name, None, builder.keysalts.as_ref())?;
-    //                 entry.raw.attributes &= !(sys::mit::KRB5_KDB_DISALLOW_ALL_TIX as i32);
-    //                 mask_mit = sys::mit::KADM5_ATTRIBUTES.into();
-    //                 let code = unsafe {
-    //                     cont.kadm5_modify_principal(self.server_handle, &mut entry.raw, mask_mit)
-    //                 };
-    //                 kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //             }
-    //         }
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-    //             let mut entry = builder.make_entry_heimdal(&self.context)?;
-    //             if let Some(kvno) = builder.kvno {
-    //                 entry.raw.kvno = kvno as i32;
-    //             }
-    //
-    //             if builder.key == PrincipalBuilderKey::OldStyleRandKey {
-    //                 entry.raw.attributes |= sys::heimdal::KRB5_KDB_DISALLOW_ALL_TIX;
-    //                 mask_heimdal |= sys::heimdal::KADM5_ATTRIBUTES;
-    //                 old_style_randkey = true;
-    //             }
-    //
-    //             let mut keysalts = builder.keysalts.as_ref().map(|ks| ks.to_raw_heimdal());
-    //             let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                 (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //             } else {
-    //                 (0, null_mut())
-    //             };
-    //
-    //             mask_heimdal |= sys::heimdal::KADM5_PRINCIPAL;
-    //             let code = if keysalts.is_none() {
-    //                 unsafe {
-    //                     cont.kadm5_create_principal(
-    //                         self.server_handle,
-    //                         &mut entry.raw,
-    //                         mask_heimdal,
-    //                         raw_pass,
-    //                     )
-    //                 }
-    //             } else {
-    //                 unsafe {
-    //                     cont.kadm5_create_principal_3(
-    //                         self.server_handle,
-    //                         &mut entry.raw,
-    //                         mask_heimdal,
-    //                         n_ks_tuple,
-    //                         ks_tuple,
-    //                         raw_pass,
-    //                     )
-    //                 }
-    //             };
-    //             let code = if code == EINVAL && builder.key == PrincipalBuilderKey::RandKey {
-    //                 let pass = prepare_dummy_pass()?;
-    //                 let raw_pass = pass.as_ptr().cast_mut();
-    //                 // The server doesn't support randkey creation. Create the principal with a
-    //                 // dummy password and disallow tickets.
-    //                 entry.raw.attributes |= sys::heimdal::KRB5_KDB_DISALLOW_ALL_TIX;
-    //                 mask_heimdal |= sys::heimdal::KADM5_ATTRIBUTES;
-    //                 old_style_randkey = true;
-    //                 if keysalts.is_none() {
-    //                     unsafe {
-    //                         cont.kadm5_create_principal(
-    //                             self.server_handle,
-    //                             &mut entry.raw,
-    //                             mask_heimdal,
-    //                             raw_pass,
-    //                         )
-    //                     }
-    //                 } else {
-    //                     unsafe {
-    //                         cont.kadm5_create_principal_3(
-    //                             self.server_handle,
-    //                             &mut entry.raw,
-    //                             mask_heimdal,
-    //                             n_ks_tuple,
-    //                             ks_tuple,
-    //                             raw_pass,
-    //                         )
-    //                     }
-    //                 }
-    //             } else {
-    //                 code
-    //             };
-    //             kadm5_ret_t_escape_hatch(&self.context, code.into())?;
-    //
-    //             if old_style_randkey {
-    //                 self.principal_randkey(&builder.name, None, builder.keysalts.as_ref())?;
-    //                 entry.raw.attributes &= !sys::heimdal::KRB5_KDB_DISALLOW_ALL_TIX;
-    //                 mask_heimdal = sys::heimdal::KADM5_ATTRIBUTES.into();
-    //                 let code = unsafe {
-    //                     cont.kadm5_modify_principal(
-    //                         self.server_handle,
-    //                         &mut entry.raw,
-    //                         mask_heimdal,
-    //                     )
-    //                 };
-    //                 kadm5_ret_t_escape_hatch(&self.context, code.into())?;
-    //             }
-    //         }
-    //     };
-    //
-    //     Ok(())
-    // }
+    fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
+        let prepare_dummy_pass = || {
+            let mut dummy_pass = String::with_capacity(256);
+            dummy_pass.push_str("6F a[");
+            for i in dummy_pass.len()..=256 {
+                dummy_pass.push((b'a' + ((i % 26) as u8)) as char);
+            }
+            CString::new(dummy_pass)
+        };
 
-    // fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
-    //     let code = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => {
-    //             let mut entry = modifier.make_entry_mit(&self.context)?;
-    //             unsafe {
-    //                 cont.kadm5_modify_principal(
-    //                     self.server_handle,
-    //                     &mut entry.raw,
-    //                     modifier.mask_mit,
-    //                 )
-    //             }
-    //         }
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-    //             let mut entry = modifier.make_entry_heimdal(&self.context)?;
-    //             unsafe {
-    //                 cont.kadm5_modify_principal(
-    //                     self.server_handle,
-    //                     &mut entry.raw,
-    //                     modifier.mask_heimdal,
-    //                 )
-    //             }
-    //             .into()
-    //         }
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+        let (entry, mut mask) = builder.make_entry(&self.context)?;
+
+        let mut old_style_randkey = false;
+
+        let (_pass, raw_pass) = library_match!(&self.context.library; |_cont, lib| {
+            if let Some(policy) = &builder.policy {
+                if policy.is_none() {
+                    mask &= !(lib!(KADM5_POLICY_CLR) as i64)
+                }
+            }
+
+            let pass = match &builder.key {
+                PrincipalBuilderKey::Password(key) => Some(CString::new(key.clone())?),
+                PrincipalBuilderKey::NoKey => {
+                    mask |= lib!(KADM5_KEY_DATA) as i64;
+                    None
+                },
+                PrincipalBuilderKey::RandKey => None,
+                PrincipalBuilderKey::ServerRandKey => None,
+                PrincipalBuilderKey::OldStyleRandKey => {
+                    mask |= lib!(KADM5_ATTRIBUTES) as i64;
+                    old_style_randkey = true;
+                    Some(prepare_dummy_pass()?)
+                }
+            };
+            let raw_pass = if let Some(pass) = &pass {
+                pass.as_ptr().cast_mut()
+            } else { null_mut() };
+
+            mask |= lib!(KADM5_PRINCIPAL) as i64;
+
+            (pass, raw_pass)
+        });
+
+        macro_rules! prepare_keysalts {
+            () => {{
+                let mut keysalts: Option<Vec<lib!(krb5_key_salt_tuple)>> =
+                    builder.keysalts.as_ref().map(|ks| ks.into());
+                let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+                    (keysalts.len(), keysalts.as_mut_ptr())
+                } else {
+                    (0, null_mut())
+                };
+                (keysalts, n_ks_tuple, ks_tuple)
+            }};
+        }
+
+        let code = library_match!(
+            &self.context.library;
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let (keysalts, n_ks_tuple, ks_tuple) = prepare_keysalts!();
+                if keysalts.is_none() {
+                    unsafe {
+                        cont.kadm5_create_principal(
+                            self.server_handle,
+                            entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                            (mask as u32).into(),
+                            raw_pass
+                        ).into()
+                    }
+                } else {
+                    unsafe {
+                        cont.kadm5_create_principal_3(
+                            self.server_handle,
+                            entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                            (mask as u32).into(),
+                            n_ks_tuple as i32,
+                            ks_tuple,
+                            raw_pass,
+                        ).into()
+                    }
+                }
+            },
+            heimdal_client => |cont, lib| unsafe {
+                cont.kadm5_create_principal(
+                    self.server_handle,
+                    entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                    mask as u32,
+                    raw_pass,
+                ).into()
+            }
+        );
+        let code = if code == EINVAL as i64 && builder.key == PrincipalBuilderKey::RandKey {
+            // The server doesn't support randkey creation. Create the principal with a dummy
+            // password and disallow tickets.
+            let pass = prepare_dummy_pass()?;
+            let raw_pass = pass.as_ptr().cast_mut();
+            library_match!(&self.context.library; |_cont, lib| {
+                let raw_entry = entry.raw as *mut lib!(_kadm5_principal_ent_t);
+                unsafe { *raw_entry }.attributes |= lib!(KRB5_KDB_DISALLOW_ALL_TIX) as lib!(krb5_flags);
+                mask |= lib!(KADM5_ATTRIBUTES) as i64;
+                old_style_randkey = true;
+            });
+            library_match!(
+                &self.context.library;
+                mit_client, mit_server, heimdal_server => |cont, lib| {
+                    let (keysalts, n_ks_tuple, ks_tuple) = prepare_keysalts!();
+                    if keysalts.is_none() {
+                        unsafe {
+                            cont.kadm5_create_principal(
+                                self.server_handle,
+                                entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                                (mask as u32).into(),
+                                raw_pass
+                            ).into()
+                        }
+                    } else {
+                        unsafe {
+                            cont.kadm5_create_principal_3(
+                                self.server_handle,
+                                entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                                (mask as u32).into(),
+                                n_ks_tuple as i32,
+                                ks_tuple,
+                                raw_pass,
+                            ).into()
+                        }
+                    }
+                },
+                heimdal_client => |cont, lib| unsafe {
+                    cont.kadm5_create_principal(
+                        self.server_handle,
+                        entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                        mask as u32,
+                        raw_pass,
+                    ).into()
+                }
+            )
+        } else {
+            code
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+        if old_style_randkey {
+            library_match!(
+                &self.context.library;
+                mit_client, mit_server, heimdal_server => |_cont, _lib| self.principal_randkey(&builder.name, None, None)?,
+                heimdal_client => |_cont, _lib| self.principal_randkey(&builder.name, None, None)?
+            );
+            library_match!(&self.context.library; |cont, lib| {
+                let raw_entry = entry.raw as *mut lib!(_kadm5_principal_ent_t);
+                unsafe { *raw_entry }.attributes &= !lib!(KRB5_KDB_DISALLOW_ALL_TIX) as lib!(krb5_flags);
+                mask = lib!(KADM5_ATTRIBUTES) as i64;
+                let code = unsafe {
+                    cont.kadm5_modify_principal(
+                        self.server_handle,
+                        raw_entry,
+                        (mask as u32).into(),
+                    ).into()
+                };
+                kadm5_ret_t_escape_hatch(&self.context, code)?;
+            });
+        }
+
+        Ok(())
+    }
+
+    fn modify_principal(&self, modifier: &PrincipalModifier) -> Result<()> {
+        library_match!(&self.context.library; |cont, lib| {
+            let (entry, mask) = modifier.make_entry(&self.context)?;
+            let code = unsafe {
+                cont.kadm5_modify_principal(
+                    self.server_handle,
+                    entry.raw as *mut lib!(_kadm5_principal_ent_t),
+                    (mask as u32).into(),
+                ).into()
+            };
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
+            Ok(())
+        })
+    }
 
     fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()> {
         let old_princ = parse_name(&self.context, old_name)?;
@@ -628,278 +542,175 @@ impl KAdminImpl for KAdmin {
         Ok(())
     }
 
-    // fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
-    //     let principal = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => {
-    //             let mut temp_princ = null_mut();
-    //             let name = CString::new(name)?;
-    //             let code = unsafe {
-    //                 cont.krb5_parse_name(
-    //                     self.context.context as sys::mit::krb5_context,
-    //                     name.as_ptr().cast_mut(),
-    //                     &mut temp_princ,
-    //                 )
-    //             };
-    //             krb5_error_code_escape_hatch(&self.context, code.into())?;
-    //             let mut canon = null_mut();
-    //             let code = unsafe {
-    //                 cont.krb5_unparse_name(
-    //                     self.context.context as sys::mit::krb5_context,
-    //                     temp_princ,
-    //                     &mut canon,
-    //                 )
-    //             };
-    //             krb5_error_code_escape_hatch(&self.context, code.into())?;
-    //             let mut principal_ent = sys::mit::_kadm5_principal_ent_t::default();
-    //             let code = unsafe {
-    //                 cont.kadm5_get_principal(
-    //                     self.server_handle,
-    //                     temp_princ,
-    //                     &mut principal_ent,
-    //                     (sys::mit::KADM5_PRINCIPAL_NORMAL_MASK
-    //                         | sys::mit::KADM5_KEY_DATA
-    //                         | sys::mit::KADM5_TL_DATA) as i64,
-    //                 )
-    //             };
-    //             unsafe {
-    //                 cont.krb5_free_principal(
-    //                     self.context.context as sys::mit::krb5_context,
-    //                     temp_princ,
-    //                 );
-    //             }
-    //             if code == sys::mit::KADM5_UNK_PRINC as i64 {
-    //                 return Ok(None);
-    //             }
-    //             kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //             let principal = Principal::from_raw_mit(self, &principal_ent)?;
-    //             let code = unsafe {
-    //                 cont.kadm5_free_principal_ent(self.server_handle, &mut principal_ent)
-    //             };
-    //             kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //             principal
-    //         }
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-    //             let mut temp_princ = null_mut();
-    //             let name = CString::new(name)?;
-    //             let code = unsafe {
-    //                 cont.krb5_parse_name(
-    //                     self.context.context as sys::heimdal::krb5_context,
-    //                     name.as_ptr().cast_mut(),
-    //                     &mut temp_princ,
-    //                 )
-    //             };
-    //             krb5_error_code_escape_hatch(&self.context, code.into())?;
-    //             let mut canon = null_mut();
-    //             let code = unsafe {
-    //                 cont.krb5_unparse_name(
-    //                     self.context.context as sys::heimdal::krb5_context,
-    //                     temp_princ,
-    //                     &mut canon,
-    //                 )
-    //             };
-    //             krb5_error_code_escape_hatch(&self.context, code.into())?;
-    //             let mut principal_ent = sys::heimdal::_kadm5_principal_ent_t::default();
-    //             let code = unsafe {
-    //                 cont.kadm5_get_principal(
-    //                     self.server_handle,
-    //                     temp_princ,
-    //                     &mut principal_ent,
-    //                     sys::heimdal::KADM5_PRINCIPAL_NORMAL_MASK as u32
-    //                         | sys::heimdal::KADM5_TL_DATA,
-    //                 )
-    //             };
-    //             unsafe {
-    //                 cont.krb5_free_principal(
-    //                     self.context.context as sys::heimdal::krb5_context,
-    //                     temp_princ,
-    //                 );
-    //             }
-    //             // TODO: fix this
-    //             // if code == sys::heimdal::KADM5_UNK_PRINC.into() {
-    //             //     return Ok(None);
-    //             // }
-    //             kadm5_ret_t_escape_hatch(&self.context, code.into())?;
-    //             let principal = Principal::from_raw_heimdal(self, &principal_ent)?;
-    //             unsafe { cont.kadm5_free_principal_ent(self.server_handle, &mut principal_ent) };
-    //             principal
-    //         }
-    //     };
-    //     Ok(Some(principal))
-    // }
+    fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
+        let unk_princ = library_match!(
+            &self.context.library;
+            mit_client, mit_server => |_cont, lib| lib!(KADM5_UNK_PRINC),
+            heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_UNK_PRINC)
+        )
+        .into();
 
-    // fn principal_change_password(
-    //     &self,
-    //     name: &str,
-    //     password: &str,
-    //     keepold: Option<bool>,
-    //     keysalts: Option<&KeySalts>,
-    // ) -> Result<()> {
-    //     let password = CString::new(password)?;
-    //     let princ = parse_name(&self.context, name)?;
-    //
-    //     let keepold = keepold.unwrap_or(false);
-    //
-    //     let code = if keepold || keysalts.is_some() {
-    //         match &self.context.library {
-    //             #[cfg(mit)]
-    //             Library::MitClient(cont) | Library::MitServer(cont) => {
-    //                 let mut keysalts = keysalts.map(|ks| ks.to_raw_mit());
-    //                 let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                     (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //                 } else {
-    //                     (0, null_mut())
-    //                 };
-    //                 unsafe {
-    //                     cont.kadm5_chpass_principal_3(
-    //                         self.server_handle,
-    //                         princ.raw as sys::mit::krb5_principal,
-    //                         keepold.into(),
-    //                         n_ks_tuple,
-    //                         ks_tuple,
-    //                         password.as_ptr().cast_mut(),
-    //                     )
-    //                 }
-    //             }
-    //             #[cfg(heimdal)]
-    //             Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-    //                 let mut keysalts = keysalts.map(|ks| ks.to_raw_heimdal());
-    //                 let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                     (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //                 } else {
-    //                     (0, null_mut())
-    //                 };
-    //                 unsafe {
-    //                     cont.kadm5_chpass_principal_3(
-    //                         self.server_handle,
-    //                         princ.raw as sys::heimdal::krb5_principal,
-    //                         keepold.into(),
-    //                         n_ks_tuple,
-    //                         ks_tuple,
-    //                         password.as_ptr().cast_mut(),
-    //                     )
-    //                 }
-    //                 .into()
-    //             }
-    //         }
-    //     } else {
-    //         match &self.context.library {
-    //             #[cfg(mit)]
-    //             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //                 cont.kadm5_chpass_principal(
-    //                     self.server_handle,
-    //                     princ.raw as sys::mit::krb5_principal,
-    //                     password.as_ptr().cast_mut(),
-    //                 )
-    //             },
-    //             #[cfg(heimdal)]
-    //             Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-    //                 cont.kadm5_chpass_principal(
-    //                     self.server_handle,
-    //                     princ.raw as sys::heimdal::krb5_principal,
-    //                     password.as_ptr().cast_mut(),
-    //                 )
-    //             }
-    //             .into(),
-    //         }
-    //     };
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //
-    //     Ok(())
-    // }
+        library_match!(&self.context.library; |cont, lib| {
+            let mut temp_princ = null_mut();
+            let name = CString::new(name)?;
+            let code = unsafe {
+                cont.krb5_parse_name(
+                    self.context.context as lib!(krb5_context),
+                    name.as_ptr().cast_mut(),
+                    &mut temp_princ,
+                ).into()
+            };
+            krb5_error_code_escape_hatch(&self.context, code)?;
 
-    // fn principal_randkey(
-    //     &self,
-    //     name: &str,
-    //     keepold: Option<bool>,
-    //     keysalts: Option<&KeySalts>,
-    // ) -> Result<()> {
-    //     let princ = parse_name(&self.context, name)?;
-    //     let keepold = keepold.unwrap_or(false);
-    //
-    //     let code = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(cont) | Library::MitServer(cont) => {
-    //             let mut keysalts = keysalts.map(|ks| ks.to_raw_mit());
-    //             let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                 (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //             } else {
-    //                 (0, null_mut())
-    //             };
-    //             unsafe {
-    //                 cont.kadm5_randkey_principal_3(
-    //                     self.server_handle,
-    //                     princ.raw as sys::mit::krb5_principal,
-    //                     keepold.into(),
-    //                     n_ks_tuple,
-    //                     ks_tuple,
-    //                     null_mut(),
-    //                     null_mut(),
-    //                 )
-    //             }
-    //         }
-    //         #[cfg(heimdal)]
-    //         Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => {
-    //             let mut keysalts = keysalts.map(|ks| ks.to_raw_heimdal());
-    //             let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-    //                 (keysalts.len() as i32, keysalts.as_mut_ptr())
-    //             } else {
-    //                 (0, null_mut())
-    //             };
-    //             unsafe {
-    //                 cont.kadm5_randkey_principal_3(
-    //                     self.server_handle,
-    //                     princ.raw as sys::heimdal::krb5_principal,
-    //                     keepold.into(),
-    //                     n_ks_tuple,
-    //                     ks_tuple,
-    //                     null_mut(),
-    //                     null_mut(),
-    //                 )
-    //             }
-    //             .into()
-    //         }
-    //     };
-    //
-    //     let rpc_error = match &self.context.library {
-    //         #[cfg(mit)]
-    //         Library::MitClient(_) | Library::MitServer(_) => sys::mit::KADM5_RPC_ERROR,
-    //         #[cfg(heimdal)]
-    //         // Library::HeimdalClient(_) | Library::HeimdalServer(_) =>
-    //         // sys::heimdal::KADM5_RPC_ERROR, TODO: fix this
-    //         Library::HeimdalClient(_) | Library::HeimdalServer(_) => 42,
-    //     };
-    //
-    //     let code = if code == rpc_error as i64 && !keepold && keysalts.is_none() {
-    //         match &self.context.library {
-    //             #[cfg(mit)]
-    //             Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-    //                 cont.kadm5_randkey_principal(
-    //                     self.server_handle,
-    //                     princ.raw as sys::mit::krb5_principal,
-    //                     null_mut(),
-    //                     null_mut(),
-    //                 )
-    //             },
-    //             #[cfg(heimdal)]
-    //             Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-    //                 cont.kadm5_randkey_principal(
-    //                     self.server_handle,
-    //                     princ.raw as sys::heimdal::krb5_principal,
-    //                     null_mut(),
-    //                     null_mut(),
-    //                 )
-    //             }
-    //             .into(),
-    //         }
-    //     } else {
-    //         code
-    //     };
-    //
-    //     kadm5_ret_t_escape_hatch(&self.context, code)?;
-    //     Ok(())
-    // }
+            let mut canon = null_mut();
+            let code = unsafe {
+                cont.krb5_unparse_name(
+                    self.context.context as lib!(krb5_context),
+                    temp_princ,
+                    &mut canon,
+                ).into()
+            };
+            krb5_error_code_escape_hatch(&self.context, code)?;
+
+            let mut princ_ent: lib!(_kadm5_principal_ent_t) = Default::default();
+            let princ_ptr = ptr::from_mut(&mut princ_ent);
+            let code = unsafe {
+                cont.kadm5_get_principal(
+                    self.server_handle,
+                    temp_princ,
+                    princ_ptr,
+                    ((lib!(KADM5_PRINCIPAL_NORMAL_MASK)) as u32).into(),
+                ).into()
+            };
+            unsafe {
+                cont.krb5_free_principal(
+                    self.context.context as lib!(krb5_context),
+                    temp_princ,
+                );
+            }
+            if code == unk_princ {
+                return Ok(None)
+            }
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
+
+            let princ = Principal::from_raw(&self.context, princ_ptr as *const c_void)?;
+            unsafe {
+                cont.kadm5_free_principal_ent(self.server_handle, princ_ptr);
+            }
+            Ok(Some(princ))
+        })
+    }
+
+    fn principal_change_password(
+        &self,
+        name: &str,
+        password: &str,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        let password = CString::new(password)?;
+        let princ = parse_name(&self.context, name)?;
+
+        let code = library_match!(
+            &self.context.library;
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let keepold = keepold.unwrap_or(false);
+
+                let mut keysalts: Option<Vec<lib!(krb5_key_salt_tuple)>> = keysalts.map(|ks| ks.into());
+                let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+                    (keysalts.len(), keysalts.as_mut_ptr())
+                } else {
+                    (0, null_mut())
+                };
+
+                if keepold || keysalts.is_some() {
+                    unsafe {
+                        cont.kadm5_chpass_principal_3(
+                            self.server_handle,
+                            princ.raw as lib!(krb5_principal),
+                            keepold.into(),
+                            n_ks_tuple as i32,
+                            ks_tuple,
+                            password.as_ptr().cast_mut(),
+                        ).into()
+                    }
+                } else {
+                    unsafe {
+                        cont.kadm5_chpass_principal(
+                            self.server_handle,
+                            princ.raw as lib!(krb5_principal),
+                            password.as_ptr().cast_mut(),
+                        ).into()
+                    }
+                }
+            },
+            heimdal_client => |cont, lib| {
+                unsafe {
+                    cont.kadm5_chpass_principal(
+                        self.server_handle,
+                        princ.raw as lib!(krb5_principal),
+                        password.as_ptr().cast_mut(),
+                    ).into()
+                }
+            }
+        );
+
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
+    }
+
+    fn principal_randkey(
+        &self,
+        name: &str,
+        keepold: Option<bool>,
+        keysalts: Option<&KeySalts>,
+    ) -> Result<()> {
+        let rpc_error = library_match!(
+            &self.context.library;
+            mit_client, mit_server => |_cont, lib| lib!(KADM5_RPC_ERROR),
+            heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_RPC_ERROR)
+        )
+        .into();
+        library_match!(&self.context.library; |cont, lib| {
+            let princ = parse_name(&self.context, name)?;
+            let keepold = keepold.unwrap_or(false);
+
+            let mut keysalts: Option<Vec<lib!(krb5_key_salt_tuple)>> = keysalts.map(|ks| ks.into());
+            let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+                (keysalts.len(), keysalts.as_mut_ptr())
+            } else {
+                (0, null_mut())
+            };
+
+            let code = unsafe {
+                cont.kadm5_randkey_principal_3(
+                    self.server_handle,
+                    princ.raw as lib!(krb5_principal),
+                    keepold.into(),
+                    n_ks_tuple as i32,
+                    ks_tuple,
+                    null_mut(),
+                    null_mut(),
+                ).into()
+            };
+
+            let code = if code == rpc_error && !keepold && keysalts.is_none() {
+                unsafe {
+                    cont.kadm5_randkey_principal (
+                        self.server_handle,
+                        princ.raw as lib!(krb5_principal),
+                        null_mut(),
+                        null_mut(),
+                    ).into()
+                }
+            } else {
+                code
+            };
+
+            kadm5_ret_t_escape_hatch(&self.context, code)?;
+            Ok(())
+        })
+    }
 
     #[cfg(any(mit_client, mit_server))]
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {

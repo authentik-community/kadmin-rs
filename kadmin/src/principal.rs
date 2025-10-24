@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    ffi::{CString, c_long, c_uint},
+    ffi::{CString, c_long, c_uint, c_void},
     ptr::null_mut,
     time::Duration,
 };
@@ -14,21 +14,17 @@ use pyo3::prelude::*;
 
 use crate::{
     context::Context,
-    conv::{c_string_to_string, delta_to_dur, dt_to_ts, dur_to_delta, ts_to_dt},
+    conv::{c_string_to_string, delta_to_dur, dt_to_ts, dur_to_delta, ts_to_dt, unparse_name},
     db_args::DbArgs,
-    error::{Error, Result, krb5_error_code_escape_hatch},
-    kadmin::{KAdmin, KAdminImpl},
+    error::{Result, krb5_error_code_escape_hatch},
+    kadmin::KAdminImpl,
     keysalt::KeySalts,
-    sys::{self, Library},
-    tl_data::{TlData, TlDataEntry},
+    sys::{self, KAdm5Variant, cfg_match, library_match},
+    tl_data::{TlData, TlDataEntry, TlDataRaw},
 };
-#[cfg(heimdal)]
-use crate::{conv::unparse_name_heimdal, tl_data::TlDataRawHeimdal};
-#[cfg(mit)]
-use crate::{conv::unparse_name_mit, tl_data::TlDataRawMit};
 
 /// A kadm5 principal
-#[derive(Clone, Debug, Getters, CopyGetters)]
+#[derive(Clone, Debug, Default, Getters, CopyGetters)]
 #[getset(get_copy = "pub")]
 #[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Principal {
@@ -74,65 +70,33 @@ pub struct Principal {
 }
 
 impl Principal {
-    #[cfg(mit)]
-    /// Create a [`Principal`] from [`sys::mit::_kadm5_principal_ent_t`]
-    pub(crate) fn from_raw_mit(
-        kadmin: &KAdmin,
-        entry: &sys::mit::_kadm5_principal_ent_t,
-    ) -> Result<Self> {
-        Ok(Self {
-            name: unparse_name_mit(&kadmin.context, entry.principal)?.unwrap(), // can never be None
-            expire_time: ts_to_dt(entry.princ_expire_time.into())?,
-            last_password_change: ts_to_dt(entry.last_pwd_change.into())?,
-            password_expiration: ts_to_dt(entry.pw_expiration.into())?,
-            max_life: delta_to_dur(entry.max_life.into()),
-            modified_by: unparse_name_mit(&kadmin.context, entry.mod_name)?,
-            modified_at: ts_to_dt(entry.mod_date.into())?,
-            attributes: entry.attributes,
-            kvno: entry.kvno,
-            mkvno: entry.mkvno,
-            policy: if !entry.policy.is_null() {
-                Some(c_string_to_string(entry.policy)?)
-            } else {
-                None
-            },
-            aux_attributes: entry.aux_attributes,
-            max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
-            last_success: ts_to_dt(entry.last_success.into())?,
-            last_failed: ts_to_dt(entry.last_failed.into())?,
-            fail_auth_count: entry.fail_auth_count,
-            tl_data: TlData::from_raw_mit(entry.n_tl_data, entry.tl_data),
-        })
-    }
+    /// Create a [`Principal`] from `_kadm5_principal_ent_t`
+    pub(crate) fn from_raw(context: &Context, entry: *const c_void) -> Result<Self> {
+        library_match!(&context.library; |_cont, lib| {
+            let entry = entry as *const lib!(_kadm5_principal_ent_t);
 
-    #[cfg(heimdal)]
-    /// Create a [`Principal`] from [`sys::heimdal::_kadm5_principal_ent_t`]
-    pub(crate) fn from_raw_heimdal(
-        kadmin: &KAdmin,
-        entry: &sys::heimdal::_kadm5_principal_ent_t,
-    ) -> Result<Self> {
-        Ok(Self {
-            name: unparse_name_heimdal(&kadmin.context, entry.principal)?.unwrap(), /* can never be None */
-            expire_time: ts_to_dt(entry.princ_expire_time)?,
-            last_password_change: ts_to_dt(entry.last_pwd_change)?,
-            password_expiration: ts_to_dt(entry.pw_expiration)?,
-            max_life: delta_to_dur(entry.max_life.into()),
-            modified_by: unparse_name_heimdal(&kadmin.context, entry.mod_name)?,
-            modified_at: ts_to_dt(entry.mod_date)?,
-            attributes: entry.attributes as i32,
-            kvno: entry.kvno as u32,
-            mkvno: entry.mkvno as u32,
-            policy: if !entry.policy.is_null() {
-                Some(c_string_to_string(entry.policy)?)
-            } else {
-                None
-            },
-            aux_attributes: entry.aux_attributes as i64,
-            max_renewable_life: delta_to_dur(entry.max_renewable_life.into()),
-            last_success: ts_to_dt(entry.last_success)?,
-            last_failed: ts_to_dt(entry.last_failed)?,
-            fail_auth_count: entry.fail_auth_count as u32,
-            tl_data: TlData::from_raw_heimdal(entry.n_tl_data, entry.tl_data),
+            Ok(Self {
+                // can never be None, unwraping is ok
+                name: unparse_name(context, unsafe { *entry }.principal as *const c_void)?.unwrap(),
+                expire_time: ts_to_dt(unsafe { *entry }.princ_expire_time.into())?,
+                last_password_change: ts_to_dt(unsafe { *entry }.last_pwd_change.into())?,
+                password_expiration: ts_to_dt(unsafe { *entry }.pw_expiration.into())?,
+                max_life: delta_to_dur(unsafe { *entry }.max_life.into()),
+                modified_by: unparse_name(context, unsafe { *entry }.mod_name as *const c_void)?,
+                modified_at: ts_to_dt(unsafe { *entry }.mod_date.into())?,
+                attributes: unsafe { *entry }.attributes as i32,
+                kvno: unsafe { *entry }.kvno as u32,
+                mkvno: unsafe { *entry }.mkvno as u32,
+                policy: if ! unsafe { *entry }.policy.is_null() {
+                    Some(c_string_to_string(unsafe { *entry }.policy)?)
+                } else { None },
+                aux_attributes: unsafe { *entry }.aux_attributes.into(),
+                max_renewable_life: delta_to_dur(unsafe { *entry }.max_renewable_life.into()),
+                last_success: ts_to_dt(unsafe { *entry }.last_success.into())?,
+                last_failed: ts_to_dt(unsafe { *entry }.last_failed.into())?,
+                fail_auth_count: unsafe { *entry }.fail_auth_count as u32,
+                tl_data: TlData::from_raw(context, unsafe { *entry }.n_tl_data, unsafe { *entry }.tl_data as *const c_void),
+            })
         })
     }
 
@@ -204,16 +168,18 @@ impl Principal {
     /// Change the password of the principal
     ///
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    ///   except perhaps for krbtgt principals. Defaults to false
-    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///   except perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option
+    ///   is silently ignored.
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal. With
+    ///   Heimdal client, this option is silently ignored.
     ///
     /// Note that principal data will have changed after this, so you may need to refresh it
     pub fn change_password<K: KAdminImpl>(
         &self,
         kadmin: &K,
         password: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         kadmin.principal_change_password(&self.name, password, keepold, keysalts)
     }
@@ -234,33 +200,36 @@ impl Principal {
         kadmin.principal_randkey(&self.name, keepold, keysalts)
     }
 
-    #[cfg(mit)]
     /// Unlocks a locked principal (one which has received too many failed authentication attempts
     /// without enough time between them according to its password policy) so that it can
     /// successfully authenticate
     ///
     /// Note that principal data will have changed after this, so you may need to refresh it
-    ///
-    /// Only available for MIT variants
     pub fn unlock<K: KAdminImpl>(&self, kadmin: &K) -> Result<()> {
-        if !kadmin.variant().is_mit() {
-            return Err(Error::LibraryMismatch(
-                "Principal unlocking is only available for MIT kadm5",
-            ));
-        }
-        self.modifier()
-            .fail_auth_count(0)
-            .tl_data(TlData {
+        let tl_entry_data_type = match kadmin.variant() {
+            #[cfg(mit_client)]
+            KAdm5Variant::MitClient => Some(sys::mit_client::KRB5_TL_LAST_ADMIN_UNLOCK as i16),
+            #[cfg(mit_server)]
+            KAdm5Variant::MitServer => Some(sys::mit_server::KRB5_TL_LAST_ADMIN_UNLOCK as i16),
+            #[cfg(heimdal_client)]
+            KAdm5Variant::HeimdalClient => None,
+            #[cfg(heimdal_server)]
+            KAdm5Variant::HeimdalServer => None,
+        };
+        let mut modifier = self.modifier().fail_auth_count(0);
+        if let Some(data_type) = tl_entry_data_type {
+            modifier = modifier.tl_data(TlData {
                 entries: vec![TlDataEntry {
-                    data_type: sys::mit::KRB5_TL_LAST_ADMIN_UNLOCK as i16,
+                    data_type,
                     contents: dt_to_ts(Some(Utc::now()))?.to_le_bytes().to_vec(),
                 }],
-            })
-            .modify(kadmin)?;
+            });
+        }
+        modifier.modify(kadmin)?;
         Ok(())
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     /// Retrieve string attributes on this principal
     ///
     /// Only available for MIT variants
@@ -268,7 +237,7 @@ impl Principal {
         kadmin.principal_get_strings(&self.name)
     }
 
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server))]
     /// Set string attribute on this principal
     ///
     /// Set `value` to None to remove the string
@@ -292,8 +261,10 @@ macro_rules! principal_doer_struct {
         $(#[$outer])*
         pub struct $StructName {
             pub(crate) name: String,
-            pub(crate) mask_mit: i64,
-            pub(crate) mask_heimdal: u32,
+            pub(crate) mask_mit_client: i64,
+            pub(crate) mask_mit_server: i64,
+            pub(crate) mask_heimdal_client: i64,
+            pub(crate) mask_heimdal_server: i64,
             pub(crate) expire_time: Option<Option<DateTime<Utc>>>,
             pub(crate) password_expiration: Option<Option<DateTime<Utc>>>,
             pub(crate) max_life: Option<Option<Duration>>,
@@ -309,6 +280,38 @@ macro_rules! principal_doer_struct {
     }
 }
 
+macro_rules! set_mask {
+    ($self:ident, $mask:ident) => {
+        cfg_match!(
+            mit_client => |lib| $self.mask_mit_client |= lib!($mask) as i64,
+            mit_server => |lib| $self.mask_mit_server |= lib!($mask) as i64,
+            heimdal_client => |lib| $self.mask_heimdal_client |= lib!($mask) as i64,
+            heimdal_server => |lib| $self.mask_heimdal_server |= lib!($mask) as i64
+        )
+    };
+
+    ($self:ident; $($libname:ident),+ => $mask:ident) => {
+        cfg_match!(
+            $(
+                $libname => |lib| set_mask!(@attr $self, $libname) |= lib!($mask) as i64
+            ),+
+        )
+    };
+
+    (@attr $self:ident, mit_client) => {
+        $self.mask_mit_client
+    };
+    (@attr $self:ident, mit_server) => {
+        $self.mask_mit_server
+    };
+    (@attr $self:ident, heimdal_client) => {
+        $self.mask_heimdal_client
+    };
+    (@attr $self:ident, heimdal_server) => {
+        $self.mask_heimdal_server
+    };
+}
+
 macro_rules! principal_doer_impl {
     () => {
         /// Set when the principal expires
@@ -316,14 +319,7 @@ macro_rules! principal_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn expire_time(mut self, expire_time: Option<DateTime<Utc>>) -> Self {
             self.expire_time = Some(expire_time);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_PRINC_EXPIRE_TIME as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_PRINC_EXPIRE_TIME;
-            }
+            set_mask!(self, KADM5_PRINC_EXPIRE_TIME);
             self
         }
 
@@ -332,28 +328,14 @@ macro_rules! principal_doer_impl {
         /// Pass `None` to clear it. Defaults to not set
         pub fn password_expiration(mut self, password_expiration: Option<DateTime<Utc>>) -> Self {
             self.password_expiration = Some(password_expiration);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_PW_EXPIRATION as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_PW_EXPIRATION;
-            }
+            set_mask!(self, KADM5_PW_EXPIRATION);
             self
         }
 
         /// Set the maximum ticket life
         pub fn max_life(mut self, max_life: Option<Duration>) -> Self {
             self.max_life = Some(max_life);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_MAX_LIFE as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_MAX_LIFE;
-            }
+            set_mask!(self, KADM5_MAX_LIFE);
             self
         }
 
@@ -363,14 +345,7 @@ macro_rules! principal_doer_impl {
         /// ones if needed
         pub fn attributes(mut self, attributes: i32) -> Self {
             self.attributes = Some(attributes);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_ATTRIBUTES as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_ATTRIBUTES;
-            }
+            set_mask!(self, KADM5_ATTRIBUTES);
             self
         }
 
@@ -378,241 +353,170 @@ macro_rules! principal_doer_impl {
         ///
         /// Pass `None` to clear it. Defaults to not set
         pub fn policy(mut self, policy: Option<&str>) -> Self {
-            #[cfg(mit)]
-            {
-                let (flag, nflag) = if policy.is_some() {
-                    (sys::mit::KADM5_POLICY, sys::mit::KADM5_POLICY_CLR)
-                } else {
-                    (sys::mit::KADM5_POLICY_CLR, sys::mit::KADM5_POLICY)
-                };
-                self.mask_mit |= (flag as i64);
-                self.mask_mit &= !(nflag as i64);
-            }
-            #[cfg(heimdal)]
-            {
-                let (flag, nflag) = if policy.is_some() {
-                    (sys::heimdal::KADM5_POLICY, sys::heimdal::KADM5_POLICY_CLR)
-                } else {
-                    (sys::heimdal::KADM5_POLICY_CLR, sys::heimdal::KADM5_POLICY)
-                };
-                self.mask_heimdal |= flag;
-                self.mask_heimdal &= !nflag;
-            }
             self.policy = Some(policy.map(String::from));
+            cfg_match!(
+                mit_client => |lib| {
+                    let (flag, nflag) = if policy.is_some() {
+                        (lib!(KADM5_POLICY) as i64, lib!(KADM5_POLICY_CLR) as i64)
+                    } else {
+                        (lib!(KADM5_POLICY_CLR) as i64, lib!(KADM5_POLICY) as i64)
+                    };
+                    self.mask_mit_client |= flag;
+                    self.mask_mit_client &= nflag;
+                },
+                mit_server => |lib| {
+                    let (flag, nflag) = if policy.is_some() {
+                        (lib!(KADM5_POLICY) as i64, lib!(KADM5_POLICY_CLR) as i64)
+                    } else {
+                        (lib!(KADM5_POLICY_CLR) as i64, lib!(KADM5_POLICY) as i64)
+                    };
+                    self.mask_mit_server |= flag;
+                    self.mask_mit_server &= nflag;
+                },
+                heimdal_client => |lib| {
+                    let (flag, nflag) = if policy.is_some() {
+                        (lib!(KADM5_POLICY) as i64, lib!(KADM5_POLICY_CLR) as i64)
+                    } else {
+                        (lib!(KADM5_POLICY_CLR) as i64, lib!(KADM5_POLICY) as i64)
+                    };
+                    self.mask_heimdal_client |= flag;
+                    self.mask_heimdal_client &= nflag;
+                },
+                heimdal_server => |lib| {
+                    let (flag, nflag) = if policy.is_some() {
+                        (lib!(KADM5_POLICY) as i64, lib!(KADM5_POLICY_CLR) as i64)
+                    } else {
+                        (lib!(KADM5_POLICY_CLR) as i64, lib!(KADM5_POLICY) as i64)
+                    };
+                    self.mask_heimdal_server |= flag;
+                    self.mask_heimdal_server &= nflag;
+                }
+            );
             self
         }
 
         /// Set auxiliary attributes
         pub fn aux_attributes(mut self, aux_attributes: c_long) -> Self {
             self.aux_attributes = Some(aux_attributes);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_AUX_ATTRIBUTES as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_AUX_ATTRIBUTES;
-            }
+            set_mask!(self, KADM5_AUX_ATTRIBUTES);
             self
         }
 
         /// Set the maximum renewable ticket life
         pub fn max_renewable_life(mut self, max_renewable_life: Option<Duration>) -> Self {
             self.max_renewable_life = Some(max_renewable_life);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_MAX_RLIFE as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_MAX_RLIFE;
-            }
+            set_mask!(self, KADM5_MAX_RLIFE);
             self
         }
 
         /// Set the number of failed authentication attempts
         pub fn fail_auth_count(mut self, fail_auth_count: u32) -> Self {
             self.fail_auth_count = Some(fail_auth_count);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_FAIL_AUTH_COUNT as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_FAIL_AUTH_COUNT;
-            }
+            set_mask!(self, KADM5_FAIL_AUTH_COUNT);
             self
         }
 
         /// Add new TL-data
         pub fn tl_data(mut self, tl_data: TlData) -> Self {
             self.tl_data = Some(tl_data);
-            #[cfg(mit)]
-            {
-                self.mask_mit |= sys::mit::KADM5_TL_DATA as i64;
-            }
-            #[cfg(heimdal)]
-            {
-                self.mask_heimdal |= sys::heimdal::KADM5_TL_DATA;
-            }
+            set_mask!(self, KADM5_TL_DATA);
             self
         }
 
-        #[cfg(mit)]
+        #[cfg(any(mit_client, mit_server))]
         /// Database specific arguments
-        ///
-        /// No-op for non MIT-variants
         pub fn db_args(mut self, db_args: DbArgs) -> Self {
             self.db_args = Some(db_args);
-            self.mask_mit |= sys::mit::KADM5_TL_DATA as i64;
+            set_mask!(self, KADM5_TL_DATA);
             self
         }
 
-        #[cfg(mit)]
-        /// Create a [`sys::mit::_kadm5_principal_ent_t`] from this builder
-        pub(crate) fn make_entry_mit<'a>(
-            &self,
-            context: &'a Context,
-        ) -> Result<PrincipalEntryRawMit<'a>> {
-            let mut entry = sys::mit::_kadm5_principal_ent_t::default();
+        /// Create a `_kadm5_principal_ent_t` from this builder
+        pub(crate) fn make_entry<'a>(&self, context: &'a Context) -> Result<(PrincipalEntryRaw<'a>, i64)> {
+            let mask = library_match!(
+                &context.library;
+                mit_client => |_cont, _lib| self.mask_mit_client,
+                mit_server => |_cont, _lib| self.mask_mit_server,
+                heimdal_client => |_cont, _lib| self.mask_heimdal_client,
+                heimdal_server => |_cont, _lib| self.mask_heimdal_server
+            );
 
-            if let Some(expire_time) = self.expire_time {
-                entry.princ_expire_time = dt_to_ts(expire_time)?;
-            }
-            if let Some(password_expiration) = self.password_expiration {
-                entry.pw_expiration = dt_to_ts(password_expiration)?;
-            }
-            if let Some(max_life) = self.max_life {
-                entry.max_life = dur_to_delta(max_life)?;
-            }
-            if let Some(attributes) = self.attributes {
-                entry.attributes = attributes;
-            }
-            let policy = if let Some(policy) = &self.policy {
-                if let Some(policy) = policy {
-                    let raw = CString::new(policy.clone())?;
-                    entry.policy = raw.as_ptr().cast_mut();
-                    Some(raw)
+            let entry = library_match!(&context.library; |cont, lib| {
+                let mut entry: lib!(_kadm5_principal_ent_t) = Default::default();
+
+                if let Some(expire_time) = self.expire_time {
+                    entry.princ_expire_time = dt_to_ts(expire_time)?.into();
+                }
+                if let Some(password_expiration) = self.password_expiration {
+                    entry.pw_expiration = dt_to_ts(password_expiration)?.into();
+                }
+                if let Some(max_life) = self.max_life {
+                    entry.max_life = dur_to_delta(max_life)?.into();
+                }
+                if let Some(attributes) = self.attributes {
+                    entry.attributes = attributes as lib!(krb5_flags);
+                }
+                let policy = if let Some(policy) = &self.policy {
+                    if let Some(policy) = policy {
+                        let raw = CString::new(policy.clone())?;
+                        entry.policy = raw.as_ptr().cast_mut();
+                        Some(raw)
+                    } else {
+                        entry.policy = null_mut();
+                        None
+                    }
                 } else {
-                    entry.policy = null_mut();
                     None
+                };
+                if let Some(aux_attributes) = self.aux_attributes {
+                    entry.aux_attributes = (aux_attributes as u32).into();
                 }
-            } else {
-                None
-            };
-            if let Some(aux_attributes) = self.aux_attributes {
-                entry.aux_attributes = aux_attributes;
-            }
-            if let Some(max_renewable_life) = self.max_renewable_life {
-                entry.max_renewable_life = dur_to_delta(max_renewable_life)?;
-            }
-            let tl_data = if let Some(db_args) = &self.db_args {
-                let mut tl_data: TlData = db_args.into();
-                if let Some(entry_tl_data) = &self.tl_data {
-                    tl_data.entries.extend_from_slice(&entry_tl_data.entries);
+                if let Some(max_renewable_life) = self.max_renewable_life {
+                    entry.max_renewable_life = dur_to_delta(max_renewable_life)?.into();
                 }
-                &Some(tl_data)
-            } else {
-                &self.tl_data
-            };
-            let tl_data = if let Some(tl_data) = tl_data {
-                let raw_tl_data = tl_data.to_raw_mit();
-                entry.n_tl_data = tl_data.entries.len() as i16;
-                entry.tl_data = raw_tl_data.raw;
-                Some(raw_tl_data)
-            } else {
-                None
-            };
 
-            // This is done at the end so we don't leak memory if anything else fails
-            let name = CString::new(self.name.clone())?;
-            let code = match &context.library {
-                Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
+                let tl_data = if let Some(db_args) = &self.db_args {
+                    let mut tl_data: TlData = db_args.into();
+                    if let Some(entry_tl_data) = &self.tl_data {
+                        tl_data.entries.extend_from_slice(&entry_tl_data.entries);
+                    }
+                    &Some(tl_data)
+                } else {
+                    &self.tl_data
+                };
+                let tl_data = if let Some(tl_data) = tl_data {
+                    let raw_tl_data = TlDataRaw::build(context, &tl_data);
+                    entry.n_tl_data = tl_data.entries.len() as i16;
+                    entry.tl_data = raw_tl_data.raw as *mut lib!(_krb5_tl_data);
+                    Some(raw_tl_data)
+                } else {
+                    None
+                };
+
+                // This is done at the end so we don't leak memory if anything else fails
+                let name = CString::new(self.name.clone())?;
+                let code = unsafe {
                     cont.krb5_parse_name(
-                        context.context as sys::mit::krb5_context,
+                        context.context as lib!(krb5_context),
                         name.as_ptr().cast_mut(),
                         &mut entry.principal,
-                    )
-                },
-                _ => unreachable!(),
-            };
-            krb5_error_code_escape_hatch(context, code.into())?;
+                    ).into()
+                };
+                krb5_error_code_escape_hatch(context, code)?;
 
-            Ok(PrincipalEntryRawMit {
-                raw: entry,
-                context,
-                _raw_policy: policy,
-                _raw_tl_data: tl_data,
-            })
-        }
+                let entry = Box::new(entry);
+                let raw = Box::into_raw(entry) as *mut c_void;
+                let raw = self.make_entry_extra(context, raw);
 
-        #[cfg(heimdal)]
-        /// Create a [`sys::heimdal::_kadm5_principal_ent_t`] from this builder
-        pub(crate) fn make_entry_heimdal<'a>(
-            &self,
-            context: &'a Context,
-        ) -> Result<PrincipalEntryRawHeimdal<'a>> {
-            let mut entry = sys::heimdal::_kadm5_principal_ent_t::default();
-
-            if let Some(expire_time) = self.expire_time {
-                entry.princ_expire_time = dt_to_ts(expire_time)?.into();
-            }
-            if let Some(password_expiration) = self.password_expiration {
-                entry.pw_expiration = dt_to_ts(password_expiration)?.into();
-            }
-            if let Some(max_life) = self.max_life {
-                entry.max_life = dur_to_delta(max_life)?.into();
-            }
-            if let Some(attributes) = self.attributes {
-                entry.attributes = attributes as u32;
-            }
-            let policy = if let Some(policy) = &self.policy {
-                if let Some(policy) = policy {
-                    let raw = CString::new(policy.clone())?;
-                    entry.policy = raw.as_ptr().cast_mut();
-                    Some(raw)
-                } else {
-                    entry.policy = null_mut();
-                    None
+                PrincipalEntryRaw {
+                    raw,
+                    context,
+                    _raw_policy: policy,
+                    _raw_tl_data: tl_data,
                 }
-            } else {
-                None
-            };
-            if let Some(aux_attributes) = self.aux_attributes {
-                entry.aux_attributes = aux_attributes as u32;
-            }
-            if let Some(max_renewable_life) = self.max_renewable_life {
-                entry.max_renewable_life = dur_to_delta(max_renewable_life)?.into();
-            }
-            let tl_data = if let Some(tl_data) = &self.tl_data {
-                let raw_tl_data = tl_data.to_raw_heimdal();
-                entry.n_tl_data = tl_data.entries.len() as i16;
-                entry.tl_data = raw_tl_data.raw;
-                Some(raw_tl_data)
-            } else {
-                None
-            };
+            });
 
-            // This is done at the end so we don't leak memory if anything else fails
-            let name = CString::new(self.name.clone())?;
-            let code = match &context.library {
-                Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
-                    cont.krb5_parse_name(
-                        context.context as sys::heimdal::krb5_context,
-                        name.as_ptr().cast_mut(),
-                        &mut entry.principal,
-                    )
-                },
-                _ => unreachable!(),
-            };
-            krb5_error_code_escape_hatch(context, code.into())?;
-
-            Ok(PrincipalEntryRawHeimdal {
-                raw: entry,
-                context,
-                _raw_policy: policy,
-                _raw_tl_data: tl_data,
-            })
+            Ok((entry, mask))
         }
     };
 }
@@ -638,6 +542,7 @@ principal_doer_struct!(
     PrincipalBuilder {
         pub(crate) kvno: Option<u32>,
         pub(crate) key: PrincipalBuilderKey,
+        #[cfg(any(mit_client, mit_server, heimdal_server))]
         pub(crate) keysalts: Option<KeySalts>,
     }
 );
@@ -662,14 +567,7 @@ impl PrincipalBuilder {
     /// Set the initial key version number
     pub fn kvno(mut self, kvno: u32) -> Self {
         self.kvno = Some(kvno);
-        #[cfg(mit)]
-        {
-            self.mask_mit |= sys::mit::KADM5_KVNO as i64;
-        }
-        #[cfg(heimdal)]
-        {
-            self.mask_heimdal |= sys::heimdal::KADM5_KVNO;
-        }
+        set_mask!(self, KADM5_KVNO);
         self
     }
 
@@ -681,10 +579,30 @@ impl PrincipalBuilder {
         self
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// Use the specified keysalt list for setting the keys of the principal
+    ///
+    /// Only available on MIT and Heimdal server libraries, and silently ignored otherwise
     pub fn keysalts(mut self, keysalts: &KeySalts) -> Self {
         self.keysalts = Some(keysalts.clone());
         self
+    }
+
+    fn make_entry_extra(&self, context: &Context, raw: *mut c_void) -> *const c_void {
+        library_match!(&context.library; |_cont, lib| {
+            let mut entry: Box<lib!(_kadm5_principal_ent_t)> = unsafe {
+                Box::from_raw(raw as *mut lib!(_kadm5_principal_ent_t))
+            };
+
+            if let Some(kvno) = self.kvno {
+                entry.kvno = kvno as lib!(krb5_kvno);
+            }
+            if self.key == PrincipalBuilderKey::OldStyleRandKey {
+                entry.attributes |= lib!(KRB5_KDB_DISALLOW_ALL_TIX) as lib!(krb5_flags);
+            }
+
+            Box::into_raw(entry) as *const c_void
+        })
     }
 
     /// Create the principal
@@ -724,6 +642,10 @@ impl PrincipalModifier {
         }
     }
 
+    fn make_entry_extra(&self, _context: &Context, raw: *mut c_void) -> *const c_void {
+        raw.cast_const()
+    }
+
     /// Modify the principal
     ///
     /// A new up-to-date instance of [`Principal`] is returned, but the old one is still available
@@ -760,48 +682,27 @@ impl Default for PrincipalBuilderKey {
     }
 }
 
-#[cfg(mit)]
-pub(crate) struct PrincipalEntryRawMit<'a> {
-    pub(crate) raw: sys::mit::_kadm5_principal_ent_t,
+pub(crate) struct PrincipalEntryRaw<'a> {
+    pub(crate) raw: *const c_void,
     context: &'a Context,
     _raw_policy: Option<CString>,
-    _raw_tl_data: Option<TlDataRawMit>,
+    _raw_tl_data: Option<TlDataRaw<'a>>,
 }
 
-#[cfg(mit)]
-impl Drop for PrincipalEntryRawMit<'_> {
+impl Drop for PrincipalEntryRaw<'_> {
     fn drop(&mut self) {
-        match &self.context.library {
-            Library::MitClient(cont) | Library::MitServer(cont) => unsafe {
-                cont.krb5_free_principal(
-                    self.context.context as sys::mit::krb5_context,
-                    self.raw.principal,
-                );
-            },
-            _ => unreachable!(),
+        if self.raw.is_null() {
+            return;
         }
-    }
-}
-
-#[cfg(heimdal)]
-pub(crate) struct PrincipalEntryRawHeimdal<'a> {
-    pub(crate) raw: sys::heimdal::_kadm5_principal_ent_t,
-    context: &'a Context,
-    _raw_policy: Option<CString>,
-    _raw_tl_data: Option<TlDataRawHeimdal>,
-}
-
-#[cfg(heimdal)]
-impl Drop for PrincipalEntryRawHeimdal<'_> {
-    fn drop(&mut self) {
-        match &self.context.library {
-            Library::HeimdalClient(cont) | Library::HeimdalServer(cont) => unsafe {
+        library_match!(&self.context.library; |cont, lib| {
+            let raw: Box<lib!(_kadm5_principal_ent_t)> = unsafe { Box::from_raw(self.raw as *mut lib!(_kadm5_principal_ent_t)) };
+            unsafe {
                 cont.krb5_free_principal(
-                    self.context.context as sys::heimdal::krb5_context,
-                    self.raw.principal,
+                    self.context.context as lib!(krb5_context),
+                    raw.principal,
                 );
-            },
-            _ => unreachable!(),
-        }
+            };
+            drop(raw);
+        });
     }
 }

@@ -443,6 +443,7 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
         .allowlist_type("krb5_key_salt_tuple")
         .allowlist_type("krb5_enctype")
         .allowlist_var("KADM5_.*")
+        .allowlist_var("KRB5_TL_.*")
         // Principal attributes
         .allowlist_var("KRB5_KDB_DISALLOW_POSTDATED")
         .allowlist_var("KRB5_KDB_DISALLOW_FORWARDABLE")
@@ -469,15 +470,13 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
         .allowlist_var("KRB5_KDB_SALTTYPE_.*")
         .allowlist_var("KRB5_TL_LAST_ADMIN_UNLOCK")
         .allowlist_function("kadm5_delete_principal")
-        // .allowlist_function("kadm5_modify_principal")
-        // .allowlist_function("kadm5_get_principal")
-        // .allowlist_function("kadm5_free_principal_ent")
-        // .allowlist_function("kadm5_chpass_principal")
-        // .allowlist_function("kadm5_chpass_principal_3")
-        // .allowlist_function("kadm5_randkey_principal_3")
-        // .allowlist_function("kadm5_randkey_principal")
-        // .allowlist_function("kadm5_create_principal")
-        // .allowlist_function("kadm5_create_principal_3")
+        .allowlist_function("kadm5_modify_principal")
+        .allowlist_function("kadm5_get_principal")
+        .allowlist_function("kadm5_free_principal_ent")
+        .allowlist_function("kadm5_chpass_principal")
+        .allowlist_function("kadm5_randkey_principal_3")
+        .allowlist_function("kadm5_randkey_principal")
+        .allowlist_function("kadm5_create_principal")
         .allowlist_function("kadm5_destroy")
         .allowlist_function("kadm5_flush")
         .allowlist_function("kadm5_free_name_list")
@@ -525,7 +524,9 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
             .allowlist_function("kadm5_free_policy_ent")
             .allowlist_function("kadm5_get_policies")
             .allowlist_function("kadm5_get_policy")
-            .allowlist_function("kadm5_modify_policy");
+            .allowlist_function("kadm5_create_principal_3")
+            .allowlist_function("kadm5_modify_policy")
+            .allowlist_function("kadm5_chpass_principal_3");
     }
 
     for include_path in &config.include_paths {

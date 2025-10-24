@@ -73,8 +73,8 @@ pub mod policy;
 #[cfg(any(mit_client, mit_server, heimdal_server))]
 pub use policy::Policy;
 
-// pub mod principal;
-// pub use principal::Principal;
+pub mod principal;
+pub use principal::Principal;
 
 pub mod sys;
 pub use sys::KAdm5Variant;
