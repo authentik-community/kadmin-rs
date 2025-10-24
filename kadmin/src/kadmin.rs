@@ -17,6 +17,7 @@ use libc::EINVAL;
 use pyo3::prelude::*;
 
 use crate::{
+    KeyData,
     context::Context,
     conv::{c_string_to_string, parse_name},
     db_args::DbArgs,
@@ -303,6 +304,29 @@ impl KAdmin {
     /// Construct a new [`KAdminBuilder`]
     pub fn builder() -> KAdminBuilder {
         KAdminBuilder::default()
+    }
+
+    /// TODO
+    pub fn principal_get_keys(&self, name: &str) -> Result<()> {
+        let princ = parse_name(&self.context, name)?;
+        let mut key_data = null_mut();
+        let mut n_key_data = 0;
+        let code = unsafe {
+            kadm5_get_principal_keys(
+                self.server_handle,
+                princ.raw,
+                1,
+                &mut key_data,
+                &mut n_key_data,
+            )
+        };
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        // TODO: check null
+        unsafe { dbg!(key_data) };
+        unsafe { dbg!(*key_data) };
+        let kd = KeyData::from_raw(n_key_data, key_data)?;
+        dbg!(kd);
+        Ok(())
     }
 }
 
