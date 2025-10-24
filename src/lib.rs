@@ -1,7 +1,6 @@
 //! Rust bindings to libkadm5
 //!
-//! This is a safe, idiomatic Rust interface to libkadm5. This crate offers two features, `client`
-//! and `local`. They are similar to how kadmin-sys behaves. You should only enable one of them.
+//! This is a safe, idiomatic Rust interface to libkadm5.
 //!
 //! With the `client` feature:
 //!
@@ -43,12 +42,6 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(feature = "client", feature = "local", not(doc)))]
-compile_error!("Feature \"client\" and feature \"local\" cannot be enabled at the same time.");
-
-#[cfg(all(not(feature = "client"), not(feature = "local"), not(doc)))]
-compile_error!("Exactly one of feature \"client\" or feature \"local\" must be selected.");
-
 mod conv;
 
 pub mod error;
@@ -70,15 +63,20 @@ pub mod keysalt;
 pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
 pub mod kadmin;
-pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl, KAdminPrivileges};
+pub use kadmin::{KAdmin, KAdminApiVersion, KAdminImpl};
 
 pub mod sync;
 
+#[cfg(any(mit_client, mit_server, heimdal_server))]
 pub mod policy;
+#[cfg(any(mit_client, mit_server, heimdal_server))]
 pub use policy::Policy;
 
 pub mod principal;
-pub use principal::{Principal, PrincipalAttributes};
+pub use principal::Principal;
+
+pub mod sys;
+pub use sys::KAdm5Variant;
 
 #[cfg(feature = "python")]
 mod python;
