@@ -548,7 +548,7 @@ impl KAdminImpl for KAdmin {
     }
 
     fn get_principal(&self, name: &str) -> Result<Option<Principal>> {
-        let unk_princ = library_match!(
+        let unk_princ: i64 = library_match!(
             &self.context.library;
             mit_client, mit_server => |_cont, lib| lib!(KADM5_UNK_PRINC),
             heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_UNK_PRINC)
@@ -670,7 +670,7 @@ impl KAdminImpl for KAdmin {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        let rpc_error = library_match!(
+        let rpc_error: i64 = library_match!(
             &self.context.library;
             mit_client, mit_server => |_cont, lib| lib!(KADM5_RPC_ERROR),
             heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_RPC_ERROR)
@@ -911,11 +911,12 @@ impl KAdminImpl for KAdmin {
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
-        let unk_policy = library_match!(
+        let unk_policy: i64 = library_match!(
             &self.context.library;
             mit_client, mit_server => |_cont, lib| lib!(KADM5_UNK_POLICY),
             heimdal_client, heimdal_server => |_cont, lib| lib!(kadm5_error_number_KADM5_UNK_POLICY)
-        );
+        )
+        .into();
         let (res, policy_ptr) = library_match!(
             &self.context.library;
             mit_client, mit_server, heimdal_server => |cont, lib| {
@@ -931,7 +932,7 @@ impl KAdminImpl for KAdmin {
                         policy_ptr,
                     ).into()
                 };
-                if code == unk_policy as i64 {
+                if code == unk_policy {
                     return Ok(None);
                 }
                 kadm5_ret_t_escape_hatch(&self.context, code)?;

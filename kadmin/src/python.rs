@@ -2,8 +2,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ffi::{c_int, c_long},
-    ops::{BitAndAssign, BitOrAssign, BitXorAssign},
+    ffi::c_int,
 };
 
 use pyo3::{
@@ -11,12 +10,12 @@ use pyo3::{
     types::{PyDict, PyString, PyTuple},
 };
 
-#[cfg(mit)]
+#[cfg(any(mit_client, mit_server, heimdal_server))]
 use crate::policy::Policy;
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
+    kadmin::{KAdminApiVersion, KAdminImpl},
     keysalt::{EncryptionType, KeySalt, KeySalts, SaltType},
     params::Params,
     principal::{Principal, PrincipalBuilderKey},
@@ -41,9 +40,8 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<KAdmin>()?;
     m.add_class::<PyPrincipalBuilderKey>()?;
     m.add_class::<Principal>()?;
-    #[cfg(mit)]
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     m.add_class::<Policy>()?;
-    m.add_class::<KAdminPrivileges>()?;
     exceptions::init(m)?;
     Ok(())
 }
@@ -51,7 +49,16 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pymethods]
 impl Params {
     #[new]
-    #[pyo3(signature = (realm=None, kadmind_port=None, kpasswd_port=None, admin_server=None, dbname=None, acl_file=None, dict_file=None, stash_file=None))]
+    #[pyo3(signature = (
+        realm=None,
+        kadmind_port=None,
+        kpasswd_port=None,
+        admin_server=None,
+        dbname=None,
+        acl_file=None,
+        dict_file=None,
+        stash_file=None,
+    ))]
     #[allow(clippy::too_many_arguments)]
     fn py_new(
         realm: Option<&str>,
@@ -70,6 +77,7 @@ impl Params {
         if let Some(kadmind_port) = kadmind_port {
             params = params.kadmind_port(kadmind_port);
         }
+        #[cfg(any(mit_client, mit_server))]
         if let Some(kpasswd_port) = kpasswd_port {
             params = params.kpasswd_port(kpasswd_port);
         }
@@ -82,6 +90,7 @@ impl Params {
         if let Some(acl_file) = acl_file {
             params = params.acl_file(acl_file);
         }
+        #[cfg(any(mit_client, mit_server))]
         if let Some(dict_file) = dict_file {
             params = params.dict_file(dict_file);
         }
@@ -242,6 +251,7 @@ impl KAdmin {
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 builder = builder.tl_data(tl_data.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(db_args) = kwargs.get_item("db_args")? {
                 builder = builder.db_args(db_args.extract()?);
             }
@@ -252,6 +262,7 @@ impl KAdmin {
                 let key = key.extract::<PyPrincipalBuilderKey>()?;
                 builder = builder.key(&key.into());
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             if let Some(keysalts) = kwargs.get_item("keysalts")? {
                 builder = builder.keysalts(&keysalts.extract()?);
             }
@@ -287,7 +298,14 @@ impl KAdmin {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        self.principal_change_password(name, password, keepold, keysalts)
+        self.principal_change_password(
+            name,
+            password,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     #[pyo3(name = "principal_randkey", signature = (name, keepold = None, keysalts = None))]
@@ -300,11 +318,13 @@ impl KAdmin {
         self.principal_randkey(name, keepold, keysalts)
     }
 
+    #[cfg(any(mit_client, mit_server))]
     #[pyo3(name = "principal_get_strings")]
     fn py_principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
         self.principal_get_strings(name)
     }
 
+    #[cfg(any(mit_client, mit_server))]
     #[pyo3(name = "principal_set_string", signature = (name, key, value))]
     fn py_principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
         self.principal_set_string(name, key, value)
@@ -315,6 +335,7 @@ impl KAdmin {
         self.list_principals(query)
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     #[pyo3(name = "add_policy", signature = (name, **kwargs))]
     fn py_add_policy(&self, name: &str, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Policy> {
         let mut builder = Policy::builder(name);
@@ -334,30 +355,38 @@ impl KAdmin {
             if let Some(password_history_num) = kwargs.get_item("password_history_num")? {
                 builder = builder.password_history_num(password_history_num.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_max_fail) = kwargs.get_item("password_max_fail")? {
                 builder = builder.password_max_fail(password_max_fail.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_failcount_interval) =
                 kwargs.get_item("password_failcount_interval")?
             {
                 builder =
                     builder.password_failcount_interval(password_failcount_interval.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_lockout_duration) = kwargs.get_item("password_lockout_duration")? {
                 builder = builder.password_lockout_duration(password_lockout_duration.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(attributes) = kwargs.get_item("attributes")? {
                 builder = builder.attributes(attributes.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(max_life) = kwargs.get_item("max_life")? {
                 builder = builder.max_life(max_life.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 builder = builder.max_renewable_life(max_renewable_life.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
                 builder = builder.allowed_keysalts(allowed_keysalts.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 builder = builder.tl_data(tl_data.extract()?);
             }
@@ -365,28 +394,32 @@ impl KAdmin {
         Ok(builder.create(self)?)
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     #[pyo3(name = "delete_policy")]
     fn py_delete_policy(&self, name: &str) -> Result<()> {
         self.delete_policy(name)
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     #[pyo3(name = "get_policy")]
     fn py_get_policy(&self, name: &str) -> Result<Option<Policy>> {
         self.get_policy(name)
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     #[pyo3(name = "policy_exists")]
     fn py_policy_exists(&self, name: &str) -> Result<bool> {
         self.policy_exists(name)
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     #[pyo3(name = "list_policies", signature = (query=None))]
     fn py_list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         self.list_policies(query)
     }
 
     #[pyo3(name = "get_privileges")]
-    fn py_get_privileges(&self) -> Result<KAdminPrivileges> {
+    fn py_get_privileges(&self) -> Result<i64> {
         self.get_privileges()
     }
 
@@ -443,6 +476,7 @@ impl KAdmin {
         Self::py_get_builder(variant, params, db_args, api_version).with_anonymous(client_name)
     }
 
+    #[cfg(any(mit_server, heimdal_server))]
     #[staticmethod]
     #[pyo3(name = "with_local", signature = (variant, params=None, db_args=None, api_version=None))]
     fn py_with_local(
@@ -488,6 +522,7 @@ impl Principal {
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 modifier = modifier.tl_data(tl_data.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(db_args) = kwargs.get_item("db_args")? {
                 modifier = modifier.db_args(db_args.extract()?);
             }
@@ -510,7 +545,14 @@ impl Principal {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        self.change_password(kadmin, password, keepold, keysalts)
+        self.change_password(
+            kadmin,
+            password,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     #[pyo3(name = "randkey", signature = (kadmin, keepold = None, keysalts = None))]
@@ -528,11 +570,13 @@ impl Principal {
         self.unlock(kadmin)
     }
 
+    #[cfg(any(mit_client, mit_server))]
     #[pyo3(name = "get_strings")]
     fn py_get_strings(&self, kadmin: &KAdmin) -> Result<HashMap<String, String>> {
         self.get_strings(kadmin)
     }
 
+    #[cfg(any(mit_client, mit_server))]
     #[pyo3(name = "set_string", signature = (kadmin, key, value))]
     fn py_set_string(&self, kadmin: &KAdmin, key: &str, value: Option<&str>) -> Result<()> {
         self.set_string(kadmin, key, value)
@@ -563,6 +607,7 @@ impl From<PyPrincipalBuilderKey> for PrincipalBuilderKey {
     }
 }
 
+#[cfg(any(mit_client, mit_server, heimdal_server))]
 #[pymethods]
 impl Policy {
     #[pyo3(name = "modify", signature = (kadmin, **kwargs))]
@@ -584,30 +629,38 @@ impl Policy {
             if let Some(password_history_num) = kwargs.get_item("password_history_num")? {
                 modifier = modifier.password_history_num(password_history_num.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_max_fail) = kwargs.get_item("password_max_fail")? {
                 modifier = modifier.password_max_fail(password_max_fail.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_failcount_interval) =
                 kwargs.get_item("password_failcount_interval")?
             {
                 modifier =
                     modifier.password_failcount_interval(password_failcount_interval.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(password_lockout_duration) = kwargs.get_item("password_lockout_duration")? {
                 modifier = modifier.password_lockout_duration(password_lockout_duration.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(attributes) = kwargs.get_item("attributes")? {
                 modifier = modifier.attributes(attributes.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(max_life) = kwargs.get_item("max_life")? {
                 modifier = modifier.max_life(max_life.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(max_renewable_life) = kwargs.get_item("max_renewable_life")? {
                 modifier = modifier.max_renewable_life(max_renewable_life.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(allowed_keysalts) = kwargs.get_item("allowed_keysalts")? {
                 modifier = modifier.allowed_keysalts(allowed_keysalts.extract()?);
             }
+            #[cfg(any(mit_client, mit_server))]
             if let Some(tl_data) = kwargs.get_item("tl_data")? {
                 modifier = modifier.tl_data(tl_data.extract()?);
             }
@@ -620,69 +673,6 @@ impl Policy {
     #[pyo3(name = "delete")]
     fn py_delete(&self, kadmin: &KAdmin) -> Result<()> {
         self.delete(kadmin)
-    }
-}
-
-#[pymethods]
-#[allow(non_upper_case_globals)]
-impl KAdminPrivileges {
-    #[classattr]
-    #[pyo3(name = "Add")]
-    const PyAdd: Self = Self::Add;
-    #[classattr]
-    #[pyo3(name = "Delete")]
-    const PyDelete: Self = Self::Delete;
-    #[classattr]
-    #[pyo3(name = "Inquire")]
-    const PyInquire: Self = Self::Inquire;
-    #[classattr]
-    #[pyo3(name = "Modify")]
-    const PyModify: Self = Self::Modify;
-
-    #[new]
-    fn py_new(bits: c_long) -> Self {
-        Self::from_bits_retain(bits)
-    }
-
-    #[pyo3(name = "bits")]
-    fn py_bits(&self) -> c_long {
-        self.bits()
-    }
-
-    fn __contains__(&self, other: Self) -> bool {
-        self.contains(other)
-    }
-
-    fn __and__(&self, other: Self) -> Self {
-        *self & other
-    }
-
-    fn __iand__(&mut self, other: Self) {
-        Self::bitand_assign(self, other);
-    }
-
-    fn __xor__(&self, other: Self) -> Self {
-        *self ^ other
-    }
-
-    fn __ixor__(&mut self, other: Self) {
-        Self::bitxor_assign(self, other);
-    }
-
-    fn __or__(&self, other: Self) -> Self {
-        *self | other
-    }
-
-    fn __ior__(&mut self, other: Self) {
-        Self::bitor_assign(self, other);
-    }
-
-    fn __invert__(&self) -> Self {
-        self.complement()
-    }
-
-    fn __int__(&self) -> c_long {
-        self.bits()
     }
 }
 
