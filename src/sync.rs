@@ -53,7 +53,12 @@ enum KAdminOperation {
         Sender<Result<()>>,
     ),
     /// See [`KAdminImpl::principal_randkey`]
-    PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
+    PrincipalRandkey(
+        String,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<KeySalts>,
+        Sender<Result<()>>,
+    ),
     #[cfg(any(mit_client, mit_server))]
     /// See [`KAdminImpl::principal_get_strings`]
     PrincipalGetStrings(String, Sender<Result<HashMap<String, String>>>),
@@ -115,8 +120,13 @@ impl KAdminOperation {
             Self::PrincipalChangePassword(name, password, sender) => {
                 let _ = sender.send(kadmin.principal_change_password(name, password));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
+            }
+            #[cfg(not(any(mit_client, mit_server, heimdal_server)))]
+            Self::PrincipalRandkey(name, sender) => {
+                let _ = sender.send(kadmin.principal_randkey(name));
             }
             #[cfg(any(mit_client, mit_server))]
             Self::PrincipalGetStrings(name, sender) => {
@@ -264,15 +274,17 @@ impl KAdminImpl for KAdmin {
     fn principal_randkey(
         &self,
         name: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
             .send(KAdminOperation::PrincipalRandkey(
                 name.to_owned(),
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keepold,
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keysalts.cloned(),
                 sender,
             ))?;

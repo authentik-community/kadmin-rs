@@ -194,17 +194,25 @@ impl Principal {
     /// Sets the key of the principal to a random value
     ///
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    ///   except perhaps for krbtgt principals. Defaults to false
-    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///   except perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option
+    ///   is silently ignored.
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal. With
+    ///   Heimdal client, this option is silently ignored.
     ///
     /// Note that principal data will have changed after this, so you may need to refresh it
     pub fn randkey<K: KAdminImpl>(
         &self,
         kadmin: &K,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        kadmin.principal_randkey(&self.name, keepold, keysalts)
+        kadmin.principal_randkey(
+            &self.name,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     /// Unlocks a locked principal (one which has received too many failed authentication attempts

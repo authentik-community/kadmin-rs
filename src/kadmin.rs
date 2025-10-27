@@ -176,8 +176,10 @@ pub trait KAdminImpl {
     /// Change a principal password
     ///
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    ///   except perhaps for krbtgt principals. Defaults to false
-    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///   except perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option
+    ///   is silently ignored.
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal. With
+    ///   Heimdal client, this option is silently ignored.
     ///
     /// Don't use this method directly. Instead, prefer [`Principal::change_password`]
     #[doc(alias = "cpw")]
@@ -192,8 +194,10 @@ pub trait KAdminImpl {
     /// Sets the key of the principal to a random value
     ///
     /// * `keepold`: Keeps the existing keys in the database. This flag is usually not necessary
-    ///   except perhaps for krbtgt principals. Defaults to false
-    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal
+    ///   except perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option
+    ///   is silently ignored.
+    /// * `keysalts`: Uses the specified keysalt list for setting the keys of the principal. With
+    ///   Heimdal client, this option is silently ignored.
     ///
     /// [`Principal::randkey`] is also available
     // TODO: add returning newly created keys
@@ -201,8 +205,8 @@ pub trait KAdminImpl {
     fn principal_randkey(
         &self,
         name: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()>;
 
     #[cfg(any(mit_client, mit_server))]
@@ -483,12 +487,14 @@ impl KAdminImpl for KAdmin {
         kadm5_ret_t_escape_hatch(&self.context, code)?;
 
         if old_style_randkey {
-            library_match!(
-                &self.context.library;
-                mit_client, mit_server, heimdal_server => |_cont, _lib| self.principal_randkey(&builder.name, None, None)?,
-                heimdal_client => |_cont, _lib| self.principal_randkey(&builder.name, None, None)?
-            );
             library_match!(&self.context.library; |cont, lib| {
+                self.principal_randkey(
+                    &builder.name,
+                    #[cfg(any(mit_client, mit_server, heimdal_server))]
+                    None,
+                    #[cfg(any(mit_client, mit_server, heimdal_server))]
+                    None,
+                )?;
                 let raw_entry = entry.raw as *mut lib!(_kadm5_principal_ent_t);
                 unsafe { *raw_entry }.attributes &= !lib!(KRB5_KDB_DISALLOW_ALL_TIX) as lib!(krb5_flags);
                 mask = lib!(KADM5_ATTRIBUTES) as i64;
@@ -661,49 +667,60 @@ impl KAdminImpl for KAdmin {
     fn principal_randkey(
         &self,
         name: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        library_match!(&self.context.library; |cont, lib| {
-            let princ = parse_name(&self.context, name)?;
-            let keepold = keepold.unwrap_or(false);
+        let princ = parse_name(&self.context, name)?;
 
-            let mut keysalts: Option<Vec<lib!(krb5_key_salt_tuple)>> = keysalts.map(|ks| ks.into());
-            let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
-                (keysalts.len(), keysalts.as_mut_ptr())
-            } else {
-                (0, null_mut())
-            };
+        let code = library_match!(
+            &self.context.library;
+            mit_client, mit_server, heimdal_server => |cont, lib| {
+                let keepold = keepold.unwrap_or(false);
 
-            let code = unsafe {
-                cont.kadm5_randkey_principal_3(
-                    self.server_handle,
-                    princ.raw as lib!(krb5_principal),
-                    keepold.into(),
-                    n_ks_tuple as i32,
-                    ks_tuple,
-                    null_mut(),
-                    null_mut(),
-                ).into()
-            };
+                let mut keysalts: Option<Vec<lib!(krb5_key_salt_tuple)>> = keysalts.map(|ks| ks.into());
+                let (n_ks_tuple, ks_tuple) = if let Some(ref mut keysalts) = keysalts {
+                    (keysalts.len(), keysalts.as_mut_ptr())
+                } else {
+                    (0, null_mut())
+                };
 
-            let rpc_error: i64 = lib!(KADM5_RPC_ERROR).into();
-            let code = if code == rpc_error && !keepold && keysalts.is_none() {
-                unsafe {
-                    cont.kadm5_randkey_principal (
+                let code = unsafe {
+                    cont.kadm5_randkey_principal_3(
                         self.server_handle,
                         princ.raw as lib!(krb5_principal),
+                        keepold.into(),
+                        n_ks_tuple as i32,
+                        ks_tuple,
                         null_mut(),
                         null_mut(),
                     ).into()
-                }
-            } else {
-                code
-            };
+                };
 
-            kadm5_ret_t_escape_hatch(&self.context, code)?;
-            Ok(())
-        })
+                let rpc_error: i64 = lib!(KADM5_RPC_ERROR).into();
+                if code == rpc_error && !keepold && keysalts.is_none() {
+                    unsafe {
+                        cont.kadm5_randkey_principal (
+                            self.server_handle,
+                            princ.raw as lib!(krb5_principal),
+                            null_mut(),
+                            null_mut(),
+                        ).into()
+                    }
+                } else {
+                    code
+                }
+            },
+            heimdal_client => |cont, lib| unsafe {
+                cont.kadm5_randkey_principal (
+                    self.server_handle,
+                    princ.raw as lib!(krb5_principal),
+                    null_mut(),
+                    null_mut(),
+                ).into()
+            }
+        );
+        kadm5_ret_t_escape_hatch(&self.context, code)?;
+        Ok(())
     }
 
     #[cfg(any(mit_client, mit_server))]
