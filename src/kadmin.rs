@@ -903,10 +903,11 @@ impl KAdminImpl for KAdmin {
                 ))
             },
             mit_client, mit_server, heimdal_server => |cont, _lib| {
+                let name = CString::new(name)?;
                 let code = unsafe {
                     cont.kadm5_delete_policy(
                         self.server_handle,
-                        name.as_ptr().cast_mut().cast()
+                        name.as_ptr().cast_mut()
                     ).into()
                 };
                 kadm5_ret_t_escape_hatch(&self.context, code)?;
