@@ -1,5 +1,5 @@
 //! Utility to run a krb5 KDC
-use std::{ffi::CStr, process::Command, thread::sleep, time::Duration};
+use std::{ffi::CStr, process::Command};
 
 use anyhow::Result;
 use pyo3::ffi::c_str;
