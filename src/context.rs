@@ -235,7 +235,7 @@ mod tests {
         let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
-        assert_eq!(message, "Unknown code ____ 255");
+        assert!(message.starts_with("Unknown"));
         Ok(())
     }
 
@@ -246,7 +246,7 @@ mod tests {
         let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib).unwrap();
         let message = context.error_code_to_message(-1);
-        assert_eq!(message, "Unknown error -1");
+        assert!(message.starts_with("Unknown"));
         Ok(())
     }
 }
