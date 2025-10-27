@@ -167,16 +167,22 @@ impl Library {
         for path in library_paths {
             for library in libraries.iter() {
                 let full_path = format!("{}/lib{}.so", path, library);
+                #[cfg(feature = "log")]
+                log::trace!("Trying to load library at path {full_path}");
                 let load = unsafe { Container::load(&full_path) };
                 #[cfg(feature = "log")]
                 if let Err(err) = &load {
                     log::trace!("Loading library at path {full_path} resulted in an error: {err}");
                 }
                 if let Ok(cont) = load {
+                    #[cfg(feature = "log")]
+                    log::trace!("Successfully loaded library at {full_path}");
                     return Some(cont);
                 }
             }
         }
+        #[cfg(feature = "log")]
+        log::trace!("Couldn't find a built-in library, trying a generic one");
         None
     }
 
@@ -428,28 +434,32 @@ mod tests {
     use super::*;
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn library_load_mit_client() -> Result<()> {
         Library::from_variant(KAdm5Variant::MitClient)?;
         Ok(())
     }
 
     #[cfg(mit_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn library_load_mit_server() -> Result<()> {
         Library::from_variant(KAdm5Variant::MitServer)?;
         Ok(())
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn library_load_heimdal_client() -> Result<()> {
         Library::from_variant(KAdm5Variant::HeimdalClient)?;
         Ok(())
     }
 
     #[cfg(heimdal_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn library_load_heimdal_server() -> Result<()> {
         Library::from_variant(KAdm5Variant::HeimdalServer)?;
         Ok(())

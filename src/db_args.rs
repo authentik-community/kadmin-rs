@@ -136,7 +136,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_empty() {
         let db_args = DbArgs::builder().build().unwrap();
 
@@ -145,7 +146,8 @@ mod tests {
         }
     }
 
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_no_value() {
         let db_args = DbArgs::builder().arg("lockiter", None).build().unwrap();
         assert_eq!(
@@ -154,7 +156,8 @@ mod tests {
         );
     }
 
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_with_value() {
         let db_args = DbArgs::builder()
             .arg("host", Some("ldap.test"))

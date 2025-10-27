@@ -322,35 +322,40 @@ mod tests {
     use super::*;
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_empty_mit() {
         let params = Params::new();
         assert_eq!(params.mask_mit_client, 0);
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_empty_heimdal() {
         let params = Params::new();
         assert_eq!(params.mask_heimdal_client, 0);
     }
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_realm_mit() {
         let params = Params::new().realm("EXAMPLE.ORG");
         assert_eq!(params.mask_mit_client, 1);
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_realm_heimdal() {
         let params = Params::new().realm("EXAMPLE.ORG");
         assert_eq!(params.mask_heimdal_client, 1);
     }
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_all_mit_client() {
         let params = Params::new()
             .realm("EXAMPLE.ORG")
@@ -361,7 +366,8 @@ mod tests {
     }
 
     #[cfg(mit_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_all_mit_server() {
         let params = Params::new()
             .realm("EXAMPLE.ORG")
@@ -372,7 +378,8 @@ mod tests {
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_all_heimdal_client() {
         let params = Params::new()
             .realm("EXAMPLE.ORG")
@@ -382,7 +389,8 @@ mod tests {
     }
 
     #[cfg(heimdal_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn build_all_heimdal_server() {
         let params = Params::new()
             .realm("EXAMPLE.ORG")

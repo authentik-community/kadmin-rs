@@ -167,7 +167,8 @@ mod tests {
     use crate::sys::KAdm5Variant;
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn new_mit_client() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib);
@@ -176,7 +177,8 @@ mod tests {
     }
 
     #[cfg(mit_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn new_mit_server() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::MitServer)?;
         let context = Context::new(lib);
@@ -185,7 +187,8 @@ mod tests {
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn new_heimdal_client() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib);
@@ -194,7 +197,8 @@ mod tests {
     }
 
     #[cfg(heimdal_server)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn new_heimdal_server() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::HeimdalServer)?;
         let context = Context::new(lib);
@@ -203,7 +207,8 @@ mod tests {
     }
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn error_code_to_message_mit() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
@@ -213,7 +218,8 @@ mod tests {
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn error_code_to_message_heimdal() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib).unwrap();
@@ -223,7 +229,8 @@ mod tests {
     }
 
     #[cfg(mit_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn error_code_to_message_wrong_code_mit() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::MitClient)?;
         let context = Context::new(lib).unwrap();
@@ -233,7 +240,8 @@ mod tests {
     }
 
     #[cfg(heimdal_client)]
-    #[test]
+    #[test_log::test]
+    #[serial_test::serial]
     fn error_code_to_message_wrong_code_heimdal() -> Result<()> {
         let lib = Library::from_variant(KAdm5Variant::HeimdalClient)?;
         let context = Context::new(lib).unwrap();
