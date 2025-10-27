@@ -6,14 +6,13 @@ __all__ = (
     "EncryptionType",
     "KAdmin",
     "KAdminApiVersion",
-    "KAdminPrivileges",
+    "KAdm5Variant",
     "KeySalt",
     "KeySalts",
     "NewPrincipalKey",
     "Params",
     "Policy",
     "Principal",
-    "PrincipalAttributes",
     "SaltType",
     "TlData",
     "TlDataEntry",
@@ -28,10 +27,17 @@ class KAdminApiVersion:
     Version4: Self
 
 @final
+class KAdm5Variant:
+    MitClient: Self
+    MitServer: Self
+    HeimdalClient: Self
+    HeimdalServer: Self
+
+@final
 class KAdmin:
     def add_principal(self, name, **kwargs) -> Principal: ...
-    def rename_principal(self, old_name, new_name): ...
-    def delete_principal(self, name): ...
+    def rename_principal(self, old_name: str, new_name: str): ...
+    def delete_principal(self, name: str): ...
     def get_principal(self, name: str) -> Principal | None: ...
     def principal_exists(self, name: str) -> bool: ...
     def principal_change_password(
@@ -42,7 +48,10 @@ class KAdmin:
         keysalts: KeySalts | None = None,
     ): ...
     def principal_randkey(
-        self, name: str, keepold: bool | None = None, keysalts: KeySalts | None = None
+        self,
+        name: str,
+        keepold: bool | None = None,
+        keysalts: KeySalts | None = None,
     ): ...
     def principal_get_strings(self, name: str) -> dict[str, str]: ...
     def principal_set_string(self, name: str, key: str, value: str | None): ...
@@ -52,9 +61,10 @@ class KAdmin:
     def get_policy(self, name: str) -> Policy | None: ...
     def policy_exists(self, name: str) -> bool: ...
     def list_policies(self, query: str | None = None) -> list[str]: ...
-    def get_privileges(self) -> KAdminPrivileges: ...
+    def get_privileges(self) -> int: ...
     @staticmethod
     def with_password(
+        variant: KAdm5Variant,
         client_name: str,
         password: str,
         params: Params | None = None,
@@ -63,6 +73,7 @@ class KAdmin:
     ) -> KAdmin: ...
     @staticmethod
     def with_keytab(
+        variant: KAdm5Variant,
         client_name: str | None = None,
         keytab: str | None = None,
         params: Params | None = None,
@@ -71,6 +82,7 @@ class KAdmin:
     ) -> KAdmin: ...
     @staticmethod
     def with_ccache(
+        variant: KAdm5Variant,
         client_name: str | None = None,
         ccache_name: str | None = None,
         params: Params | None = None,
@@ -79,7 +91,15 @@ class KAdmin:
     ) -> KAdmin: ...
     @staticmethod
     def with_anonymous(
+        variant: KAdm5Variant,
         client_name: str,
+        params: Params | None = None,
+        db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
+    ) -> KAdmin: ...
+    @staticmethod
+    def with_local(
+        variant: KAdm5Variant,
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
@@ -94,7 +114,7 @@ class Principal:
     max_life: datetime.timedelta | None
     modified_by: str
     modified_at: datetime.datetime | None
-    attributes: PrincipalAttributes
+    attributes: int
     kvno: int
     mkvno: int
     policy: str | None
@@ -123,30 +143,6 @@ class Principal:
     def unlock(self, kadmin: KAdmin): ...
     def get_strings(self, kadmin: KAdmin) -> dict[str, str]: ...
     def set_string(self, kadmin: KAdmin, key: str, value: str | None): ...
-
-@final
-class PrincipalAttributes:
-    DisallowPostdated: Self
-    DisallowForwardable: Self
-    DisallowTgtBased: Self
-    DisallowRenewable: Self
-    DisallowProxiable: Self
-    DisallowDupSkey: Self
-    DisallowAllTix: Self
-    RequiresPreAuth: Self
-    RequiresHwAuth: Self
-    RequiresPwChange: Self
-    DisallowSvr: Self
-    PwChangeService: Self
-    SupportDesMd5: Self
-    NewPrinc: Self
-    OkAsDelegate: Self
-    OkToAuthAsDelegate: Self
-    NoAuthDataRequired: Self
-    LockdownKeys: Self
-
-    def __init__(self, bits: int): ...
-    def bits(self) -> int: ...
 
 class NewPrincipalKey:
     @final
@@ -226,7 +222,7 @@ class EncryptionType:
     Aes128CtsHmacSha256128: Self
     Aes256CtsHmacSha384192: Self
 
-    def __init__(self, enctype: int | str): ...
+    def __init__(self, enctype: int): ...
 
 @final
 class SaltType:
@@ -235,7 +231,7 @@ class SaltType:
     OnlyRealm: Self
     Special: Self
 
-    def __init__(self, enctype: int | str | None): ...
+    def __init__(self, salttype: int | None): ...
 
 @final
 class KeySalt:
@@ -258,13 +254,3 @@ class TlDataEntry:
 @final
 class TlData:
     entries: list[TlDataEntry]
-
-@final
-class KAdminPrivileges:
-    Inquire: Self
-    Add: Self
-    Modify: Self
-    Delete: Self
-
-    def __init__(self, bits: int): ...
-    def bits(self) -> int: ...

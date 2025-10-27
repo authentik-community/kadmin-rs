@@ -14,6 +14,9 @@ ThreadRecvError = exceptions.ThreadRecvError
 TimestampConversion = exceptions.TimestampConversion
 DateTimeConversion = exceptions.DateTimeConversion
 DurationConversion = exceptions.DurationConversion
+LockError = exceptions.LockError
+LibraryLoadError = exceptions.LibraryLoadError
+LibraryMismatch = exceptions.LibraryMismatch
 
 __all__ = (
     "PyKAdminException",
@@ -30,4 +33,7 @@ __all__ = (
     "TimestampConversion",
     "DateTimeConversion",
     "DurationConversion",
+    "LockError",
+    "LibraryLoadError",
+    "LibraryMismatch",
 )
