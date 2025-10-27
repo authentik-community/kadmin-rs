@@ -28,7 +28,7 @@ ci-lint-clippy: ci-build-deps
 
 # Mypy types checking
 lint-mypy: install-python
-  stubtest kadmin kadmin_local
+  stubtest kadmin
 [private]
 ci-lint-mypy: ci-build-deps lint-mypy
 
