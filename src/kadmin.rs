@@ -129,12 +129,13 @@ pub trait KAdminImpl {
     /// Rename a principal
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    /// kadm.rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
+    /// kadmin
+    ///     .rename_principal("old@EXAMPLE.ORG", "new@EXAMPLE.ORG")
     ///     .unwrap();
-    /// # }
     /// ```
     #[doc(alias = "renprinc")]
     fn rename_principal(&self, old_name: &str, new_name: &str) -> Result<()>;
@@ -148,13 +149,13 @@ pub trait KAdminImpl {
     /// Retrieve a principal
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = String::from("user@EXAMPLE.ORG");
-    /// let principal = kadm.get_principal(&princname).unwrap();
+    /// let principal = kadmin.get_principal(&princname).unwrap();
     /// assert!(principal.is_some());
-    /// # }
     /// ```
     #[doc(alias = "getprinc")]
     fn get_principal(&self, name: &str) -> Result<Option<Principal>>;
@@ -162,12 +163,12 @@ pub trait KAdminImpl {
     /// Check if a principal exists
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = String::from("user@EXAMPLE.ORG");
-    /// assert!(kadm.principal_exists(&princname).unwrap());
-    /// # }
+    /// assert!(kadmin.principal_exists(&princname).unwrap());
     /// ```
     fn principal_exists(&self, name: &str) -> Result<bool> {
         Ok(self.get_principal(name)?.is_some())
@@ -234,13 +235,13 @@ pub trait KAdminImpl {
     /// does not contain an `@` character, an `@` character followed by the local realm is appended
     /// to the expression. If no query is provided, all principals are returned.
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    /// for princ in kadm.list_principals(None).unwrap() {
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
+    /// for princ in kadmin.list_principals(None).unwrap() {
     ///     println!("{princ}");
     /// }
-    /// # }
     /// ```
     #[doc(alias("listprincs", "get_principals", "getprincs"))]
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>>;
@@ -276,13 +277,13 @@ pub trait KAdminImpl {
     /// Retrieve a policy
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #   .with_ccache(None, None)
+    /// #   .unwrap();
     /// let polname = String::from("mypol");
-    /// let policy = kadm.get_policy(&polname).unwrap();
+    /// let policy = kadmin.get_policy(&polname).unwrap();
     /// assert!(policy.is_some());
-    /// # }
     /// ```
     ///
     /// Only available for MIT and Heimdal server-side libraries.
@@ -293,12 +294,12 @@ pub trait KAdminImpl {
     /// Check if a policy exists
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let polname = String::from("mypol");
-    /// assert!(kadm.policy_exists(&polname).unwrap());
-    /// # }
+    /// assert!(kadmin.policy_exists(&polname).unwrap());
     /// ```
     ///
     /// Only available for MIT and Heimdal server-side libraries.
@@ -314,13 +315,13 @@ pub trait KAdminImpl {
     /// all existing policy names are returned.
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl};
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
-    /// for pol in kadm.list_policies(None).unwrap() {
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
+    /// for pol in kadmin.list_policies(None).unwrap() {
     ///     println!("{pol}");
     /// }
-    /// # }
     /// ```
     ///
     /// Only available for MIT and Heimdal server-side libraries.

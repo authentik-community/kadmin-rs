@@ -123,18 +123,17 @@ impl Principal {
     /// Construct a new [`PrincipalBuilder`] for a principal with `name`
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Principal};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = "myuser";
     /// let policy = Some("default");
     /// let princ = Principal::builder(princname)
     ///     .policy(policy)
-    ///     .create(&kadm)
+    ///     .create(&kadmin)
     ///     .unwrap();
     /// assert_eq!(princ.policy(), policy);
-    /// # }
     /// ```
     pub fn builder(name: &str) -> PrincipalBuilder {
         PrincipalBuilder::new(name)
@@ -143,15 +142,14 @@ impl Principal {
     /// Construct a new [`PrincipalModifier`] from this principal
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Principal};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = "myuser";
-    /// let princ = kadm.get_principal(&princname).unwrap().unwrap();
-    /// let princ = princ.modifier().policy(None).modify(&kadm).unwrap();
+    /// let princ = kadmin.get_principal(&princname).unwrap().unwrap();
+    /// let princ = princ.modifier().policy(None).modify(&kadmin).unwrap();
     /// assert_eq!(princ.policy(), None);
-    /// # }
     /// ```
     pub fn modifier(&self) -> PrincipalModifier {
         PrincipalModifier::from_principal(self)
@@ -544,18 +542,17 @@ principal_doer_struct!(
     /// Utility to create a principal
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Principal};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = "myuser";
     /// let policy = Some("default");
     /// let princ = Principal::builder(princname)
     ///     .policy(policy)
-    ///     .create(&kadm)
+    ///     .create(&kadmin)
     ///     .unwrap();
     /// assert_eq!(princ.policy(), policy);
-    /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalBuilder {
@@ -635,15 +632,14 @@ principal_doer_struct!(
     /// Utility to modify a principal
     ///
     /// ```no_run
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Principal};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Principal};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let princname = "myuser";
-    /// let princ = kadm.get_principal(&princname).unwrap().unwrap();
-    /// let princ = princ.modifier().policy(None).modify(&kadm).unwrap();
+    /// let princ = kadmin.get_principal(&princname).unwrap().unwrap();
+    /// let princ = princ.modifier().policy(None).modify(&kadmin).unwrap();
     /// assert_eq!(princ.policy(), None);
-    /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
     PrincipalModifier {}

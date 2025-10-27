@@ -165,18 +165,17 @@ impl Policy {
     ///
     /// ```no_run
     /// # use std::time::Duration;
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let polname = String::from("mynewpol");
     /// let password_max_life = Some(Duration::from_secs(365 * 24 * 60 * 60));
     /// let policy = Policy::builder(&polname)
     ///     .password_max_life(password_max_life)
-    ///     .create(&kadm)
+    ///     .create(&kadmin)
     ///     .unwrap();
     /// assert_eq!(policy.password_max_life(), password_max_life);
-    /// # }
     /// ```
     pub fn builder(name: &str) -> PolicyBuilder {
         PolicyBuilder::new(name)
@@ -186,19 +185,18 @@ impl Policy {
     ///
     /// ```no_run
     /// # use std::time::Duration;
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let polname = String::from("mynewpol");
-    /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
+    /// let policy = kadmin.get_policy(&polname).unwrap().unwrap();
     /// let policy = policy
     ///     .modifier()
     ///     .password_min_length(16)
-    ///     .modify(&kadm)
+    ///     .modify(&kadmin)
     ///     .unwrap();
     /// assert_eq!(policy.password_min_length(), 16);
-    /// # }
     /// ```
     pub fn modifier(&self) -> PolicyModifier {
         PolicyModifier::from_policy(self)
@@ -534,18 +532,17 @@ policy_doer_struct!(
     ///
     /// ```no_run
     /// # use std::time::Duration;
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let polname = String::from("mynewpol");
     /// let password_max_life = Some(Duration::from_secs(365 * 24 * 60 * 60));
     /// let policy = Policy::builder(&polname)
     ///     .password_max_life(password_max_life)
-    ///     .create(&kadm)
+    ///     .create(&kadmin)
     ///     .unwrap();
     /// assert_eq!(policy.password_max_life(), password_max_life);
-    /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
     PolicyBuilder {}
@@ -580,15 +577,14 @@ policy_doer_struct!(
     ///
     /// ```no_run
     /// # use std::time::Duration;
-    /// # use crate::kadmin::{KAdmin, KAdminImpl, Policy};
-    /// # #[cfg(feature = "client")]
-    /// # fn example() {
-    /// let kadm = kadmin::KAdmin::builder().with_ccache(None, None).unwrap();
+    /// # use crate::kadmin::{KAdmin, KAdminImpl, KAdm5Variant, Policy};
+    /// # let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    /// #     .with_ccache(None, None)
+    /// #     .unwrap();
     /// let polname = String::from("mynewpol");
-    /// let policy = kadm.get_policy(&polname).unwrap().unwrap();
-    /// let policy = policy.modifier().password_min_length(16).modify(&kadm).unwrap();
+    /// let policy = kadmin.get_policy(&polname).unwrap().unwrap();
+    /// let policy = policy.modifier().password_min_length(16).modify(&kadmin).unwrap();
     /// assert_eq!(policy.password_min_length(), 16);
-    /// # }
     /// ```
     #[derive(Clone, Debug, Default)]
     PolicyModifier {}
