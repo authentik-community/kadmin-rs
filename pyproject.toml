@@ -71,21 +71,13 @@ find = { where = ["python/src"] }
 
 [[tool.setuptools-rust.ext-modules]]
 target = "kadmin._lib"
-path = "kadmin/Cargo.toml"
+path = "Cargo.toml"
 strip = "All"
-args = ["--no-default-features"]
-features = ["client", "python"]
-
-[[tool.setuptools-rust.ext-modules]]
-target = "kadmin_local._lib"
-path = "kadmin/Cargo.toml"
-strip = "All"
-args = ["--no-default-features"]
-features = ["local", "python"]
+features = ["python"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"
 
 [tool.poetry]
 package-mode = false
