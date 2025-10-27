@@ -1,6 +1,9 @@
 //! Kadm5 [`TlData`]
 
-use std::{ffi::c_void, ptr::null_mut};
+use std::{
+    ffi::c_void,
+    ptr::{null, null_mut},
+};
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -81,7 +84,8 @@ pub(crate) struct TlDataRaw<'a> {
     pub(crate) raw: *const c_void,
     context: &'a Context,
 
-    _contents: Vec<Vec<u8>>,
+    _raw_box: *const c_void,
+    _raw_contents: Vec<Vec<u8>>,
 }
 
 impl<'a> TlDataRaw<'a> {
@@ -91,13 +95,14 @@ impl<'a> TlDataRaw<'a> {
             return Self {
                 raw: null_mut(),
                 context,
-                _contents: vec![],
+                _raw_box: null(),
+                _raw_contents: vec![],
             };
         }
 
-        let mut contents = Vec::new();
+        let mut raw_contents = Vec::new();
 
-        let raw = library_match!(
+        let (raw_ptr, raw_box) = library_match!(
             &context.library;
             mit_client, mit_server => |_cont, lib| {
                 let mut raw: Vec<_> = tl_data
@@ -109,7 +114,7 @@ impl<'a> TlDataRaw<'a> {
                         data.tl_data_type = entry.data_type;
                         data.tl_data_length = entry_contents.len() as u16;
                         data.tl_data_contents = entry_contents.as_ptr().cast_mut();
-                        contents.push(entry_contents);
+                        raw_contents.push(entry_contents);
                         data
                     })
                     .collect();
@@ -118,8 +123,10 @@ impl<'a> TlDataRaw<'a> {
                     raw[i - 1].tl_data_next = &mut raw[i];
                 }
 
+                let raw_ptr = raw.as_ptr() as *const c_void;
                 let raw = Box::new(raw);
-                Box::into_raw(raw) as *const c_void
+                let raw_box = Box::into_raw(raw) as *const c_void;
+                (raw_ptr, raw_box)
             },
             heimdal_client, heimdal_server => |_cont, lib| {
                 let mut raw: Vec<_> = tl_data
@@ -131,7 +138,7 @@ impl<'a> TlDataRaw<'a> {
                         data.tl_data_type = entry.data_type;
                         data.tl_data_length = entry_contents.len() as i16;
                         data.tl_data_contents = entry_contents.as_ptr().cast_mut() as *mut c_void;
-                        contents.push(entry_contents);
+                        raw_contents.push(entry_contents);
                         data
                     })
                     .collect();
@@ -140,26 +147,31 @@ impl<'a> TlDataRaw<'a> {
                     raw[i - 1].tl_data_next = &mut raw[i];
                 }
 
+                let raw_ptr = raw.as_ptr() as *const c_void;
                 let raw = Box::new(raw);
-                Box::into_raw(raw) as *const c_void
+                let raw_box = Box::into_raw(raw) as *const c_void;
+                (raw_ptr, raw_box)
             }
         );
 
         Self {
-            raw,
+            raw: raw_ptr,
             context,
-            _contents: contents,
+            _raw_box: raw_box,
+            _raw_contents: raw_contents,
         }
     }
 }
 
 impl Drop for TlDataRaw<'_> {
     fn drop(&mut self) {
-        if self.raw.is_null() {
+        if self._raw_box.is_null() {
             return;
         }
         library_match!(&self.context.library; |_cont, lib| {
-            let raw: Box<Vec<lib!(_krb5_tl_data)>> = unsafe { Box::from_raw(self.raw as *mut Vec<lib!(_krb5_tl_data)>) };
+            let raw: Box<Vec<lib!(_krb5_tl_data)>> = unsafe {
+                Box::from_raw(self._raw_box as *mut Vec<lib!(_krb5_tl_data)>)
+            };
             drop(raw);
         });
     }

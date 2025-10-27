@@ -19,9 +19,9 @@ ci-lint-ruff:
 
 # Lint code
 lint-rust:
-  cargo clippy --package kadmin
-  cargo clippy --package kadmin --features log
-  cargo clippy --package kadmin --features python
+  cargo clippy
+  cargo clippy --features log
+  cargo clippy --features python
 [private]
 ci-lint-clippy: ci-build-deps
   RUSTFLAGS="-Dwarnings" just lint-rust
@@ -43,21 +43,21 @@ lint-all: lint lint-mypy
 alias b := build-rust
 # Build all rust crates
 build-rust:
-  cargo build --package kadmin
-  cargo build --package kadmin --features log
-  cargo build --package kadmin --features python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_server
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_server
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client,mit_server
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client,heimdal_server
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client,python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_server,python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client,python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_server,python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features mit_client,mit_server,python
-  RUSTFLAGS="-Awarnings" cargo build --package kadmin --no-default-features --features heimdal_client,heimdal_server,python
+  cargo build
+  cargo build --features log
+  cargo build --features python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_server
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_server
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,mit_server
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,heimdal_server
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_server,python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_server,python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,mit_server,python
+  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,heimdal_server,python
 [private]
 ci-build-deps:
   sudo apt-get remove -y --purge man-db
@@ -82,8 +82,7 @@ build: build-rust build-python
 alias t := test-rust
 # Test rust code
 test-rust:
-  cargo test --package kadmin
-  cargo test --package kadmin --no-default-features --features local
+  cargo test
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
@@ -97,10 +96,7 @@ ci-test-rust: ci-test-deps-mit
 alias ts := test-sanity
 # Test kadmin with valgrind for memory leaks
 test-sanity:
-  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
-    cargo test --package kadmin
-  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" \
-    cargo test --package kadmin --no-default-features --features local
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust
 [private]
 ci-test-sanity: ci-test-deps-mit
   just test-sanity

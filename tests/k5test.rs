@@ -1,5 +1,5 @@
 //! Utility to run a krb5 KDC
-use std::ffi::CStr;
+use std::{ffi::CStr, process::Command, thread::sleep, time::Duration};
 
 use anyhow::Result;
 use pyo3::ffi::c_str;
@@ -145,5 +145,7 @@ impl Drop for K5Test {
             Ok::<(), PyErr>(())
         })
         .unwrap();
+        Command::new("pkill").arg("krb5kdc").output().unwrap();
+        Command::new("pkill").arg("kadmind").output().unwrap();
     }
 }
