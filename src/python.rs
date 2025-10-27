@@ -315,7 +315,13 @@ impl KAdmin {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        self.principal_randkey(name, keepold, keysalts)
+        self.principal_randkey(
+            name,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     #[cfg(any(mit_client, mit_server))]
@@ -562,7 +568,13 @@ impl Principal {
         keepold: Option<bool>,
         keysalts: Option<&KeySalts>,
     ) -> Result<()> {
-        self.randkey(kadmin, keepold, keysalts)
+        self.randkey(
+            kadmin,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keepold,
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
+            keysalts,
+        )
     }
 
     #[pyo3(name = "unlock")]
