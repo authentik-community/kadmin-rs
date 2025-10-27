@@ -17,6 +17,7 @@ env:
   CARGO_INCREMENTAL: "false"
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
+  RUST_LOG: trace
 
 jobs:
   lint:

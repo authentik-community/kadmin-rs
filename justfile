@@ -82,7 +82,7 @@ build: build-rust build-python
 alias t := test-rust
 # Test rust code
 test-rust:
-  cargo test
+  cargo test --features log
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
