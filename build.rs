@@ -9,7 +9,7 @@ use std::{
     process::Command,
 };
 
-use quote::{format_ident, quote};
+use quote::quote;
 use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter)]
@@ -607,7 +607,7 @@ fn extract_constants_to_python_wrapper(
     let syntax_tree = syn::parse_file(&content).unwrap();
 
     let variant_name = config.name();
-    let sys_module = format_ident!("{}", config.name());
+    let sys_module = quote::format_ident!("{}", config.name());
 
     let mut consts = Vec::new();
     for item in syntax_tree.items {

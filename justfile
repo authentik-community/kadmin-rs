@@ -110,6 +110,7 @@ ci-test-deps-h5l: ci-test-deps
   sudo apt-get install -y --no-install-recommends libkrb5-3 libkadm5clnt-mit12 libkadm5srv-mit12 heimdal-dev heimdal-servers heimdal-kdc
 [private]
 ci-test-python-mit: ci-test-deps-mit _install-python _test-python
+[private]
 ci-test-python-h5l: ci-test-deps-h5l _install-python _test-python
 
 # Test rust crates and python bindings
