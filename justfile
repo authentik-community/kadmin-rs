@@ -5,30 +5,30 @@ default:
 # Auto format code
 lint-fix:
   cargo fmt
-  black .
-  ruff check --fix .
+  uv run black .
+  uv run ruff check --fix .
 [private]
 ci-lint-rustfmt:
   cargo fmt --check
 [private]
 ci-lint-black:
-  black --check .
+  uv run black --check .
 [private]
 ci-lint-ruff:
-  ruff check .
+  uv run ruff check .
 
 # Lint code
 lint-rust:
   cargo clippy
   cargo clippy --features log
-  cargo clippy --features python
+  uv run cargo clippy --features python
 [private]
 ci-lint-clippy: ci-build-deps
   RUSTFLAGS="-Dwarnings" just lint-rust
 
 # Mypy types checking
 lint-mypy: install-python
-  stubtest kadmin
+  uv run stubtest kadmin
 [private]
 ci-lint-mypy: ci-build-deps lint-mypy
 
@@ -45,19 +45,19 @@ alias b := build-rust
 build-rust:
   cargo build
   cargo build --features log
-  cargo build --features python
+  uv run cargo build --features python
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,mit_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,heimdal_server
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,python
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_server,python
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,python
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_server,python
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,mit_server,python
-  RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,heimdal_server,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_client,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_server,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_client,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_server,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_client,mit_server,python
+  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_client,heimdal_server,python
 [private]
 ci-build-deps:
   sudo apt-get remove -y --purge man-db
@@ -69,12 +69,12 @@ ci-build-rust: ci-build-deps
 
 # Build python wheel
 build-python:
-  python -m build
+  uv run python -m build
 [private]
 ci-build-python: ci-build-deps build-python
 [private]
 ci-build-python-sdist:
-  python -m build --sdist
+  uv run python -m build --sdist
 
 # Build rust crates and python wheel
 build: build-rust build-python
@@ -82,7 +82,7 @@ build: build-rust build-python
 alias t := test-rust
 # Test rust code
 test-rust:
-  cargo test --features log -- --nocapture
+  uv run cargo test --features log -- --nocapture
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
@@ -102,7 +102,7 @@ ci-test-sanity: ci-test-deps-mit
   just test-sanity
 
 _test-python:
-  python -m unittest python/tests/test_*.py
+  uv run python -m unittest python/tests/test_*.py
 # Test python bindings
 test-python: install-python _test-python
 [private]
@@ -127,7 +127,7 @@ docs-rust:
 
 # Generate the Python docs
 docs-python:
-  cd python/docs && sphinx-build -M html . _build
+  cd python/docs && uv run sphinx-build -M html . _build
 
 # Cleanup rust build directory
 clean-rust:

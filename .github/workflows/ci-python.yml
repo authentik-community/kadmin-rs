@@ -37,7 +37,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: uv run just ci-lint-${{ matrix.job }}
+      - run: just ci-lint-${{ matrix.job }}
   build:
     strategy:
       fail-fast: false
@@ -63,7 +63,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: uv run just ci-build-python
+      - run: just ci-build-python
       - uses: actions/upload-artifact@v4
         with:
           name: python-${{ matrix.python-version }}-build
@@ -103,7 +103,7 @@ jobs:
           name: python-${{ matrix.python-version }}-build
           path: dist
       - run: |
-          PATH="/usr/lib/heimdal-servers:$PATH" uv run just ci-test-python-${{ matrix.job }}
+          PATH="/usr/lib/heimdal-servers:$PATH" just ci-test-python-${{ matrix.job }}
   check-python:
     if: always()
     needs:
@@ -127,7 +127,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: uv run just ci-build-python-sdist
+      - run: just ci-build-python-sdist
       - uses: actions/upload-artifact@v4
         with:
           name: python-cibw-sdist

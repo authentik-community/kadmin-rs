@@ -78,7 +78,7 @@ jobs:
         with:
           tool: just
       - name: Test
-        run: uv run just ci-test-${{ matrix.job }}
+        run: just ci-test-${{ matrix.job }}
   check-rust:
     if: always()
     needs:
