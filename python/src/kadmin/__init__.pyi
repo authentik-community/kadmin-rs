@@ -70,6 +70,7 @@ class KAdmin:
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_keytab(
@@ -79,6 +80,7 @@ class KAdmin:
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_ccache(
@@ -88,6 +90,7 @@ class KAdmin:
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_anonymous(
@@ -96,6 +99,7 @@ class KAdmin:
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_local(
@@ -103,6 +107,7 @@ class KAdmin:
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
 
 @final

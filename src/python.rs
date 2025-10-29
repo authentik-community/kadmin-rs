@@ -200,6 +200,7 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> KAdminBuilder {
         let mut builder = KAdminBuilder::new(variant);
         if let Some(params) = params {
@@ -210,6 +211,9 @@ impl KAdmin {
         }
         if let Some(api_version) = api_version {
             builder = builder.api_version(api_version);
+        }
+        if let Some(library_path) = library_path {
+            builder = builder.library_path(library_path);
         }
         builder
     }
@@ -431,7 +435,7 @@ impl KAdmin {
     }
 
     #[staticmethod]
-    #[pyo3(name = "with_password", signature = (variant, client_name, password, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_password", signature = (variant, client_name, password, params=None, db_args=None, api_version=None, library_path=None))]
     fn py_with_password(
         variant: KAdm5Variant,
         client_name: &str,
@@ -439,13 +443,14 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> Result<Self> {
-        Self::py_get_builder(variant, params, db_args, api_version)
+        Self::py_get_builder(variant, params, db_args, api_version, library_path)
             .with_password(client_name, password)
     }
 
     #[staticmethod]
-    #[pyo3(name = "with_keytab", signature = (variant, client_name=None, keytab=None, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_keytab", signature = (variant, client_name=None, keytab=None, params=None, db_args=None, api_version=None, library_path=None))]
     fn py_with_keytab(
         variant: KAdm5Variant,
         client_name: Option<&str>,
@@ -453,12 +458,14 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> Result<Self> {
-        Self::py_get_builder(variant, params, db_args, api_version).with_keytab(client_name, keytab)
+        Self::py_get_builder(variant, params, db_args, api_version, library_path)
+            .with_keytab(client_name, keytab)
     }
 
     #[staticmethod]
-    #[pyo3(name = "with_ccache", signature = (variant, client_name=None, ccache_name=None, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_ccache", signature = (variant, client_name=None, ccache_name=None, params=None, db_args=None, api_version=None, library_path=None))]
     fn py_with_ccache(
         variant: KAdm5Variant,
         client_name: Option<&str>,
@@ -466,33 +473,37 @@ impl KAdmin {
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> Result<Self> {
-        Self::py_get_builder(variant, params, db_args, api_version)
+        Self::py_get_builder(variant, params, db_args, api_version, library_path)
             .with_ccache(client_name, ccache_name)
     }
 
     #[staticmethod]
-    #[pyo3(name = "with_anonymous", signature = (variant, client_name, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_anonymous", signature = (variant, client_name, params=None, db_args=None, api_version=None, library_path=None))]
     fn py_with_anonymous(
         variant: KAdm5Variant,
         client_name: &str,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> Result<Self> {
-        Self::py_get_builder(variant, params, db_args, api_version).with_anonymous(client_name)
+        Self::py_get_builder(variant, params, db_args, api_version, library_path)
+            .with_anonymous(client_name)
     }
 
     #[cfg(any(mit_server, heimdal_server))]
     #[staticmethod]
-    #[pyo3(name = "with_local", signature = (variant, params=None, db_args=None, api_version=None))]
+    #[pyo3(name = "with_local", signature = (variant, params=None, db_args=None, api_version=None, library_path=None))]
     fn py_with_local(
         variant: KAdm5Variant,
         params: Option<Params>,
         db_args: Option<DbArgs>,
         api_version: Option<KAdminApiVersion>,
+        library_path: Option<&str>,
     ) -> Result<Self> {
-        Self::py_get_builder(variant, params, db_args, api_version).with_local()
+        Self::py_get_builder(variant, params, db_args, api_version, library_path).with_local()
     }
 }
 

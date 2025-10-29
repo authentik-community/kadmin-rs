@@ -74,7 +74,7 @@ kadmin
    
    This class has no constructor. Instead, use the `with_` methods
 
-   .. py:staticmethod:: with_password(variant, client_name, password, params=None, db_args=None, api_version=None)
+   .. py:staticmethod:: with_password(variant, client_name, password, params=None, db_args=None, api_version=None, library_path=None)
 
       Construct a KAdmin object using a password
       
@@ -90,6 +90,8 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
       
@@ -97,7 +99,7 @@ kadmin
       
          kadm = KAdmin.with_password("user@EXAMPLE.ORG", "vErYsEcUrE")
 
-   .. py:staticmethod:: with_keytab(variant, client_name=None, keytab=None, params=None, db_args=None)
+   .. py:staticmethod:: with_keytab(variant, client_name=None, keytab=None, params=None, db_args=None, library_path=None)
 
       Construct a KAdmin object using a keytab
       
@@ -115,10 +117,12 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
-   .. py:staticmethod:: with_ccache(variant, client_name=None, ccache_name=None, params=None, db_args=None)
+   .. py:staticmethod:: with_ccache(variant, client_name=None, ccache_name=None, params=None, db_args=None, library_path=None)
 
       Construct a KAdmin object using a credentials cache
       
@@ -136,14 +140,16 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
-   .. py:staticmethod:: with_anonymous(variant, client_name, params=None, db_args=None)
+   .. py:staticmethod:: with_anonymous(variant, client_name, params=None, db_args=None, library_path=None)
 
       Not implemented
 
-   .. py:staticmethod:: with_local(variant, params=None, db_args=None, api_version=None)
+   .. py:staticmethod:: with_local(variant, params=None, db_args=None, api_version=None, library_path=None)
 
       Construct a :py:class:`KAdmin` object for local database manipulation.
       
@@ -155,6 +161,8 @@ kadmin
       :type db_args: :py:class:`DbArgs<kadmin.DbArgs>` | None
       :param api_version: kadm5 API version to use
       :type api_version: :py:class:`KAdminApiVersion<kadmin.KAdminApiVersion>` | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
