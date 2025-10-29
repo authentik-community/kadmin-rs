@@ -1,4 +1,4 @@
-from kadmin._lib import sys
+from kadmin._lib import sys  # type: ignore[import-not-found]
 
 if hasattr(sys, "mit_client"):
     mit_client = sys.mit_client
