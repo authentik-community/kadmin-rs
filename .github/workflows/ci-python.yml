@@ -55,9 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --no-install-project
         with:
           python-version: ${{ matrix.python-version }}
+      - run: uv sync --no-install-project
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
