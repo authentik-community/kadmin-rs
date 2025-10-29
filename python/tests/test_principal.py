@@ -12,7 +12,11 @@ class TestPrincipal(KerberosTestCase):
             self.realm.password("admin"),
         )
         self.assertEqual(
-            [princ for princ in kadm.list_principals("*") if not princ.startswith("host/")],
+            [
+                princ
+                for princ in kadm.list_principals("*")
+                if not princ.startswith("host/")
+            ],
             [
                 "HTTP/testserver@KRBTEST.COM",
                 "K/M@KRBTEST.COM",
@@ -80,7 +84,9 @@ class TestPrincipal(KerberosTestCase):
         princ = kadm.add_principal(princname)
         self.assertIsNotNone(princ)
         assert princ is not None
-        princ = princ.modify(kadm, attributes=kadmin.PrincipalAttributes.RequiresPreAuth)
+        princ = princ.modify(
+            kadm, attributes=kadmin.PrincipalAttributes.RequiresPreAuth
+        )
         self.assertEqual(princ.attributes, kadmin.PrincipalAttributes.RequiresPreAuth)
         princ = kadm.get_principal(princname)
         self.assertIsNotNone(princ)
