@@ -9,7 +9,7 @@ use std::{
     process::Command,
 };
 
-use quote::quote;
+use quote::{format_ident, quote};
 use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter)]
@@ -540,6 +540,8 @@ fn generate_bindings(config: &KAdm5Config, out_path: &Path) {
 
     patch_heimdal_error_code(&bindings_path);
     transform_bindings_functions_to_dlopen_wrapper(&bindings_path);
+    #[cfg(feature = "python")]
+    extract_constants_to_python_wrapper(config, &bindings_path, out_path);
 }
 
 // Latest versions of heimdal are putting errors in an enum, which is good, but breaks
@@ -592,4 +594,63 @@ fn transform_bindings_functions_to_dlopen_wrapper(bindings_path: &Path) {
     let bindings_syntax = syn::parse2(bindings_tokens).unwrap();
     let bindings_output = prettyplease::unparse(&bindings_syntax);
     write(bindings_path, bindings_output).unwrap();
+}
+
+#[cfg(feature = "python")]
+fn extract_constants_to_python_wrapper(
+    config: &KAdm5Config,
+    bindings_path: &Path,
+    out_path: &Path,
+) {
+    let content = read_to_string(bindings_path).unwrap();
+
+    let syntax_tree = syn::parse_file(&content).unwrap();
+
+    let variant_name = config.name();
+    let sys_module = format_ident!("{}", config.name());
+
+    let mut consts = Vec::new();
+    for item in syntax_tree.items {
+        if let syn::Item::Const(const_item) = item {
+            if const_item.ident == "_" {
+                continue;
+            }
+            if let syn::Type::Reference(syn::TypeReference { elem, .. }) = &*const_item.ty {
+                if let syn::Type::Path(syn::TypePath { path, .. }) = &**elem {
+                    if let Some(segment) = path.segments.last() {
+                        if segment.ident == "CStr" {
+                            continue;
+                        }
+                    }
+                }
+            }
+            consts.push(const_item.ident.clone());
+        }
+    }
+
+    let add_statements: Vec<_> = consts
+        .iter()
+        .map(|name| {
+            let name_str = name.to_string();
+            quote! {
+                m.add(#name_str, crate::sys::#sys_module::#name)?;
+            }
+        })
+        .collect();
+
+    let python_wrapper_tokens = quote! {
+        use pyo3::prelude::*;
+
+        pub(super) fn init(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+            let m = PyModule::new(parent.py(), #variant_name)?;
+            #(#add_statements)*
+            parent.add_submodule(&m)?;
+            Ok(())
+        }
+    };
+
+    let python_wrapper_syntax = syn::parse2(python_wrapper_tokens).unwrap();
+    let python_wrapper_output = prettyplease::unparse(&python_wrapper_syntax);
+    let python_wrapper_path = out_path.join(format!("python_bindings_{}.rs", config.name()));
+    write(python_wrapper_path, python_wrapper_output).unwrap();
 }

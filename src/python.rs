@@ -43,6 +43,7 @@ fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     m.add_class::<Policy>()?;
     exceptions::init(m)?;
+    sys::init(m)?;
     Ok(())
 }
 
@@ -908,5 +909,47 @@ mod exceptions {
                 exc
             })
         }
+    }
+}
+
+/// libkadm5 direct bindings
+mod sys {
+    use pyo3::prelude::*;
+
+    pub(super) fn init(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "sys")?;
+        #[cfg(mit_client)]
+        mit_client::init(&m)?;
+        #[cfg(mit_server)]
+        mit_server::init(&m)?;
+        #[cfg(heimdal_client)]
+        heimdal_client::init(&m)?;
+        #[cfg(heimdal_server)]
+        heimdal_server::init(&m)?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+
+    #[cfg(mit_client)]
+    mod mit_client {
+        include!(concat!(env!("OUT_DIR"), "/python_bindings_mit_client.rs"));
+    }
+    #[cfg(mit_server)]
+    mod mit_server {
+        include!(concat!(env!("OUT_DIR"), "/python_bindings_mit_server.rs"));
+    }
+    #[cfg(heimdal_client)]
+    mod heimdal_client {
+        include!(concat!(
+            env!("OUT_DIR"),
+            "/python_bindings_heimdal_client.rs"
+        ));
+    }
+    #[cfg(heimdal_server)]
+    mod heimdal_server {
+        include!(concat!(
+            env!("OUT_DIR"),
+            "/python_bindings_heimdal_server.rs"
+        ));
     }
 }
