@@ -1,6 +1,6 @@
 [package]
 name = "kadmin-sys"
-version = "0.3.0"
+version = "0.4.0"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -33,7 +33,7 @@ server = []
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.71"
+bindgen = "0.72"
 system-deps = "7.0"
 
 [lints.clippy]

@@ -26,7 +26,7 @@ use crate::{
     tl_data::{TlData, TlDataEntry},
 };
 
-#[pymodule(name = "_lib")]
+#[pymodule(name = "_lib", gil_used = false)]
 fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_class::<KAdminApiVersion>()?;
@@ -977,7 +977,7 @@ mod exceptions {
                 }
             };
 
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 if let Some((code, message)) = extras {
                     let bound_exc = exc.value(py);
                     if let Err(err) = bound_exc.setattr(intern!(py, "code"), code) {
