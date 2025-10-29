@@ -12,6 +12,8 @@
 //! - `heimdal_client`
 //! - `heimdal_server`
 //!
+//! For remote operations:
+//!
 //! ```no_run
 //! use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};
 //!
@@ -24,6 +26,8 @@
 //!
 //! dbg!("{}", kadmin.list_principals(None).unwrap());
 //! ```
+//!
+//! For local operations:
 //!
 //! ```no_run
 //! use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};

@@ -4,10 +4,6 @@ This repository contains both a work-in-progress safe, idiomatic Rust bindings f
 
 It also contains a Python API to those bindings.
 
-### Kerberos implementations compatibility
-
-These libraries will only compile against MIT krb5. However, they will allow you to communicate with an MIT krb5 KDC as well as a Heimdal KDC. In fact, these libraries are tested against both!
-
 ## kadmin
 
 ![Crates.io Version](https://img.shields.io/crates/v/kadmin)
@@ -16,28 +12,66 @@ These libraries will only compile against MIT krb5. However, they will allow you
 
 This is a safe, idiomatic Rust interface to libkadm5.
 
-With the `client` feature:
+This library does not link against libkadm5, but instead loads it at runtime to be able to
+support multiple variants.
+
+It provides four features, all enabled by default, for the supported variants of libkadm5:
+
+- `mit_client`
+- `mit_server`
+- `heimdal_client`
+- `heimdal_server`
+
+For remote operations:
 
 ```rust
-use kadmin::{KAdmin, KAdminImpl};
+use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};
 
 let princ = "user/admin@EXAMPLE.ORG";
 let password = "vErYsEcUrE";
 
-let kadmin = KAdmin::builder().with_password(&princ, &password).unwrap();
+let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
+    .with_password(&princ, &password)
+    .unwrap();
 
-dbg!("{}", kadmin.list_principals("*").unwrap());
+dbg!("{}", kadmin.list_principals(None).unwrap());
 ```
 
-With the `local` feature:
+For local operations:
 
 ```rust
-use kadmin::{KAdmin, KAdminImpl};
+use kadmin::{KAdm5Variant, KAdmin, KAdminImpl};
 
-let kadmin = KAdmin::builder().with_local().unwrap();
+let kadmin = KAdmin::builder(KAdm5Variant::MitServer)
+    .with_local()
+    .unwrap();
 
-dbg!("{}", kadmin.list_principals("*").unwrap());
+dbg!("{}", kadmin.list_principals(None).unwrap());
 ```
+
+#### About compilation
+
+During compilation, all the enabled variants will be discovered and bindings will be generated
+from the discovered variants. If a variant cannot be discovered, it will not be available for
+use. The following environment variables are available to override that discovery process:
+
+To override the directories in which the `kadm5/admin.h` header will be searched for:
+
+- `KADMIN_MIT_CLIENT_INCLUDES`
+- `KADMIN_MIT_SERVER_INCLUDES`
+- `KADMIN_HEIMDAL_CLIENT_INCLUDES`
+- `KADMIN_HEIMDAL_SERVER_INCLUDES`
+
+To override the path to the `krb5-config` binary:
+
+- `KADM5_MIT_CLIENT_KRB5_CONFIG`
+- `KADM5_MIT_SERVER_KRB5_CONFIG`
+- `KADM5_HEIMDAL_CLIENT_KRB5_CONFIG`
+- `KADM5_HEIMDAL_SERVER_KRB5_CONFIG`
+
+Library paths will also be looked for, and forwarded so that at runtime, the library can be
+loaded. If it cannot find any, it will try to load a generic library from the system library
+paths. You can override the path the library is loaded from with [`sys::Library::from_path`].
 
 #### About thread safety
 
@@ -49,25 +83,25 @@ As far as I can tell, libkadm5 APIs are **not** thread safe. As such, the types 
 ![Read the Docs](https://img.shields.io/readthedocs/kadmin-rs)
 ![Maintenance](https://img.shields.io/maintenance/maintained/2025)
 
-These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
+These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety.
 
-With `kadmin`:
+For remote operations:
 
 ```python
 import kadmin
 
 princ = "user/admin@EXAMPLE.ORG"
 password = "vErYsEcUrE"
-kadm = kadmin.KAdmin.with_password(princ, password)
+kadm = kadmin.KAdmin.with_password(kadmin.KAdm5Variant.MitClient, princ, password)
 print(kadm.list_principals("*"))
 ```
 
-With `kadmin_local`:
+For local operations:
 
 ```python
 import kadmin
 
-kadm = kadmin.KAdmin.with_local()
+kadm = kadmin.KAdmin.with_local(kadmin.KAdm5Variant.MitClient)
 print(kadm.list_principals("*"))
 ```
 

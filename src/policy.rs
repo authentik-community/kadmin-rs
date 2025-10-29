@@ -20,6 +20,8 @@ use crate::{
 };
 
 /// A kadm5 policy
+///
+/// Only available for MIT and Heimdal server-side libraries.
 #[derive(Clone, Debug, Default, Getters, CopyGetters)]
 #[getset(get_copy = "pub")]
 #[cfg_attr(feature = "python", pyclass(get_all))]

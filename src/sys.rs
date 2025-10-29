@@ -14,7 +14,7 @@ use crate::error::Result;
 /// against. The list of currently supported options consist of the enum variants.
 ///
 /// Depending on how kadmin was compiled, not all variants may be supported on your system. Refer
-/// to the crate's documentation on how to compile for all possible options.
+/// to the crate documentation on how to compile for all possible options.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(u32)]
