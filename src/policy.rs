@@ -94,7 +94,11 @@ pub struct Policy {
 
 impl Policy {
     /// Create a [`Policy`] from [`_kadm5_policy_ent_t`]
-    pub(crate) fn from_raw(context: &Context, entry: *const c_void) -> Result<Self> {
+    pub(crate) fn from_raw(
+        server_handle: *mut c_void,
+        context: &Context,
+        entry: *const c_void,
+    ) -> Result<Self> {
         let mut pol = library_match!(&context.library; |_cont, lib| {
             let entry = entry as *const lib!(_kadm5_policy_ent_t);
 
@@ -136,6 +140,17 @@ impl Policy {
                 );
             },
             heimdal_client, heimdal_server => |_cont, _lib| {}
+        );
+
+        library_match!(
+            &context.library;
+            mit_client, mit_server => |cont, lib| unsafe {
+                cont.kadm5_free_policy_ent(server_handle, entry as lib!(kadm5_policy_ent_t));
+            },
+            heimdal_server => |cont, lib| unsafe {
+                cont.kadm5_free_policy_ent(entry as lib!(kadm5_policy_ent_t));
+            },
+            heimdal_client => |_cont, _lib| {}
         );
         Ok(pol)
     }

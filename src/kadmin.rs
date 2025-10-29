@@ -919,11 +919,10 @@ impl KAdminImpl for KAdmin {
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
-        let (res, policy_ptr) = library_match!(
+        library_match!(
             &self.context.library;
             mit_client, mit_server, heimdal_server => |cont, lib| {
                 let name = CString::new(name)?;
-                // let mut policy_ent: Box<lib!(_kadm5_policy_ent_t)> = Box::new(Default::default());
                 let mut policy_ent: lib!(_kadm5_policy_ent_t) = Default::default();
                 let policy_ptr = ptr::from_mut(&mut policy_ent);
 
@@ -940,28 +939,15 @@ impl KAdminImpl for KAdmin {
                 }
                 kadm5_ret_t_escape_hatch(&self.context, code)?;
 
-                let policy = Policy::from_raw(&self.context, policy_ptr as *const c_void)?;
-                (Ok(Some(policy)), policy_ptr as *const c_void)
+                let policy = Policy::from_raw(self.server_handle, &self.context, policy_ptr as *const c_void)?;
+                Ok(Some(policy))
             },
             heimdal_client => |_cont, _lib| {
-                (Err(Error::LibraryMismatch(
+                Err(Error::LibraryMismatch(
                     "Policy operations are only available for MIT and Heimdal server libraries",
-                )), null())
+                ))
             }
-        );
-        if !policy_ptr.is_null() {
-            library_match!(
-                &self.context.library;
-                mit_client, mit_server => |cont, lib| unsafe {
-                    cont.kadm5_free_policy_ent(self.server_handle, policy_ptr as *mut lib!(_kadm5_policy_ent_t));
-                },
-                heimdal_server => |cont, lib| unsafe {
-                    cont.kadm5_free_policy_ent(policy_ptr as *mut lib!(_kadm5_policy_ent_t));
-                },
-                heimdal_client => |_cont, _lib| {}
-            );
-        }
-        res
+        )
     }
 
     #[cfg(any(mit_client, mit_server, heimdal_server))]
