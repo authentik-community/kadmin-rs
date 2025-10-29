@@ -31,8 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
@@ -58,7 +56,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
@@ -95,7 +92,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
       - uses: taiki-e/install-action@v2
         with:
           tool: just
@@ -124,8 +120,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
       - uses: taiki-e/install-action@v2
         with:
           tool: just
@@ -144,8 +138,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
       - id: set-matrix
         name: compute matrix
         run: |
