@@ -31,6 +31,7 @@
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
           sccache
 
+          python314
           uv
 
           clang
