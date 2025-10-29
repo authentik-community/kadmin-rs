@@ -41,6 +41,23 @@ Repository = "https://github.com/authentik-community/kadmin-rs.git"
 requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[dependency-groups]
+dev = [
+  "black",
+  "build",
+  "cibuildwheel",
+  "mypy",
+  "ruff",
+  "sphinx",
+  "sphinx-rtd-theme",
+]
+test = [
+  "k5test",
+]
+
+[tool.uv]
+package = false
+
 [tool.cibuildwheel]
 enable = ["cpython-freethreading", "pypy"]
 
@@ -85,17 +102,3 @@ features = ["local", "python"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-
-[dependency-groups]
-dev = [
-  "black",
-  "build",
-  "cibuildwheel",
-  "mypy",
-  "ruff",
-  "sphinx",
-  "sphinx-rtd-theme",
-]
-test = [
-  "k5test",
-]
