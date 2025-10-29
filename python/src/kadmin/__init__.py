@@ -15,7 +15,7 @@ from kadmin._lib import (
     TlDataEntry,
     __version__,
 )
-from . import exceptions, sys
+from . import exceptions, sys  # noqa: F401
 
 __all__ = (
     "DbArgs",
@@ -33,6 +33,4 @@ __all__ = (
     "TlData",
     "TlDataEntry",
     "__version__",
-    "exceptions",
-    "sys",
 )
