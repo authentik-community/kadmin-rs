@@ -74,7 +74,7 @@ build-python:
 ci-build-python: ci-build-deps build-python
 [private]
 ci-build-python-sdist:
-  uv run maturin sdist
+  uv build --sdist
 
 # Build rust crates and python wheel
 build: build-rust build-python
@@ -136,7 +136,7 @@ clean-rust:
 # Cleanup python wheel builds
 clean-python:
   uv pip uninstall python-kadmin-rs
-  rm -rf target/wheels wheelhouse
+  rm -rf dist target/wheels wheelhouse
 
 # Cleanup all
 clean: clean-rust clean-python

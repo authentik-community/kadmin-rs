@@ -133,7 +133,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: python-cibw-sdist
-          path: target/wheels/*.tar.gz
+          path: dist
   build-wheels-matrix:
     needs: check-python
     runs-on: ubuntu-latest
