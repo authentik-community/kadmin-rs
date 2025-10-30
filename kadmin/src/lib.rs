@@ -66,6 +66,9 @@ pub use db_args::DbArgs;
 pub mod tl_data;
 pub use tl_data::{TlData, TlDataEntry};
 
+pub mod key_data;
+pub use key_data::{KeyData, KeyDataEntry};
+
 pub mod keysalt;
 pub use keysalt::{EncryptionType, KeySalt, KeySalts, SaltType};
 
