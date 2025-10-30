@@ -104,33 +104,33 @@ impl KAdm5Variant {
             #[cfg(feature = "mit_client")]
             Self::MitClient => vec![
                 "krb5-config.mit",
+                "/usr/local/opt/krb5/bin/krb5-config",
                 "/opt/homebrew/opt/krb5/bin/krb5-config",
                 "krb5-config",
             ],
             #[cfg(feature = "mit_server")]
             Self::MitServer => vec![
                 "krb5-config.mit",
+                "/usr/local/opt/krb5/bin/krb5-config",
                 "/opt/homebrew/opt/krb5/bin/krb5-config",
                 "krb5-config",
             ],
             #[cfg(feature = "heimdal_client")]
-            Self::HeimdalClient => {
-                vec![
-                    "krb5-config.heimdal",
-                    "heimdal-krb5-config",
-                    "/opt/homebrew/opt/heimdal/bin/krb5-config",
-                    "krb5-config",
-                ]
-            }
+            Self::HeimdalClient => vec![
+                "krb5-config.heimdal",
+                "heimdal-krb5-config",
+                "/opt/homebrew/opt/heimdal/bin/krb5-config",
+                "krb5-config",
+            ],
+
             #[cfg(feature = "heimdal_server")]
-            Self::HeimdalServer => {
-                vec![
-                    "krb5-config.heimdal",
-                    "heimdal-krb5-config",
-                    "/opt/homebrew/opt/heimdal/bin/krb5-config",
-                    "krb5-config",
-                ]
-            }
+            Self::HeimdalServer => vec![
+                "krb5-config.heimdal",
+                "heimdal-krb5-config",
+                "/usr/local/opt/heimdal/bin/krb5-config",
+                "/opt/homebrew/opt/heimdal/bin/krb5-config",
+                "krb5-config",
+            ],
         }
     }
 
