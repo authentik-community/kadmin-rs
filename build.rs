@@ -106,9 +106,13 @@ impl KAdm5Variant {
             #[cfg(feature = "mit_server")]
             Self::MitServer => vec!["krb5-config.mit", "krb5-config"],
             #[cfg(feature = "heimdal_client")]
-            Self::HeimdalClient => vec!["krb5-config.heimdal", "krb5-config"],
+            Self::HeimdalClient => {
+                vec!["krb5-config.heimdal", "heimdal-krb5-config", "krb5-config"]
+            }
             #[cfg(feature = "heimdal_server")]
-            Self::HeimdalServer => vec!["krb5-config.heimdal", "krb5-config"],
+            Self::HeimdalServer => {
+                vec!["krb5-config.heimdal", "heimdal-krb5-config", "krb5-config"]
+            }
         }
     }
 
