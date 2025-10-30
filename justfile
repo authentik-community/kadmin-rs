@@ -62,7 +62,7 @@ build-rust:
 ci-build-deps:
   sudo apt-get remove -y --purge man-db
   sudo apt-get update
-  sudo apt-get install -y --no-install-recommends build-essential libkrb5-dev pkg-config krb5-multidev heimdal-multidev python3-dev
+  sudo apt-get install -y --no-install-recommends build-essential pkg-config krb5-multidev libkrb5-dev heimdal-multidev libclang-dev python3-dev
 [private]
 ci-build-rust: ci-build-deps
   RUSTFLAGS="-Dwarnings" just build-rust
