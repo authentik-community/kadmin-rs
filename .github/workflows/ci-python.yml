@@ -67,7 +67,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: python-${{ matrix.python-version }}-build
-          path: dist
+          path: target/wheels/
   test:
     needs: build
     strategy:
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           name: python-${{ matrix.python-version }}-build
-          path: dist
+          path: target/wheels/
       - run: |
           PATH="/usr/lib/heimdal-servers:$PATH" just ci-test-python-${{ matrix.job }}
   check-python:
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: python-cibw-sdist
-          path: dist/*.tar.gz
+          path: target/wheels/*.tar.gz
   build-wheels-matrix:
     needs: check-python
     runs-on: ubuntu-latest
