@@ -19,6 +19,35 @@ env:
   RUSTC_WRAPPER: "sccache"
 
 jobs:
+  test-macos:
+    runs-on: macos-14
+    steps:
+      - run: |
+          brew install krb5 heimdal
+          echo homebrew
+          ls -la /opt/homebrew/
+          echo homebrew opt
+          ls -la /opt/homebrew/opt
+          echo homebrew opt krb5
+          ls -la /opt/homebrew/opt/krb5/
+          echo homebrew opt krb5 bin
+          ls -la /opt/homebrew/opt/krb5/bin
+          echo homebrew opt heimdal
+          ls -la /opt/homebrew/opt/heimdal/
+          echo homebrew opt heimdal bin
+          ls -la /opt/homebrew/opt/heimdal/bin
+          echo system
+          ls -la /usr/local/
+          echo system opt
+          ls -la /usr/local/opt/
+          echo system opt krb5
+          ls -la /usr/local/opt/krb5/
+          echo system opt krb5 bin
+          ls -la /usr/local/opt/krb5/bin
+          echo system opt heimdal
+          ls -la /usr/local/opt/heimdal/
+          echo system opt heimdal bin
+          ls -la /usr/local/opt/heimdal/bin
   lint:
     strategy:
       fail-fast: false
