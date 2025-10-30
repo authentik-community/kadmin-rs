@@ -119,6 +119,7 @@ impl KAdm5Variant {
             Self::HeimdalClient => vec![
                 "krb5-config.heimdal",
                 "heimdal-krb5-config",
+                "/usr/local/opt/heimdal/bin/krb5-config",
                 "/opt/homebrew/opt/heimdal/bin/krb5-config",
                 "krb5-config",
             ],
