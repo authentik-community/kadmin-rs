@@ -26,7 +26,7 @@ getset = "0.1"
 indoc = { version = "2", optional = true }
 kadmin-sys = { path = "../kadmin-sys", version = "0.4.0", default-features = false }
 libc = "0.2"
-pyo3 = { version = "0.26", features = [
+pyo3 = { version = "0.27", features = [
   "extension-module",
   "chrono",
   "chrono-tz",
@@ -37,7 +37,7 @@ thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
-pyo3 = { version = "0.26", features = ["auto-initialize"] }
+pyo3 = { version = "0.27", features = ["auto-initialize"] }
 rand = "0.9"
 serial_test = { version = "3.1", default-features = false, features = [
   "log",
