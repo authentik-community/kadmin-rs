@@ -69,12 +69,12 @@ ci-build-rust: ci-build-deps
 
 # Build python wheel
 build-python:
-  uv run python -m build
+  uv run maturin build
 [private]
 ci-build-python: ci-build-deps build-python
 [private]
 ci-build-python-sdist:
-  uv run python -m build --sdist
+  uv run maturin sdist
 
 # Build rust crates and python wheel
 build: build-rust build-python
@@ -118,7 +118,7 @@ test-all: test-rust test-sanity test-python
 alias ta := test-all
 
 _install-python:
-  uv pip install --force-reinstall dist/python_kadmin_rs-*.whl
+  uv pip install --force-reinstall target/wheels/python_kadmin_rs-*.whl
 # Build and install wheel
 install-python: clean-python build-python _install-python
 
@@ -136,7 +136,7 @@ clean-rust:
 # Cleanup python wheel builds
 clean-python:
   uv pip uninstall python-kadmin-rs
-  rm -rf dist wheelhouse
+  rm -rf target/wheels wheelhouse
 
 # Cleanup all
 clean: clean-rust clean-python

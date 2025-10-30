@@ -1,36 +1,5 @@
-from kadmin._lib import (
-    DbArgs,
-    EncryptionType,
-    KAdmin,
-    KAdminApiVersion,
-    KAdm5Variant,
-    KeySalt,
-    KeySalts,
-    NewPrincipalKey,
-    Params,
-    Policy,
-    Principal,
-    SaltType,
-    TlData,
-    TlDataEntry,
-    __version__,
-)
-from . import exceptions, sys  # noqa: F401
+from .kadmin import *
 
-__all__ = (
-    "DbArgs",
-    "EncryptionType",
-    "KAdmin",
-    "KAdminApiVersion",
-    "KAdm5Variant",
-    "KeySalt",
-    "KeySalts",
-    "NewPrincipalKey",
-    "Params",
-    "Policy",
-    "Principal",
-    "SaltType",
-    "TlData",
-    "TlDataEntry",
-    "__version__",
-)
+__doc__ = kadmin.__doc__
+if hasattr(kadmin, "__all__"):
+    __all__ = kadmin.__all__

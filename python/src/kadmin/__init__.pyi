@@ -1,24 +1,10 @@
-from typing import Self, final
 import datetime
+from typing import Self, final
+from typing_extensions import disjoint_base
 
-__all__ = (
-    "DbArgs",
-    "EncryptionType",
-    "KAdmin",
-    "KAdminApiVersion",
-    "KAdm5Variant",
-    "KeySalt",
-    "KeySalts",
-    "NewPrincipalKey",
-    "Params",
-    "Policy",
-    "Principal",
-    "SaltType",
-    "TlData",
-    "TlDataEntry",
-    "__version__",
-)
 __version__: str
+exceptions: object
+sys: object
 
 @final
 class KAdminApiVersion:
@@ -149,31 +135,32 @@ class Principal:
     def get_strings(self, kadmin: KAdmin) -> dict[str, str]: ...
     def set_string(self, kadmin: KAdmin, key: str, value: str | None): ...
 
+@disjoint_base
 class NewPrincipalKey:
     @final
     class Password(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, password: str): ...
+        def __new__(cls, _0: str): ...
 
     @final
     class NoKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class RandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class ServerRandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class OldStyleRandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
 @final
 class Policy:
@@ -198,8 +185,8 @@ class Policy:
 
 @final
 class Params:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         realm: str | None = None,
         kadmind_port: int | None = None,
         kpasswd_port: int | None = None,
@@ -212,50 +199,58 @@ class Params:
 
 @final
 class DbArgs:
-    def __init__(self, /, *args, **kwargs: str | None): ...
+    def __new__(cls, /, *args, **kwargs: str | None): ...
 
 @final
 class EncryptionType:
-    Des3CbcRaw: Self
-    Des3CbcSha1: Self
-    ArcfourHmac: Self
-    ArcfourHmacExp: Self
-    Aes128CtsHmacSha196: Self
-    Aes256CtsHmacSha196: Self
-    Camellia128CtsCmac: Self
-    Camellia256CtsCmac: Self
-    Aes128CtsHmacSha256128: Self
-    Aes256CtsHmacSha384192: Self
-
-    def __init__(self, enctype: int): ...
+    def __new__(cls, enctype: int): ...
 
 @final
 class SaltType:
-    Normal: Self
-    NoRealm: Self
-    OnlyRealm: Self
-    Special: Self
-
-    def __init__(self, salttype: int | None): ...
+    def __new__(cls, salttype: int | None = None): ...
 
 @final
 class KeySalt:
     enctype: EncryptionType
     salttype: SaltType
 
-    def __init__(self, enctype: EncryptionType, salttype: SaltType | None): ...
+    def __new__(cls, enctype: EncryptionType, salttype: SaltType | None = None): ...
 
 @final
 class KeySalts:
     keysalts: set[KeySalt]
 
-    def __init__(self, keysalts: set[KeySalt]): ...
+    def __new__(cls, keysalts: set[KeySalt]): ...
 
 @final
 class TlDataEntry:
     data_type: int
     contents: list[int]
 
+    def __new__(cls, data_type: int, contents: list[int]): ...
+
 @final
 class TlData:
     entries: list[TlDataEntry]
+
+    def __new__(cls, entries: list[TlDataEntry]): ...
+
+__all__ = [
+    "DbArgs",
+    "EncryptionType",
+    "KAdmin",
+    "KAdminApiVersion",
+    "KAdm5Variant",
+    "KeySalt",
+    "KeySalts",
+    "NewPrincipalKey",
+    "Params",
+    "Policy",
+    "Principal",
+    "SaltType",
+    "TlData",
+    "TlDataEntry",
+    "__version__",
+    "exceptions",
+    "sys",
+]

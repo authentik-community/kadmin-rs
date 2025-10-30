@@ -38,14 +38,20 @@ Documentation = "https://github.com/authentik-community/kadmin-rs"
 Repository = "https://github.com/authentik-community/kadmin-rs.git"
 
 [build-system]
-requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin >=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["python"]
+module-name = "kadmin"
+python-source = "python/src"
 
 [dependency-groups]
 dev = [
   "black",
   "build",
   "cibuildwheel",
+  "maturin",
   "mypy",
   "ruff",
   "sphinx",

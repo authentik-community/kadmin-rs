@@ -24,7 +24,7 @@ use crate::{
     tl_data::{TlData, TlDataEntry},
 };
 
-#[pymodule(name = "_lib", gil_used = false)]
+#[pymodule(name = "kadmin", gil_used = false)]
 fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_class::<KAdminApiVersion>()?;

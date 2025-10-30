@@ -5,77 +5,81 @@
     futils.url = "github:numtide/flake-utils";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    rust-overlay,
-    futils,
-  } @ inputs: let
-    inherit (nixpkgs) lib;
-    inherit (futils.lib) eachDefaultSystem defaultSystems;
+  outputs =
+    { self
+    , nixpkgs
+    , rust-overlay
+    , futils
+    ,
+    } @ inputs:
+    let
+      inherit (nixpkgs) lib;
+      inherit (futils.lib) eachDefaultSystem defaultSystems;
 
-    nixpkgsFor = lib.genAttrs defaultSystems (system:
-      import nixpkgs {
-        inherit system;
-        overlays = [
-          rust-overlay.overlays.default
-        ];
-      });
-  in
-    eachDefaultSystem
-    (system: let
-      pkgs = nixpkgsFor.${system};
-    in {
-      devShell =
-        pkgs.mkShell
-        {
-          buildInputs = with pkgs; [
-            (lib.hiPrio rust-bin.nightly.latest.rustfmt)
-            (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
-            sccache
-
-            python314
-            uv
-
-            clang
-            glibc
-            krb5.out
-            krb5.dev
-            # heimdal.dev
-            libclang
-            openssl
-            pkg-config
-
-            cargo-msrv
-            cargo-release
-            cargo-workspaces
-            git
-            just
-            valgrind
+      nixpkgsFor = lib.genAttrs defaultSystems (system:
+        import nixpkgs {
+          inherit system;
+          overlays = [
+            rust-overlay.overlays.default
           ];
+        });
+    in
+    eachDefaultSystem
+      (system:
+      let
+        pkgs = nixpkgsFor.${system};
+      in
+      {
+        devShell =
+          pkgs.mkShell
+            {
+              buildInputs = with pkgs; [
+                (lib.hiPrio rust-bin.nightly.latest.rustfmt)
+                (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+                sccache
 
-          RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-          RUST_BACKTRACE = 1;
-          RUSTC_WRAPPER = "sccache";
-          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
-          UV_NO_BINARY_PACKAGE = "ruff";
+                python314
+                uv
 
-          KADMIN_MIT_CLIENT_INCLUDES = "${pkgs.krb5.dev}/include";
-          KADMIN_MIT_SERVER_INCLUDES = "${pkgs.krb5.dev}/include";
-          KADMIN_HEIMDAL_CLIENT_INCLUDES = "${pkgs.heimdal.dev}/include";
-          KADMIN_HEIMDAL_SERVER_INCLUDES = "${pkgs.heimdal.dev}/include";
-          KADMIN_MIT_CLIENT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
-          KADMIN_MIT_SERVER_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
-          KADMIN_HEIMDAL_CLIENT_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
-          KADMIN_HEIMDAL_SERVER_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+                clang
+                glibc
+                krb5.out
+                krb5.dev
+                # heimdal.dev
+                libclang
+                openssl
+                pkg-config
 
-          SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
-          SYSTEM_DEPS_KRB5_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
-          SYSTEM_DEPS_KRB5_LIB = "krb5";
-          SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
-          SYSTEM_DEPS_KADM5CLNT_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
-          SYSTEM_DEPS_KADM5CLNT_LIB = "kadm5clnt_mit";
-          SYSTEM_DEPS_KADM5CLNT_INCLUDE = "${pkgs.krb5.dev}/include";
-        };
-    });
+                cargo-msrv
+                cargo-release
+                cargo-workspaces
+                git
+                just
+                valgrind
+              ];
+
+              RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+              RUST_BACKTRACE = 1;
+              RUSTC_WRAPPER = "sccache";
+              LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+              UV_NO_BINARY_PACKAGE = "maturin ruff";
+
+              KADMIN_MIT_CLIENT_INCLUDES = "${pkgs.krb5.dev}/include";
+              KADMIN_MIT_SERVER_INCLUDES = "${pkgs.krb5.dev}/include";
+              KADMIN_HEIMDAL_CLIENT_INCLUDES = "${pkgs.heimdal.dev}/include";
+              KADMIN_HEIMDAL_SERVER_INCLUDES = "${pkgs.heimdal.dev}/include";
+              KADMIN_MIT_CLIENT_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
+              KADMIN_MIT_SERVER_KRB5_CONFIG = "${pkgs.krb5.dev}/bin/krb5-config";
+              KADMIN_HEIMDAL_CLIENT_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+              KADMIN_HEIMDAL_SERVER_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
+
+              SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
+              SYSTEM_DEPS_KRB5_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
+              SYSTEM_DEPS_KRB5_LIB = "krb5";
+              SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
+              SYSTEM_DEPS_KADM5CLNT_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
+              SYSTEM_DEPS_KADM5CLNT_LIB = "kadm5clnt_mit";
+              SYSTEM_DEPS_KADM5CLNT_INCLUDE = "${pkgs.krb5.dev}/include";
+            };
+      });
 }
