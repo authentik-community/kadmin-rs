@@ -68,7 +68,7 @@ enable = ["cpython-freethreading", "pypy"]
 [tool.cibuildwheel.linux]
 before-all = [
   "curl -sSf https://sh.rustup.rs | sh -s -- -y",
-  "yum install -y krb5-devel clang-devel openssl-devel || apk add krb5-dev clang-dev",
+  "yum install -y krb5-devel heimdal-devel clang-devel openssl-devel",
 ]
 environment = { PATH = "$HOME/.cargo/bin:$PATH" }
 environment-pass = ["DEBIAN_FRONTEND", "CARGO_INCREMENTAL"]
@@ -85,15 +85,6 @@ before-all = [
   "brew install llvm krb5",
 ]
 environment = { PKG_CONFIG_PATH = "/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig", MACOSX_DEPLOYMENT_TARGET = "14.0", PATH = "$HOME/.cargo/bin:$PATH" }
-
-[tool.setuptools.packages]
-find = { where = ["python/src"] }
-
-[[tool.setuptools-rust.ext-modules]]
-target = "kadmin._lib"
-path = "Cargo.toml"
-strip = "All"
-features = ["python"]
 
 [tool.ruff]
 line-length = 100
