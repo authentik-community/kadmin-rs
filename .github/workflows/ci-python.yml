@@ -150,8 +150,10 @@ jobs:
         run: |
           MATRIX="$(
             {
-              uv run cibuildwheel --print-build-identifiers --platform linux --archs x86_64,aarch64 \
+              uv run cibuildwheel --print-build-identifiers --platform linux --archs x86_64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-latest"}/' \
+              && uv run cibuildwheel --print-build-identifiers --platform linux --archs aarch64 \
+                | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-24.04-arm"}/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "macos-13" }/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
