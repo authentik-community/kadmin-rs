@@ -77,9 +77,9 @@ environment-pass = ["DEBIAN_FRONTEND", "CARGO_INCREMENTAL"]
 [tool.cibuildwheel.macos]
 before-all = [
   "curl -sSf https://sh.rustup.rs | sh -s -- -y",
-  "brew install llvm krb5",
+  "brew install krb5 heimdal llvm",
 ]
-environment = { PKG_CONFIG_PATH = "/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig", MACOSX_DEPLOYMENT_TARGET = "14.0", PATH = "$HOME/.cargo/bin:$PATH" }
+environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", PATH = "$HOME/.cargo/bin:$PATH" }
 
 [tool.ruff]
 line-length = 100

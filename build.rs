@@ -102,16 +102,34 @@ impl KAdm5Variant {
     fn bins(&self) -> Vec<&'static str> {
         match self {
             #[cfg(feature = "mit_client")]
-            Self::MitClient => vec!["krb5-config.mit", "krb5-config"],
+            Self::MitClient => vec![
+                "krb5-config.mit",
+                "/opt/homebrew/opt/krb5/bin/krb5-config",
+                "krb5-config",
+            ],
             #[cfg(feature = "mit_server")]
-            Self::MitServer => vec!["krb5-config.mit", "krb5-config"],
+            Self::MitServer => vec![
+                "krb5-config.mit",
+                "/opt/homebrew/opt/krb5/bin/krb5-config",
+                "krb5-config",
+            ],
             #[cfg(feature = "heimdal_client")]
             Self::HeimdalClient => {
-                vec!["krb5-config.heimdal", "heimdal-krb5-config", "krb5-config"]
+                vec![
+                    "krb5-config.heimdal",
+                    "heimdal-krb5-config",
+                    "/opt/homebrew/opt/heimdal/bin/krb5-config",
+                    "krb5-config",
+                ]
             }
             #[cfg(feature = "heimdal_server")]
             Self::HeimdalServer => {
-                vec!["krb5-config.heimdal", "heimdal-krb5-config", "krb5-config"]
+                vec![
+                    "krb5-config.heimdal",
+                    "heimdal-krb5-config",
+                    "/opt/homebrew/opt/heimdal/bin/krb5-config",
+                    "krb5-config",
+                ]
             }
         }
     }
