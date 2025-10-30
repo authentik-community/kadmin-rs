@@ -2,10 +2,9 @@
 
 use std::{
     collections::HashMap,
-    ffi::{CString, c_void},
+    ffi::{CString, c_char, c_void},
     mem::MaybeUninit,
-    ptr,
-    ptr::{null, null_mut},
+    ptr::{self, null, null_mut},
     sync::Mutex,
 };
 
@@ -801,7 +800,7 @@ impl KAdminImpl for KAdmin {
 
     fn list_principals(&self, query: Option<&str>) -> Result<Vec<String>> {
         let query = CString::new(query.unwrap_or("*"))?;
-        let mut princs: *mut *mut i8 = null_mut();
+        let mut princs: *mut *mut c_char = null_mut();
         let mut count = 0;
 
         let code = library_match!(&self.context.library; |cont, _lib| unsafe {
@@ -961,7 +960,7 @@ impl KAdminImpl for KAdmin {
             },
             mit_client, mit_server, heimdal_server => |cont, _lib| {
                 let query = CString::new(query.unwrap_or("*"))?;
-                let mut policies: *mut *mut i8 = null_mut();
+                let mut policies: *mut *mut c_char = null_mut();
                 let mut count = 0;
 
                 let code = unsafe {

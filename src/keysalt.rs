@@ -74,7 +74,7 @@ impl EncryptionType {
                 Ok(s.to_owned().into_string()?)
             },
             heimdal_client, heimdal_server => |cont, lib| {
-                let mut raw: *mut i8 = null_mut();
+                let mut raw: *mut c_char = null_mut();
                 let code = unsafe {
                     cont.krb5_enctype_to_string(
                         context.context as lib!(krb5_context),
@@ -166,7 +166,7 @@ impl SaltType {
                 Ok(s.to_owned().into_string()?)
             },
             heimdal_client, heimdal_server => |cont, lib| {
-                let mut raw: *mut i8 = null_mut();
+                let mut raw: *mut c_char = null_mut();
                 let code = unsafe {
                     cont.krb5_salttype_to_string(
                         context.context as lib!(krb5_context),
