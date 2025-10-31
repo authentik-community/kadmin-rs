@@ -9,7 +9,7 @@ use kadmin::KAdm5Variant;
 #[test]
 #[serial]
 fn with_password() -> Result<()> {
-    let realm = K5Test::new()?;
+    let realm = K5Test::new(KAdm5Variant::MitClient)?;
     let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
         .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
     kadmin.list_principals(None)?;
@@ -18,8 +18,18 @@ fn with_password() -> Result<()> {
 
 #[test]
 #[serial]
+fn with_password_heimdal() -> Result<()> {
+    let realm = K5Test::new(KAdm5Variant::HeimdalClient)?;
+    let kadmin = KAdmin::builder(KAdm5Variant::HeimdalClient)
+        .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+    kadmin.list_principals(None)?;
+    Ok(())
+}
+
+#[test]
+#[serial]
 fn with_keytab() -> Result<()> {
-    let realm = K5Test::new()?;
+    let realm = K5Test::new(KAdm5Variant::MitClient)?;
     let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
         .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
     kadmin.list_principals(None)?;
@@ -29,7 +39,7 @@ fn with_keytab() -> Result<()> {
 #[test]
 #[serial]
 fn with_ccache() -> Result<()> {
-    let realm = K5Test::new()?;
+    let realm = K5Test::new(KAdm5Variant::MitClient)?;
     realm.prep_kadmin()?;
     let kadmin_ccache = realm.kadmin_ccache()?;
     let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
@@ -41,7 +51,7 @@ fn with_ccache() -> Result<()> {
 #[test]
 #[serial]
 fn with_local() -> Result<()> {
-    let realm = K5Test::new()?;
+    let realm = K5Test::new(KAdm5Variant::MitServer)?;
     let db_args = DbArgs::builder()
         .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
         .build()?;
@@ -68,7 +78,7 @@ mod sync {
     #[test]
     #[serial]
     fn with_password() -> Result<()> {
-        let realm = K5Test::new()?;
+        let realm = K5Test::new(KAdm5Variant::MitClient)?;
         let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
             .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
         kadmin.list_principals(None)?;
@@ -78,7 +88,7 @@ mod sync {
     #[test]
     #[serial]
     fn with_keytab() -> Result<()> {
-        let realm = K5Test::new()?;
+        let realm = K5Test::new(KAdm5Variant::MitClient)?;
         let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
             .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
         kadmin.list_principals(None)?;
@@ -88,7 +98,7 @@ mod sync {
     #[test]
     #[serial]
     fn with_ccache() -> Result<()> {
-        let realm = K5Test::new()?;
+        let realm = K5Test::new(KAdm5Variant::MitClient)?;
         realm.prep_kadmin()?;
         let kadmin_ccache = realm.kadmin_ccache()?;
         let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
@@ -100,7 +110,7 @@ mod sync {
     #[test]
     #[serial]
     fn with_local() -> Result<()> {
-        let realm = K5Test::new()?;
+        let realm = K5Test::new(KAdm5Variant::MitServer)?;
         let db_args = DbArgs::builder()
             .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
             .build()?;

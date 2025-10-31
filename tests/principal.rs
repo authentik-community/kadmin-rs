@@ -18,7 +18,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn list_principals() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let principals = kadmin.list_principals(Some("*"))?;
@@ -46,7 +46,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn principal_exists() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 assert!(kadmin.principal_exists(&realm.user_princ()?)?);
@@ -59,7 +59,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn get_principal() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princ = kadmin.get_principal(&realm.user_princ()?)?;
@@ -72,7 +72,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn create_principal() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princname = random_string(16);
@@ -89,7 +89,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn delete_principal() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princname = random_string(16);
@@ -103,7 +103,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn modify_principal() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princname = random_string(16);
@@ -127,7 +127,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn change_password() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
@@ -141,7 +141,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn randkey() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
@@ -155,7 +155,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn unlock() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();
@@ -166,7 +166,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn strings() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let princ = kadmin.get_principal(&realm.user_princ()?)?.unwrap();

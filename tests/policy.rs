@@ -18,7 +18,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn list_policies() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let policies = kadmin.list_policies(Some("*"))?;
@@ -29,7 +29,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn policy_exists() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let polname = random_string(16);
@@ -41,7 +41,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn create_policy() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let polname = random_string(16);
@@ -55,7 +55,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn delete_policy() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let polname = random_string(16);
@@ -69,7 +69,7 @@ macro_rules! gen_tests {
             #[test]
             #[serial]
             fn modify_policy() -> Result<()> {
-                let realm = K5Test::new()?;
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
                 let polname = random_string(16);

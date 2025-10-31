@@ -62,6 +62,9 @@ test = ["k5test"]
 [tool.uv]
 package = false
 
+[tool.uv.sources]
+k5test = { git = "https://github.com/pythongssapi/k5test.git", rev = "349b79ecdff9a3ec00441c467511ff03e92450c9" }
+
 [tool.cibuildwheel]
 enable = ["cpython-freethreading", "pypy"]
 skip = "*-musllinux_*"

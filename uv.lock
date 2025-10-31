@@ -346,11 +346,7 @@ wheels = [
 [[package]]
 name = "k5test"
 version = "0.10.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5e/3b/f65afbc2e1fb7e728cb3abd3fac872aad9dc0e222d343ac24675713bfb41/k5test-0.10.4.tar.gz", hash = "sha256:e152491e6602f6a93b3d533d387bd4590f2476093b6842170ff0b93de64bef30", size = 13661, upload-time = "2024-03-20T02:48:26.001Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/ba/d86d465c589cbed8f872e187e90abbac73eb1453483477771e87e7ee8376/k5test-0.10.4-py2.py3-none-any.whl", hash = "sha256:33de7ff10bf99155fe8ee5d5976798ad1db6237214306dadf5a0ae9d6bb0ad03", size = 11954, upload-time = "2024-03-20T02:48:24.502Z" },
-]
+source = { git = "https://github.com/pythongssapi/k5test.git?rev=349b79ecdff9a3ec00441c467511ff03e92450c9#349b79ecdff9a3ec00441c467511ff03e92450c9" }
 
 [[package]]
 name = "markupsafe"
@@ -619,7 +615,7 @@ dev = [
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
 ]
-test = [{ name = "k5test" }]
+test = [{ name = "k5test", git = "https://github.com/pythongssapi/k5test.git?rev=349b79ecdff9a3ec00441c467511ff03e92450c9" }]
 
 [[package]]
 name = "pytokens"

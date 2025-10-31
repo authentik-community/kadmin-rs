@@ -73,13 +73,21 @@
               KADMIN_HEIMDAL_CLIENT_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
               KADMIN_HEIMDAL_SERVER_KRB5_CONFIG = "${pkgs.heimdal.dev}/bin/krb5-config";
 
-              SYSTEM_DEPS_KRB5_NO_PKG_CONFIG = "true";
-              SYSTEM_DEPS_KRB5_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
-              SYSTEM_DEPS_KRB5_LIB = "krb5";
-              SYSTEM_DEPS_KADM5CLNT_NO_PKG_CONFIG = "true";
-              SYSTEM_DEPS_KADM5CLNT_SEARCH_NATIVE = "${pkgs.krb5.lib}/lib";
-              SYSTEM_DEPS_KADM5CLNT_LIB = "kadm5clnt_mit";
-              SYSTEM_DEPS_KADM5CLNT_INCLUDE = "${pkgs.krb5.dev}/include";
+              K5TEST_MIT_KDB5_UTIL = "${pkgs.krb5}/bin/kdb5_util";
+              K5TEST_MIT_KRB5KDC = "${pkgs.krb5}/bin/krb5kdc";
+              K5TEST_MIT_KADMIN = "${pkgs.krb5}/bin/kadmin";
+              K5TEST_MIT_KADMIN_LOCAL = "${pkgs.krb5}/bin/kadmin.local";
+              K5TEST_MIT_KADMIND = "${pkgs.krb5}/bin/kadmind";
+              K5TEST_MIT_KPROP = "${pkgs.krb5}/bin/kprop";
+              K5TEST_MIT_KINIT = "${pkgs.krb5}/bin/kinit";
+              K5TEST_MIT_KLIST = "${pkgs.krb5}/bin/klist";
+
+              K5TEST_HEIMDAL_KDC = "${pkgs.heimdal}/libexec/kdc";
+              K5TEST_HEIMDAL_KADMIN = "${pkgs.heimdal}/bin/kadmin";
+              K5TEST_HEIMDAL_KADMIND = "${pkgs.heimdal}/libexec/kadmind";
+              K5TEST_HEIMDAL_KINIT = "${pkgs.heimdal}/bin/kinit";
+              K5TEST_HEIMDAL_KLIST = "${pkgs.heimdal}/bin/klist";
+              K5TEST_HEIMDAL_KTUTIL = "${pkgs.heimdal}/bin/ktutil";
             };
       });
 }
