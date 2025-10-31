@@ -86,7 +86,7 @@ jobs:
         with:
           tool: just
       - name: Test
-        run: just ci-test-${{ matrix.job }}-${{ variant }}
+        run: just ci-test-${{ matrix.job }}-${{ matrix.variant }}
   check-rust:
     if: always()
     needs:
