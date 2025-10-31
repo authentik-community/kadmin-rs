@@ -129,7 +129,7 @@ ci-test-python-mit: ci-test-deps-mit _install-python _test-python
 ci-test-python-h5l: ci-test-deps-h5l _install-python _test-python
 
 # Test rust crates and python bindings
-test-all: test-rust-mit test-sanity test-python
+test-all: test-rust-mit test-sanity-mit test-python
 alias ta := test-all
 
 _install-python:
