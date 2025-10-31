@@ -97,10 +97,10 @@ ci-test-deps-heimdal: ci-build-deps ci-test-deps
   sudo apt-get install -y --no-install-recommends heimdal-clients heimdal-kdc
 [private]
 ci-test-rust-mit: ci-test-deps-mit
-  RUSTFLAGS="-Dwarnings" just test-rust-mit
+  RUSTFLAGS="-Awarnings" just test-rust-mit
 [private]
 ci-test-rust-heimdal: ci-test-deps-heimdal
-  RUSTFLAGS="-Dwarnings" just test-rust-heimdal
+  RUSTFLAGS="-Awarnings" just test-rust-heimdal
 
 alias ts := test-sanity-mit
 # Test kadmin with valgrind for memory leaks, only MIT variants
