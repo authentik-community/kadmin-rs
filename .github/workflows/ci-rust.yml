@@ -19,6 +19,13 @@ env:
   RUSTC_WRAPPER: "sccache"
   RUST_LOG: kadmin=trace
 
+  K5TEST_HEIMDAL_KDC: "/usr/lib/heimdal-servers/kdc"
+  K5TEST_HEIMDAL_KADMIN: "/usr/bin/kadmin"
+  K5TEST_HEIMDAL_KADMIND: "/usr/lib/heimdal-servers/kadmind"
+  K5TEST_HEIMDAL_KINIT: "/usr/bin/kinit"
+  K5TEST_HEIMDAL_KLIST: "/usr/bin/klist"
+  K5TEST_HEIMDAL_KTUTIL: "/usr/bin/ktutil"
+
 jobs:
   lint:
     strategy:
@@ -75,7 +82,6 @@ jobs:
     timeout-minutes: 30
     env:
       KRB5_TRACE: /dev/stderr
-      RUST_LOG: kadmin=trace
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v5
