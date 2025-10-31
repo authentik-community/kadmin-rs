@@ -1,128 +1,98 @@
 //! Test KAdmin builders
-use anyhow::Result;
-use kadmin::{DbArgs, KAdmin, KAdminImpl, Params};
-use serial_test::serial;
 mod k5test;
-use k5test::K5Test;
-use kadmin::KAdm5Variant;
 
-#[test]
-#[serial]
-fn with_password() -> Result<()> {
-    let realm = K5Test::new(KAdm5Variant::MitClient)?;
-    let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-        .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-    kadmin.list_principals(None)?;
-    Ok(())
+macro_rules! gen_tests_remote {
+    ($libname: ident, $variant:ident) => {
+        #[cfg($libname)]
+        mod $libname {
+            use anyhow::Result;
+            use kadmin::{KAdm5Variant, KAdminImpl};
+            use serial_test::serial;
+
+            use super::{super::k5test::K5Test, *};
+
+            #[test]
+            #[serial]
+            fn with_password() -> Result<()> {
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
+                let kadmin = KAdmin::builder(KAdm5Variant::$variant)
+                    .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+                kadmin.list_principals(None)?;
+                Ok(())
+            }
+
+            #[test]
+            #[serial]
+            fn with_keytab() -> Result<()> {
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
+                let kadmin = KAdmin::builder(KAdm5Variant::$variant)
+                    .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
+                kadmin.list_principals(None)?;
+                Ok(())
+            }
+
+            #[test]
+            #[serial]
+            fn with_ccache() -> Result<()> {
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
+                realm.prep_kadmin()?;
+                let kadmin_ccache = realm.kadmin_ccache()?;
+                let kadmin = KAdmin::builder(KAdm5Variant::$variant)
+                    .with_ccache(Some(&realm.admin_princ()?), Some(&kadmin_ccache))?;
+                kadmin.list_principals(None)?;
+                Ok(())
+            }
+        }
+    };
 }
 
-#[test]
-#[serial]
-fn with_password_heimdal() -> Result<()> {
-    let realm = K5Test::new(KAdm5Variant::HeimdalClient)?;
-    let kadmin = KAdmin::builder(KAdm5Variant::HeimdalClient)
-        .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-    kadmin.list_principals(None)?;
-    Ok(())
+macro_rules! gen_tests_local {
+    ($libname: ident, $variant:ident) => {
+        #[cfg($libname)]
+        mod $libname {
+            use anyhow::Result;
+            use kadmin::{DbArgs, KAdm5Variant, KAdminImpl, Params};
+            use serial_test::serial;
+
+            use super::{super::k5test::K5Test, *};
+
+            #[test]
+            #[serial]
+            fn with_local() -> Result<()> {
+                let realm = K5Test::new(KAdm5Variant::$variant)?;
+                let db_args = DbArgs::builder()
+                    .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
+                    .build()?;
+                let params = Params::new()
+                    .dbname(&format!("{}/db", realm.tmpdir()?))
+                    .acl_file(&format!("{}/acl", realm.tmpdir()?))
+                    .dict_file(&format!("{}/dict", realm.tmpdir()?))
+                    .stash_file(&format!("{}/stash", realm.tmpdir()?));
+                let kadmin = KAdmin::builder(KAdm5Variant::$variant)
+                    .db_args(db_args)
+                    .params(params)
+                    .with_local()?;
+                kadmin.list_principals(None)?;
+                Ok(())
+            }
+        }
+    };
 }
 
-#[test]
-#[serial]
-fn with_keytab() -> Result<()> {
-    let realm = K5Test::new(KAdm5Variant::MitClient)?;
-    let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-        .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-    kadmin.list_principals(None)?;
-    Ok(())
-}
+mod direct {
+    use kadmin::KAdmin;
 
-#[test]
-#[serial]
-fn with_ccache() -> Result<()> {
-    let realm = K5Test::new(KAdm5Variant::MitClient)?;
-    realm.prep_kadmin()?;
-    let kadmin_ccache = realm.kadmin_ccache()?;
-    let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-        .with_ccache(Some(&realm.admin_princ()?), Some(&kadmin_ccache))?;
-    kadmin.list_principals(None)?;
-    Ok(())
-}
-
-#[test]
-#[serial]
-fn with_local() -> Result<()> {
-    let realm = K5Test::new(KAdm5Variant::MitServer)?;
-    let db_args = DbArgs::builder()
-        .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
-        .build()?;
-    let params = Params::new()
-        .dbname(&format!("{}/db", realm.tmpdir()?))
-        .acl_file(&format!("{}/acl", realm.tmpdir()?))
-        .dict_file(&format!("{}/dict", realm.tmpdir()?))
-        .stash_file(&format!("{}/stash", realm.tmpdir()?));
-    let kadmin = KAdmin::builder(KAdm5Variant::MitServer)
-        .db_args(db_args)
-        .params(params)
-        .with_local()?;
-    kadmin.list_principals(None)?;
-    Ok(())
+    gen_tests_remote!(mit_client, MitClient);
+    gen_tests_remote!(heimdal_client, HeimdalClient);
+    gen_tests_local!(mit_server, MitServer);
+    gen_tests_local!(heimdal_server, HeimdalServer);
 }
 
 mod sync {
-    use anyhow::Result;
-    use kadmin::{DbArgs, KAdm5Variant, KAdminImpl, Params, sync::KAdmin};
-    use serial_test::serial;
+    use kadmin::sync::KAdmin;
 
-    use crate::K5Test;
-
-    #[test]
-    #[serial]
-    fn with_password() -> Result<()> {
-        let realm = K5Test::new(KAdm5Variant::MitClient)?;
-        let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-            .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-        kadmin.list_principals(None)?;
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn with_keytab() -> Result<()> {
-        let realm = K5Test::new(KAdm5Variant::MitClient)?;
-        let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-            .with_password(&realm.admin_princ()?, &realm.password("admin")?)?;
-        kadmin.list_principals(None)?;
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn with_ccache() -> Result<()> {
-        let realm = K5Test::new(KAdm5Variant::MitClient)?;
-        realm.prep_kadmin()?;
-        let kadmin_ccache = realm.kadmin_ccache()?;
-        let kadmin = KAdmin::builder(KAdm5Variant::MitClient)
-            .with_ccache(Some(&realm.admin_princ()?), Some(&kadmin_ccache))?;
-        kadmin.list_principals(None)?;
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn with_local() -> Result<()> {
-        let realm = K5Test::new(KAdm5Variant::MitServer)?;
-        let db_args = DbArgs::builder()
-            .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
-            .build()?;
-        let params = Params::new()
-            .dbname(&format!("{}/db", realm.tmpdir()?))
-            .acl_file(&format!("{}/acl", realm.tmpdir()?))
-            .dict_file(&format!("{}/dict", realm.tmpdir()?))
-            .stash_file(&format!("{}/stash", realm.tmpdir()?));
-        let _kadmin = KAdmin::builder(KAdm5Variant::MitServer)
-            .db_args(db_args)
-            .params(params)
-            .with_local()?;
-        Ok(())
-    }
+    gen_tests_remote!(mit_client, MitClient);
+    gen_tests_remote!(heimdal_client, HeimdalClient);
+    gen_tests_local!(mit_server, MitServer);
+    gen_tests_local!(heimdal_server, HeimdalServer);
 }

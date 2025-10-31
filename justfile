@@ -79,10 +79,13 @@ ci-build-python-sdist:
 # Build rust crates and python wheel
 build: build-rust build-python
 
-alias t := test-rust
-# Test rust code
-test-rust:
-  uv run cargo test --features log -- --nocapture
+alias t := test-rust-mit
+# Test rust code, only MIT variants
+test-rust-mit:
+  uv run cargo test --no-default-features --features mit_client,mit_server,log -- --nocapture
+# Test rust code, only Heimdal variants
+test-rust-heimdal:
+  uv run cargo test --no-default-features --features heimdal_client,heimdal_server,log -- --nocapture
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
@@ -90,16 +93,28 @@ ci-test-deps:
 ci-test-deps-mit: ci-build-deps ci-test-deps
   sudo apt-get install -y --no-install-recommends krb5-kdc krb5-user krb5-admin-server
 [private]
-ci-test-rust: ci-test-deps-mit
-  RUSTFLAGS="-Dwarnings" just test-rust
-
-alias ts := test-sanity
-# Test kadmin with valgrind for memory leaks
-test-sanity:
-  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust
+ci-test-deps-heimdal: ci-build-deps ci-test-deps
+  sudo apt-get install -y --no-install-recommends heimdal-clients heimdal-kdc
 [private]
-ci-test-sanity: ci-test-deps-mit
-  just test-sanity
+ci-test-rust-mit: ci-test-deps-mit
+  RUSTFLAGS="-Dwarnings" just test-rust-mit
+[private]
+ci-test-rust-heimdal: ci-test-deps-heimdal
+  RUSTFLAGS="-Dwarnings" just test-rust-heimdal
+
+alias ts := test-sanity-mit
+# Test kadmin with valgrind for memory leaks, only MIT variants
+test-sanity-mit:
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust-mit
+# Test kadmin with valgrind for memory leaks, only Heimdal variants
+test-sanity-heimdal:
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust-heimdal
+[private]
+ci-test-sanity-mit: ci-test-deps-mit
+  just test-sanity-mit
+[private]
+ci-test-sanity-heimdal: ci-test-deps-heimdal
+  just test-sanity-heimdal
 
 _test-python:
   uv run python -m unittest python/tests/test_*.py
@@ -114,7 +129,7 @@ ci-test-python-mit: ci-test-deps-mit _install-python _test-python
 ci-test-python-h5l: ci-test-deps-h5l _install-python _test-python
 
 # Test rust crates and python bindings
-test-all: test-rust test-sanity test-python
+test-all: test-rust-mit test-sanity test-python
 alias ta := test-all
 
 _install-python:
