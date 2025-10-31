@@ -63,11 +63,14 @@ macro_rules! gen_tests_local {
                 let db_args = DbArgs::builder()
                     .arg("dbname", Some(&format!("{}/db", realm.tmpdir()?)))
                     .build()?;
-                let params = Params::new()
+                let mut params = Params::new()
                     .dbname(&format!("{}/db", realm.tmpdir()?))
                     .acl_file(&format!("{}/acl", realm.tmpdir()?))
-                    .dict_file(&format!("{}/dict", realm.tmpdir()?))
                     .stash_file(&format!("{}/stash", realm.tmpdir()?));
+                #[cfg(any(mit_client, mit_server))]
+                {
+                    params = params.dict_file(&format!("{}/dict", realm.tmpdir()?));
+                }
                 let kadmin = KAdmin::builder(KAdm5Variant::$variant)
                     .db_args(db_args)
                     .params(params)

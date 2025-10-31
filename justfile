@@ -82,10 +82,10 @@ build: build-rust build-python
 alias t := test-rust-mit
 # Test rust code, only MIT variants
 test-rust-mit:
-  uv run cargo test --no-default-features --features mit_client,mit_server,log -- --nocapture
+  RUSTFLAGS="-Awarnings" uv run cargo test --no-default-features --features mit_client,mit_server,log -- --nocapture
 # Test rust code, only Heimdal variants
 test-rust-heimdal:
-  uv run cargo test --no-default-features --features heimdal_client,heimdal_server,log -- --nocapture
+  RUSTFLAGS="-Awarnings" uv run cargo test --no-default-features --features heimdal_client,heimdal_server,log -- --nocapture
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
@@ -96,11 +96,10 @@ ci-test-deps-mit: ci-build-deps ci-test-deps
 ci-test-deps-heimdal: ci-build-deps ci-test-deps
   sudo apt-get install -y --no-install-recommends heimdal-clients heimdal-kdc
 [private]
-ci-test-rust-mit: ci-test-deps-mit
-  RUSTFLAGS="-Awarnings" just test-rust-mit
+ci-test-rust-mit: ci-test-deps-mit test-rust-mit
 [private]
-ci-test-rust-heimdal: ci-test-deps-heimdal
-  RUSTFLAGS="-Awarnings" just test-rust-heimdal
+ci-test-rust-heimdal: ci-test-deps-heimdal test-rust-heimdal
+  just test-rust-heimdal
 
 alias ts := test-sanity-mit
 # Test kadmin with valgrind for memory leaks, only MIT variants
