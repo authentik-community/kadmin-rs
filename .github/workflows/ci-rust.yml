@@ -17,6 +17,14 @@ env:
   CARGO_INCREMENTAL: "false"
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
+  RUST_LOG: kadmin=trace
+
+  K5TEST_HEIMDAL_KDC: "/usr/lib/heimdal-servers/kdc"
+  K5TEST_HEIMDAL_KADMIN: "/usr/bin/kadmin"
+  K5TEST_HEIMDAL_KADMIND: "/usr/lib/heimdal-servers/kadmind"
+  K5TEST_HEIMDAL_KINIT: "/usr/bin/kinit"
+  K5TEST_HEIMDAL_KLIST: "/usr/bin/klist"
+  K5TEST_HEIMDAL_KTUTIL: "/usr/bin/ktutil"
 
 jobs:
   lint:
@@ -32,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --all-groups
       - uses: mozilla-actions/sccache-action@v0.0.9
       - if: ${{ matrix.toolchain }}
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -49,6 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --all-groups
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
@@ -63,6 +75,9 @@ jobs:
         job:
           - rust
           - sanity
+        variant:
+          - mit
+          # - heimdal
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -77,7 +92,7 @@ jobs:
         with:
           tool: just
       - name: Test
-        run: uv run just ci-test-${{ matrix.job }}
+        run: just ci-test-${{ matrix.job }}-${{ matrix.variant }}
   check-rust:
     if: always()
     needs:
@@ -97,8 +112,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - crate: kadmin-sys
-            extra_args: "--no-verify"
           - crate: kadmin
             extra_args: ""
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')

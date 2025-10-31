@@ -6,7 +6,9 @@ import kadmin
 class TestPolicy(KerberosTestCase):
     def test_list_policies(self):
         kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
+            kadmin.KAdm5Variant.MitClient,
+            self.realm.admin_princ,
+            self.realm.password("admin"),
         )
         self.assertEqual(
             kadm.list_policies("*"),
@@ -15,7 +17,9 @@ class TestPolicy(KerberosTestCase):
 
     def test_policy_exists(self):
         kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
+            kadmin.KAdm5Variant.MitClient,
+            self.realm.admin_princ,
+            self.realm.password("admin"),
         )
         polname = random_string(16)
         kadm.add_policy(polname)
@@ -24,7 +28,9 @@ class TestPolicy(KerberosTestCase):
 
     def test_create_policy(self):
         kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
+            kadmin.KAdm5Variant.MitClient,
+            self.realm.admin_princ,
+            self.realm.password("admin"),
         )
         polname = random_string(16)
         policy = kadm.add_policy(polname)
@@ -35,7 +41,9 @@ class TestPolicy(KerberosTestCase):
 
     def test_delete_policy(self):
         kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
+            kadmin.KAdm5Variant.MitClient,
+            self.realm.admin_princ,
+            self.realm.password("admin"),
         )
         polname = random_string(16)
         policy = kadm.add_policy(polname)
@@ -45,12 +53,18 @@ class TestPolicy(KerberosTestCase):
 
     def test_modify(self):
         kadm = kadmin.KAdmin.with_password(
-            self.realm.admin_princ, self.realm.password("admin")
+            kadmin.KAdm5Variant.MitClient,
+            self.realm.admin_princ,
+            self.realm.password("admin"),
         )
         polname = random_string(16)
         policy = kadm.add_policy(polname)
         policy = policy.modify(kadm, password_min_length=42)
+        self.assertNotEqual(policy, None)
+        assert policy is not None
         self.assertEqual(policy.password_min_length, 42)
         policy = kadm.get_policy(polname)
+        self.assertNotEqual(policy, None)
+        assert policy is not None
         self.assertEqual(policy.password_min_length, 42)
         kadm.delete_policy(polname)

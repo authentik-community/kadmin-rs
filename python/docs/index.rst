@@ -1,9 +1,9 @@
 Welcome to python-kadmin-rs's documentation!
 ============================================
 
-This is a Python interface to libkadm5. It provides two Python modules: `kadmin` for remote operations, and `kadmin_local` for local operations.
+This is a Python interface to libkadm5.
 
-With `kadmin`:
+For remote operations:
 
 .. code-block:: python
 
@@ -14,23 +14,28 @@ With `kadmin`:
    kadm = kadmin.KAdmin.with_password(princ, password)
    print(kadm.list_principals("*"))
 
-With `kadmin_local`:
+For local operations:
 
 .. code-block:: python
 
-   import kadmin_local
+   import kadmin
 
    kadm = kadmin.KAdmin.with_local()
    print(kadm.list_principals("*"))
 
-The only difference between the two modules is the `KAdmin.with_` methods used to construct the KAdmin object. As such, only the `kadmin` module is fully documented. The `kadmin_local` documentation only contains the addition of the specialized initialization method.
+This module consists of bindings to the `kadmin` Rust crate. It doesn't link
+against libkadm5 directly, but instead loads if at runtime. You can find more
+information about this process in `the Rust crate documentation`_.
+
+.. _the Rust crate documentation: https://docs.rs/kadmin/latest/kadmin/
 
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
 
    kadmin.rst
-   kadmin_local.rst
+   exceptions.rst
+   sys.rst
 
 Indices and tables
 ==================
