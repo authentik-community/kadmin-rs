@@ -38,11 +38,12 @@ pub static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 ///
 /// If no version is provided during the KAdmin initialization, it defaults to the most
 /// conservative one, currently version 2.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum KAdminApiVersion {
     /// Version 2
+    #[default]
     Version2,
     /// Version 3, only usable with MIT kadm5
     #[cfg(any(mit_client, mit_server))]
@@ -50,12 +51,6 @@ pub enum KAdminApiVersion {
     /// Version 4, only usable with MIT kadm5
     #[cfg(any(mit_client, mit_server))]
     Version4,
-}
-
-impl Default for KAdminApiVersion {
-    fn default() -> Self {
-        Self::Version2
-    }
 }
 
 impl KAdminApiVersion {

@@ -673,7 +673,7 @@ impl PrincipalModifier {
 /// How the principal key should be set
 ///
 /// The default is [`Self::RandKey`]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 #[allow(clippy::exhaustive_enums)]
 pub enum PrincipalBuilderKey {
     /// Provide a password to use
@@ -682,6 +682,7 @@ pub enum PrincipalBuilderKey {
     NoKey,
     /// A random key should be generated for the principal. Tries `ServerRandKey` and falls back to
     /// `OldStyleRandKey`
+    #[default]
     RandKey,
     /// A random key should be generated for the principal by the server
     ServerRandKey,
@@ -689,12 +690,6 @@ pub enum PrincipalBuilderKey {
     /// generated dummy key, then calls `randkey` on the principal and finally removes
     /// `KRB5_KDB_DISALLOW_ALL_TIX`
     OldStyleRandKey,
-}
-
-impl Default for PrincipalBuilderKey {
-    fn default() -> Self {
-        Self::RandKey
-    }
 }
 
 pub(crate) struct PrincipalEntryRaw<'a> {
