@@ -99,6 +99,7 @@ pub struct KAdmin {
     pub(crate) context: Context,
     /// Server handle for kadm5
     pub(crate) server_handle: *mut c_void,
+    _keytab: Option<CString>,
 }
 
 /// Common methods for `KAdmin` implementations
@@ -1117,6 +1118,7 @@ impl KAdminBuilder {
         let kadmin = KAdmin {
             context,
             server_handle: null_mut(),
+            _keytab: None,
         };
 
         let api_version = api_version.to_raw(kadmin.context.library.variant())?;
@@ -1266,6 +1268,7 @@ impl KAdminBuilder {
             }
         );
 
+        kadmin._keytab = Some(keytab);
         drop(params_raw);
         drop(_guard);
 
