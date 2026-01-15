@@ -40,7 +40,7 @@ static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 ///
 /// If no version is provided during the KAdmin initialization, it defaults to the most
 /// conservative one, currently version 2.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(u32)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]

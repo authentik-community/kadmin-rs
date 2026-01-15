@@ -97,7 +97,7 @@ impl TryFrom<EncryptionType> for String {
 
 /// Kerberos salt type
 // In MIT krb5: src/lib/krb5/krb/str_conv.c
-#[derive(Copy, Clone, Debug, FromRepr, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, FromRepr, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(i32)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
