@@ -46,6 +46,7 @@ static KADMIN_INIT_LOCK: Mutex<()> = Mutex::new(());
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum KAdminApiVersion {
     /// Version 2
+    #[default]
     Version2 = KADM5_API_VERSION_2,
     /// Version 3
     Version3 = KADM5_API_VERSION_3,
@@ -56,12 +57,6 @@ pub enum KAdminApiVersion {
 impl From<KAdminApiVersion> for krb5_ui_4 {
     fn from(api_version: KAdminApiVersion) -> Self {
         api_version as Self
-    }
-}
-
-impl Default for KAdminApiVersion {
-    fn default() -> Self {
-        Self::Version2
     }
 }
 
