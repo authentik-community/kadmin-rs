@@ -1,31 +1,74 @@
-[workspace]
-members = ["kadmin-sys", "kadmin"]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "kadmin"
+version = "0.6.3"
 authors = [
   "Marc 'risson' Schmitt <marc.schmitt@risson.space>",
   "authentik community <hello@goauthentik.io>",
 ]
 edition = "2021"
 rust-version = "1.77"
+description = "Rust bindings for the Kerberos administration interface (kadm5)"
 readme = "README.md"
 homepage = "https://github.com/authentik-community/kadmin-rs"
 repository = "https://github.com/authentik-community/kadmin-rs.git"
 license = "MIT"
+keywords = ["kerberos", "krb5", "kadm5", "kadmin"]
+categories = ["api-bindings", "authentication"]
 
-[workspace.lints.rust]
+[features]
+mit_client = []
+mit_server = []
+heimdal_client = []
+heimdal_server = []
+default = ["mit_client", "mit_server", "heimdal_client", "heimdal_server"]
+log = ["dep:log"]
+python = ["dep:pyo3", "dep:indoc"]
+
+[dependencies]
+chrono = "0.4"
+dlopen2 = "0.8"
+getset = "0.1"
+indoc = { version = "2", optional = true }
+libc = "0.2"
+log = { version = "0.4", optional = true }
+pyo3 = { version = "0.27", features = [
+  "extension-module",
+  "chrono",
+  "chrono-tz",
+], optional = true }
+strum = { version = "0.27", features = ["derive"] }
+thiserror = "2"
+
+[build-dependencies]
+bindgen = "0.72"
+pkg-config = "0.3"
+prettyplease = "0.2"
+quote = "1.0"
+strum = { version = "0.27", features = ["derive"] }
+syn = { version = "2.0", features = ["full", "parsing"] }
+
+[dev-dependencies]
+anyhow = "1"
+pyo3 = { version = "0.27", features = ["auto-initialize"] }
+rand = "0.9"
+serial_test = { version = "3.1", default-features = false, features = [
+  "log",
+  "logging",
+] }
+test-log = "0.2"
+
+[lints.rust]
 missing_docs = "warn"
 semicolon_in_expressions_from_macros = "warn"
 unreachable_pub = "warn"
 unused_import_braces = "warn"
 unused_qualifications = "warn"
 
-[workspace.lints.rustdoc]
+[lints.rustdoc]
 missing_crate_level_docs = "warn"
 unescaped_backticks = "warn"
 
-[workspace.lints.clippy]
+[lints.clippy]
 branches_sharing_code = "warn"
 cloned_instead_of_copied = "warn"
 dbg_macro = "warn"
@@ -44,3 +87,10 @@ str_to_string = "warn"
 todo = "warn"
 unreadable_literal = "warn"
 unseparated_literal_suffix = "warn"
+useless_conversion = "allow"
+unnecessary_cast = "allow"
+
+[package.metadata.release]
+pre-release-replacements = [
+  { file = "../pyproject.toml", search = "^version = \"[a-z0-9\\.-]+\"", replace = "version = \"{{version}}\"", exactly = 1 },
+]

@@ -37,14 +37,20 @@ Documentation = "https://github.com/authentik-community/kadmin-rs"
 Repository = "https://github.com/authentik-community/kadmin-rs.git"
 
 [build-system]
-requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin >=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["python"]
+module-name = "kadmin"
+python-source = "python/src"
 
 [dependency-groups]
 dev = [
   "black",
   "build",
   "cibuildwheel",
+  "maturin",
   "mypy",
   "ruff",
   "sphinx",
@@ -55,47 +61,28 @@ test = ["k5test"]
 [tool.uv]
 package = false
 
+[tool.uv.sources]
+k5test = { git = "https://github.com/pythongssapi/k5test.git", rev = "349b79ecdff9a3ec00441c467511ff03e92450c9" }
+
 [tool.cibuildwheel]
 enable = ["cpython-freethreading", "pypy"]
+skip = "*-musllinux_*"
 
 [tool.cibuildwheel.linux]
 before-all = [
   "curl -sSf https://sh.rustup.rs | sh -s -- -y",
-  "yum install -y krb5-devel clang-devel openssl-devel || apk add krb5-dev clang-dev",
+  "yum install -y krb5-devel heimdal-devel clang-devel openssl-devel",
 ]
 environment = { PATH = "$HOME/.cargo/bin:$PATH" }
 environment-pass = ["DEBIAN_FRONTEND", "CARGO_INCREMENTAL"]
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-pypy_x86_64-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
-manylinux-ppc64le-image = "manylinux_2_28"
-manylinux-s390x-image = "manylinux_2_28"
-manylinux-pypy_aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 before-all = [
   "curl -sSf https://sh.rustup.rs | sh -s -- -y",
-  "brew install llvm krb5",
+  "brew install krb5 heimdal llvm",
 ]
-environment = { PKG_CONFIG_PATH = "/opt/homebrew/opt/krb5/lib/pkgconfig:/usr/local/opt/krb5/lib/pkgconfig", MACOSX_DEPLOYMENT_TARGET = "14.0", PATH = "$HOME/.cargo/bin:$PATH" }
-
-[tool.setuptools.packages]
-find = { where = ["python/src"] }
-
-[[tool.setuptools-rust.ext-modules]]
-target = "kadmin._lib"
-path = "kadmin/Cargo.toml"
-strip = "All"
-args = ["--no-default-features"]
-features = ["client", "python"]
-
-[[tool.setuptools-rust.ext-modules]]
-target = "kadmin_local._lib"
-path = "kadmin/Cargo.toml"
-strip = "All"
-args = ["--no-default-features"]
-features = ["local", "python"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", PATH = "$HOME/.cargo/bin:$PATH" }
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"

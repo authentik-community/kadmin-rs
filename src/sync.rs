@@ -8,6 +8,7 @@
 //! wrapped and the [`KAdminImpl`] trait.
 use std::{
     collections::HashMap,
+    ffi::{OsStr, OsString},
     panic::resume_unwind,
     sync::{
         Arc,
@@ -19,14 +20,16 @@ use std::{
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
+#[cfg(any(mit_client, mit_server, heimdal_server))]
+use crate::policy::{Policy, PolicyBuilder, PolicyModifier};
 use crate::{
     db_args::DbArgs,
     error::Result,
-    kadmin::{KAdminApiVersion, KAdminImpl, KAdminPrivileges},
+    kadmin::{KAdminApiVersion, KAdminImpl},
     keysalt::KeySalts,
     params::Params,
-    policy::{Policy, PolicyBuilder, PolicyModifier},
     principal::{Principal, PrincipalBuilder, PrincipalModifier},
+    sys::{KAdm5Variant, Library},
 };
 
 /// Operations from [`KAdminImpl`]
@@ -45,30 +48,42 @@ enum KAdminOperation {
     PrincipalChangePassword(
         String,
         String,
-        Option<bool>,
-        Option<KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<KeySalts>,
         Sender<Result<()>>,
     ),
     /// See [`KAdminImpl::principal_randkey`]
-    PrincipalRandkey(String, Option<bool>, Option<KeySalts>, Sender<Result<()>>),
+    PrincipalRandkey(
+        String,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] Option<KeySalts>,
+        Sender<Result<()>>,
+    ),
+    #[cfg(any(mit_client, mit_server))]
     /// See [`KAdminImpl::principal_get_strings`]
     PrincipalGetStrings(String, Sender<Result<HashMap<String, String>>>),
+    #[cfg(any(mit_client, mit_server))]
     /// See [`KAdminImpl::principal_set_string`]
     PrincipalSetString(String, String, Option<String>, Sender<Result<()>>),
     /// See [`KAdminImpl::list_principals`]
     ListPrincipals(Option<String>, Sender<Result<Vec<String>>>),
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::add_policy`]
     AddPolicy(PolicyBuilder, Sender<Result<()>>),
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::modify_policy`]
     ModifyPolicy(PolicyModifier, Sender<Result<()>>),
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::delete_policy`]
     DeletePolicy(String, Sender<Result<()>>),
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::get_policy`]
     GetPolicy(String, Sender<Result<Option<Policy>>>),
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     /// See [`KAdminImpl::list_policies`]
     ListPolicies(Option<String>, Sender<Result<Vec<String>>>),
     /// See [`KAdminImpl::get_privileges`]
-    GetPrivileges(Sender<Result<KAdminPrivileges>>),
+    GetPrivileges(Sender<Result<i64>>),
     /// Stop the kadmin thread
     Exit,
 }
@@ -92,6 +107,7 @@ impl KAdminOperation {
             Self::GetPrincipal(name, sender) => {
                 let _ = sender.send(kadmin.get_principal(name));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::PrincipalChangePassword(name, password, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_change_password(
                     name,
@@ -100,30 +116,46 @@ impl KAdminOperation {
                     keysalts.as_ref(),
                 ));
             }
+            #[cfg(not(any(mit_client, mit_server, heimdal_server)))]
+            Self::PrincipalChangePassword(name, password, sender) => {
+                let _ = sender.send(kadmin.principal_change_password(name, password));
+            }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::PrincipalRandkey(name, keepold, keysalts, sender) => {
                 let _ = sender.send(kadmin.principal_randkey(name, *keepold, keysalts.as_ref()));
             }
+            #[cfg(not(any(mit_client, mit_server, heimdal_server)))]
+            Self::PrincipalRandkey(name, sender) => {
+                let _ = sender.send(kadmin.principal_randkey(name));
+            }
+            #[cfg(any(mit_client, mit_server))]
             Self::PrincipalGetStrings(name, sender) => {
                 let _ = sender.send(kadmin.principal_get_strings(name));
             }
+            #[cfg(any(mit_client, mit_server))]
             Self::PrincipalSetString(name, key, value, sender) => {
                 let _ = sender.send(kadmin.principal_set_string(name, key, value.as_deref()));
             }
             Self::ListPrincipals(query, sender) => {
                 let _ = sender.send(kadmin.list_principals(query.as_deref()));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::AddPolicy(builder, sender) => {
                 let _ = sender.send(kadmin.add_policy(builder));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::ModifyPolicy(modifier, sender) => {
                 let _ = sender.send(kadmin.modify_policy(modifier));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::DeletePolicy(name, sender) => {
                 let _ = sender.send(kadmin.delete_policy(name));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::GetPolicy(name, sender) => {
                 let _ = sender.send(kadmin.get_policy(name));
             }
+            #[cfg(any(mit_client, mit_server, heimdal_server))]
             Self::ListPolicies(query, sender) => {
                 let _ = sender.send(kadmin.list_policies(query.as_deref()));
             }
@@ -159,17 +191,22 @@ impl Drop for InnerKAdmin {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "python", pyclass)]
 pub struct KAdmin {
+    variant: KAdm5Variant,
     inner: Arc<InnerKAdmin>,
 }
 
 impl KAdmin {
     /// Construct a new [`KAdminBuilder`]
-    pub fn builder() -> KAdminBuilder {
-        KAdminBuilder::default()
+    pub fn builder(variant: KAdm5Variant) -> KAdminBuilder {
+        KAdminBuilder::new(variant)
     }
 }
 
 impl KAdminImpl for KAdmin {
+    fn variant(&self) -> KAdm5Variant {
+        self.variant
+    }
+
     fn add_principal(&self, builder: &PrincipalBuilder) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -216,8 +253,8 @@ impl KAdminImpl for KAdmin {
         &self,
         name: &str,
         password: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -225,7 +262,9 @@ impl KAdminImpl for KAdmin {
             .send(KAdminOperation::PrincipalChangePassword(
                 name.to_owned(),
                 password.to_owned(),
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keepold,
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keysalts.cloned(),
                 sender,
             ))?;
@@ -235,21 +274,24 @@ impl KAdminImpl for KAdmin {
     fn principal_randkey(
         &self,
         name: &str,
-        keepold: Option<bool>,
-        keysalts: Option<&KeySalts>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keepold: Option<bool>,
+        #[cfg(any(mit_client, mit_server, heimdal_server))] keysalts: Option<&KeySalts>,
     ) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
             .send(KAdminOperation::PrincipalRandkey(
                 name.to_owned(),
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keepold,
+                #[cfg(any(mit_client, mit_server, heimdal_server))]
                 keysalts.cloned(),
                 sender,
             ))?;
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server))]
     fn principal_get_strings(&self, name: &str) -> Result<HashMap<String, String>> {
         let (sender, receiver) = channel();
         self.inner
@@ -261,6 +303,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server))]
     fn principal_set_string(&self, name: &str, key: &str, value: Option<&str>) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -283,6 +326,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn add_policy(&self, builder: &PolicyBuilder) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -291,6 +335,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn modify_policy(&self, modifier: &PolicyModifier) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -299,6 +344,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn delete_policy(&self, name: &str) -> Result<()> {
         let (sender, receiver) = channel();
         self.inner
@@ -307,6 +353,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn get_policy(&self, name: &str) -> Result<Option<Policy>> {
         let (sender, receiver) = channel();
         self.inner
@@ -315,6 +362,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
+    #[cfg(any(mit_client, mit_server, heimdal_server))]
     fn list_policies(&self, query: Option<&str>) -> Result<Vec<String>> {
         let (sender, receiver) = channel();
         self.inner.op_sender.send(KAdminOperation::ListPolicies(
@@ -324,7 +372,7 @@ impl KAdminImpl for KAdmin {
         receiver.recv()?
     }
 
-    fn get_privileges(&self) -> Result<KAdminPrivileges> {
+    fn get_privileges(&self) -> Result<i64> {
         let (sender, receiver) = channel();
         self.inner
             .op_sender
@@ -334,14 +382,27 @@ impl KAdminImpl for KAdmin {
 }
 
 /// [`KAdmin`] builder
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct KAdminBuilder {
+    variant: KAdm5Variant,
+    library_path: Option<OsString>,
     params: Option<Params>,
     db_args: Option<DbArgs>,
     api_version: KAdminApiVersion,
 }
 
 impl KAdminBuilder {
+    /// Create a new [`KAdminBuilder`] instance
+    pub fn new(variant: KAdm5Variant) -> Self {
+        Self {
+            variant,
+            library_path: None,
+            params: None,
+            db_args: None,
+            api_version: Default::default(),
+        }
+    }
+
     /// Provide additional [`Params`][`crate::params::Params`] to this
     /// [`KAdmin`] instance
     pub fn params(mut self, params: Params) -> Self {
@@ -362,15 +423,25 @@ impl KAdminBuilder {
         self
     }
 
+    /// Set the path from where to load the kadm5 library
+    pub fn library_path<S: AsRef<OsStr>>(mut self, library_path: S) -> Self {
+        self.library_path = Some(library_path.as_ref().to_os_string());
+        self
+    }
+
     /// Construct a [`crate::kadmin::KAdminBuilder`] object that isn't initialized yet from the
     /// builder inputs
     fn get_builder(self) -> Result<crate::kadmin::KAdminBuilder> {
-        let mut builder = crate::kadmin::KAdmin::builder();
+        let mut builder = crate::kadmin::KAdmin::builder(self.variant);
         if let Some(params) = self.params {
             builder = builder.params(params);
         }
         if let Some(db_args) = self.db_args {
             builder = builder.db_args(db_args);
+        }
+        if let Some(library_path) = self.library_path {
+            let library = Library::from_path(self.variant, &library_path)?;
+            builder = builder.library(library);
         }
         builder = builder.api_version(self.api_version);
         Ok(builder)
@@ -380,6 +451,7 @@ impl KAdminBuilder {
     fn build<F>(self, kadmin_build: F) -> Result<KAdmin>
     where F: FnOnce(crate::kadmin::KAdminBuilder) -> Result<crate::kadmin::KAdmin> + Send + 'static
     {
+        let variant = self.variant;
         let (op_sender, op_receiver) = channel();
         let (start_sender, start_receiver) = channel();
 
@@ -411,6 +483,7 @@ impl KAdminBuilder {
 
         match start_receiver.recv()? {
             Ok(_) => Ok(KAdmin {
+                variant,
                 inner: Arc::new(InnerKAdmin {
                     op_sender,
                     join_handle: Some(join_handle),
@@ -425,8 +498,6 @@ impl KAdminBuilder {
 
     /// Construct a [`KAdmin`] object from this builder using a client name (usually a principal
     /// name) and a password
-    #[cfg(any(feature = "client", doc))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_password(self, client_name: &str, password: &str) -> Result<KAdmin> {
         let client_name = client_name.to_owned();
         let password = password.to_owned();
@@ -440,8 +511,6 @@ impl KAdminBuilder {
     /// If no client name is provided, `host/hostname` will be used
     ///
     /// If no keytab is provided, the default keytab will be used
-    #[cfg(any(feature = "client", doc))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_keytab(self, client_name: Option<&str>, keytab: Option<&str>) -> Result<KAdmin> {
         let client_name = client_name.map(String::from);
         let keytab = keytab.map(String::from);
@@ -456,8 +525,6 @@ impl KAdminBuilder {
     /// used
     ///
     /// If no credentials cache name is provided, the default credentials cache will be used
-    #[cfg(any(feature = "client", doc))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_ccache(
         self,
         client_name: Option<&str>,
@@ -472,17 +539,16 @@ impl KAdminBuilder {
     }
 
     /// Not implemented
-    #[cfg(any(feature = "client", doc))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
     pub fn with_anonymous(self, client_name: &str) -> Result<KAdmin> {
         let client_name = client_name.to_owned();
 
         self.build(move |builder| builder.with_anonymous(&client_name))
     }
 
+    #[cfg(any(mit_server, heimdal_server))]
     /// Construct a [`KAdmin`] object from this builder for local database manipulation.
-    #[cfg(any(feature = "local", doc))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "local")))]
+    ///
+    /// Only available on server-side libraries.
     pub fn with_local(self) -> Result<KAdmin> {
         self.build(move |builder| builder.with_local())
     }

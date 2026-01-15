@@ -1,25 +1,10 @@
-from typing import Self, final
 import datetime
+from typing import Self, final
+from typing_extensions import disjoint_base
 
-__all__ = (
-    "DbArgs",
-    "EncryptionType",
-    "KAdmin",
-    "KAdminApiVersion",
-    "KAdminPrivileges",
-    "KeySalt",
-    "KeySalts",
-    "NewPrincipalKey",
-    "Params",
-    "Policy",
-    "Principal",
-    "PrincipalAttributes",
-    "SaltType",
-    "TlData",
-    "TlDataEntry",
-    "__version__",
-)
 __version__: str
+exceptions: object
+sys: object
 
 @final
 class KAdminApiVersion:
@@ -28,10 +13,17 @@ class KAdminApiVersion:
     Version4: Self
 
 @final
+class KAdm5Variant:
+    MitClient: Self
+    MitServer: Self
+    HeimdalClient: Self
+    HeimdalServer: Self
+
+@final
 class KAdmin:
     def add_principal(self, name, **kwargs) -> Principal: ...
-    def rename_principal(self, old_name, new_name): ...
-    def delete_principal(self, name): ...
+    def rename_principal(self, old_name: str, new_name: str): ...
+    def delete_principal(self, name: str): ...
     def get_principal(self, name: str) -> Principal | None: ...
     def principal_exists(self, name: str) -> bool: ...
     def principal_change_password(
@@ -42,7 +34,10 @@ class KAdmin:
         keysalts: KeySalts | None = None,
     ): ...
     def principal_randkey(
-        self, name: str, keepold: bool | None = None, keysalts: KeySalts | None = None
+        self,
+        name: str,
+        keepold: bool | None = None,
+        keysalts: KeySalts | None = None,
     ): ...
     def principal_get_strings(self, name: str) -> dict[str, str]: ...
     def principal_set_string(self, name: str, key: str, value: str | None): ...
@@ -52,37 +47,53 @@ class KAdmin:
     def get_policy(self, name: str) -> Policy | None: ...
     def policy_exists(self, name: str) -> bool: ...
     def list_policies(self, query: str | None = None) -> list[str]: ...
-    def get_privileges(self) -> KAdminPrivileges: ...
+    def get_privileges(self) -> int: ...
     @staticmethod
     def with_password(
+        variant: KAdm5Variant,
         client_name: str,
         password: str,
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_keytab(
+        variant: KAdm5Variant,
         client_name: str | None = None,
         keytab: str | None = None,
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_ccache(
+        variant: KAdm5Variant,
         client_name: str | None = None,
         ccache_name: str | None = None,
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
     @staticmethod
     def with_anonymous(
+        variant: KAdm5Variant,
         client_name: str,
         params: Params | None = None,
         db_args: DbArgs | None = None,
         api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
+    ) -> KAdmin: ...
+    @staticmethod
+    def with_local(
+        variant: KAdm5Variant,
+        params: Params | None = None,
+        db_args: DbArgs | None = None,
+        api_version: KAdminApiVersion | None = None,
+        library_path: str | None = None,
     ) -> KAdmin: ...
 
 @final
@@ -94,7 +105,7 @@ class Principal:
     max_life: datetime.timedelta | None
     modified_by: str
     modified_at: datetime.datetime | None
-    attributes: PrincipalAttributes
+    attributes: int
     kvno: int
     mkvno: int
     policy: str | None
@@ -124,55 +135,32 @@ class Principal:
     def get_strings(self, kadmin: KAdmin) -> dict[str, str]: ...
     def set_string(self, kadmin: KAdmin, key: str, value: str | None): ...
 
-@final
-class PrincipalAttributes:
-    DisallowPostdated: Self
-    DisallowForwardable: Self
-    DisallowTgtBased: Self
-    DisallowRenewable: Self
-    DisallowProxiable: Self
-    DisallowDupSkey: Self
-    DisallowAllTix: Self
-    RequiresPreAuth: Self
-    RequiresHwAuth: Self
-    RequiresPwChange: Self
-    DisallowSvr: Self
-    PwChangeService: Self
-    SupportDesMd5: Self
-    NewPrinc: Self
-    OkAsDelegate: Self
-    OkToAuthAsDelegate: Self
-    NoAuthDataRequired: Self
-    LockdownKeys: Self
-
-    def __init__(self, bits: int): ...
-    def bits(self) -> int: ...
-
+@disjoint_base
 class NewPrincipalKey:
     @final
     class Password(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, password: str): ...
+        def __new__(cls, _0: str): ...
 
     @final
     class NoKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class RandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class ServerRandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
     @final
     class OldStyleRandKey(NewPrincipalKey):
         __match_args__: tuple
-        def __init__(self, *args, **kwargs): ...
+        def __init__(self): ...
 
 @final
 class Policy:
@@ -197,8 +185,8 @@ class Policy:
 
 @final
 class Params:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         realm: str | None = None,
         kadmind_port: int | None = None,
         kpasswd_port: int | None = None,
@@ -211,60 +199,58 @@ class Params:
 
 @final
 class DbArgs:
-    def __init__(self, /, *args, **kwargs: str | None): ...
+    def __new__(cls, /, *args, **kwargs: str | None): ...
 
 @final
 class EncryptionType:
-    Des3CbcRaw: Self
-    Des3CbcSha1: Self
-    ArcfourHmac: Self
-    ArcfourHmacExp: Self
-    Aes128CtsHmacSha196: Self
-    Aes256CtsHmacSha196: Self
-    Camellia128CtsCmac: Self
-    Camellia256CtsCmac: Self
-    Aes128CtsHmacSha256128: Self
-    Aes256CtsHmacSha384192: Self
-
-    def __init__(self, enctype: int | str): ...
+    def __new__(cls, enctype: int): ...
 
 @final
 class SaltType:
-    Normal: Self
-    NoRealm: Self
-    OnlyRealm: Self
-    Special: Self
-
-    def __init__(self, enctype: int | str | None): ...
+    def __new__(cls, salttype: int | None = None): ...
 
 @final
 class KeySalt:
     enctype: EncryptionType
     salttype: SaltType
 
-    def __init__(self, enctype: EncryptionType, salttype: SaltType | None): ...
+    def __new__(cls, enctype: EncryptionType, salttype: SaltType | None = None): ...
 
 @final
 class KeySalts:
     keysalts: set[KeySalt]
 
-    def __init__(self, keysalts: set[KeySalt]): ...
+    def __new__(cls, keysalts: set[KeySalt]): ...
 
 @final
 class TlDataEntry:
     data_type: int
     contents: list[int]
 
+    def __new__(cls, data_type: int, contents: list[int]): ...
+
 @final
 class TlData:
     entries: list[TlDataEntry]
 
-@final
-class KAdminPrivileges:
-    Inquire: Self
-    Add: Self
-    Modify: Self
-    Delete: Self
+    def __new__(cls, entries: list[TlDataEntry]): ...
 
-    def __init__(self, bits: int): ...
-    def bits(self) -> int: ...
+__all__ = [
+    "DbArgs",
+    "EncryptionType",
+    "KAdmin",
+    "KAdminApiVersion",
+    "KAdm5Variant",
+    "KeySalt",
+    "KeySalts",
+    "NewPrincipalKey",
+    "Params",
+    "Policy",
+    "Principal",
+    "SaltType",
+    "TlData",
+    "TlDataEntry",
+    "__version__",
+    "exceptions",
+    "sys",
+]

@@ -3,6 +3,40 @@ kadmin
 
 .. py:module:: kadmin
 
+.. py:class:: KAdm5Variant
+
+   kadm5 library variant
+
+   Represent a kadm5 library to use. This struct will determine which C library kadmin will link
+   against. The list of currently supported options consist of the enum variants.
+
+   Depending on how kadmin was compiled, not all variants may be supported on your system. Refer
+   to the package documentation on how to compile for all possible options.
+
+   .. py:attribute:: MitClient
+
+      MIT krb5 client-side library
+
+      :type: KAdm5Variant
+
+   .. py:attribute:: MitServer
+
+      MIT krb5 server-side library
+
+      :type: KAdm5Variant
+
+   .. py:attribute:: HeimdalClient
+
+      Heimdal client-side library
+
+      :type: KAdm5Variant
+
+   .. py:attribute:: HeimdalServer
+
+      Heimdal server-side library
+
+      :type: KAdm5Variant
+
 .. py:class:: KAdminApiVersion
 
    kadm5 API version
@@ -40,10 +74,12 @@ kadmin
    
    This class has no constructor. Instead, use the `with_` methods
 
-   .. py:staticmethod:: with_password(client_name, password, params=None, db_args=None, api_version=None)
+   .. py:staticmethod:: with_password(variant, client_name, password, params=None, db_args=None, api_version=None, library_path=None)
 
       Construct a KAdmin object using a password
       
+      :param variant: Which kadm5 variant to use
+      :type variant: KAdm5Variant
       :param client_name: client name, usually a principal name
       :type client_name: str
       :param password: password to authenticate with
@@ -54,6 +90,8 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
       
@@ -61,10 +99,12 @@ kadmin
       
          kadm = KAdmin.with_password("user@EXAMPLE.ORG", "vErYsEcUrE")
 
-   .. py:staticmethod:: with_keytab(client_name=None, keytab=None, params=None, db_args=None)
+   .. py:staticmethod:: with_keytab(variant, client_name=None, keytab=None, params=None, db_args=None, library_path=None)
 
       Construct a KAdmin object using a keytab
       
+      :param variant: Which kadm5 variant to use
+      :type variant: KAdm5Variant
       :param client_name: client name, usually a principal name. If not provided,
           `host/hostname` will be used
       :type client_name: str | None
@@ -77,13 +117,17 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
-   .. py:staticmethod:: with_ccache(client_name=None, ccache_name=None, params=None, db_args=None)
+   .. py:staticmethod:: with_ccache(variant, client_name=None, ccache_name=None, params=None, db_args=None, library_path=None)
 
       Construct a KAdmin object using a credentials cache
       
+      :param variant: Which kadm5 variant to use
+      :type variant: KAdm5Variant
       :param client_name: client name, usually a principal name. If not provided, the default
           principal from the credentials cache will be used
       :type client_name: str | None
@@ -96,12 +140,31 @@ kadmin
       :type db_args: DbArgs | None
       :param api_version: kadm5 API version to use
       :type api_version: KAdminApiVersion | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
       :return: an initialized :py:class:`KAdmin` object
       :rtype: KAdmin
 
-   .. py:staticmethod:: with_anonymous(client_name, params=None, db_args=None)
+   .. py:staticmethod:: with_anonymous(variant, client_name, params=None, db_args=None, library_path=None)
 
       Not implemented
+
+   .. py:staticmethod:: with_local(variant, params=None, db_args=None, api_version=None, library_path=None)
+
+      Construct a :py:class:`KAdmin` object for local database manipulation.
+      
+      :param variant: Which kadm5 variant to use
+      :type variant: KAdm5Variant
+      :param params: additional kadm5 config options
+      :type params: :py:class:`Params<kadmin.Params>` | None
+      :param db_args: additional database specific arguments
+      :type db_args: :py:class:`DbArgs<kadmin.DbArgs>` | None
+      :param api_version: kadm5 API version to use
+      :type api_version: :py:class:`KAdminApiVersion<kadmin.KAdminApiVersion>` | None
+      :param library_path: path to libkadm5.so to load
+      :type library_path: str | None
+      :return: an initialized :py:class:`KAdmin` object
+      :rtype: KAdmin
 
    .. py:method:: add_principal(name, **kwargs)
 
@@ -171,9 +234,11 @@ kadmin
       :param password: the new password
       :type password: str
       :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
-         perhaps for krbtgt principals. Defaults to false
+         perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option is silently
+         ignored
       :type keepold: bool | None
-      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal. With Heimdal
+         client, this option is silently ignored
       :type keysalts: KeySalts | None
 
    .. py:method:: principal_randkey(name, keepold=None, keysalts=None)
@@ -185,14 +250,18 @@ kadmin
       :param name: name of the principal to randomize the key of
       :type name: str
       :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
-         perhaps for krbtgt principals. Defaults to false
+         perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option is silently
+         ignored
       :type keepold: bool | None
-      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal. With Heimdal
+         client, this option is silently ignored
       :type keysalts: KeySalts | None
 
    .. py:method:: principal_get_strings(name)
 
       Retrieve string attributes on this principal
+
+      Only available for MIT variants
 
       :param name: name of the principal to randomize the key of
       :type name: str
@@ -202,6 +271,8 @@ kadmin
    .. py:method:: principal_set_string(name, key, value)
 
       Set string attribute on this principal
+
+      Only available for MIT variants
 
       :param name: name of the principal to randomize the key of
       :type name: str
@@ -226,6 +297,8 @@ kadmin
    .. py:method:: add_policy(name, **kwargs)
 
       Create a policy
+
+      Only available for MIT and Heimdal server-side libraries.
       
       :param name: the name of the policy to create
       :type name: str
@@ -237,6 +310,8 @@ kadmin
    .. py:method:: delete_policy(name)
 
       Delete a policy
+
+      Only available for MIT and Heimdal server-side libraries.
       
       :py:meth:`Policy.delete` is also available
       
@@ -246,6 +321,8 @@ kadmin
    .. py:method:: get_policy(name)
 
       Retrieve a policy
+
+      Only available for MIT and Heimdal server-side libraries.
       
       :param name: policy name to retrieve
       :type name: str
@@ -255,6 +332,8 @@ kadmin
    .. py:method:: policy_exists(name)
 
       Check if a policy exists
+
+      Only available for MIT and Heimdal server-side libraries.
       
       :param name: policy name to check for
       :type name: str
@@ -264,6 +343,8 @@ kadmin
    .. py:method:: list_policies(query=None)
 
       List policies
+
+      Only available for MIT and Heimdal server-side libraries.
       
       :param query: a shell-style glob expression that can contain the wild-card characters
           `?`, `*`, and `[]`. All policy names matching the expression are returned.
@@ -277,7 +358,7 @@ kadmin
       Get current privileges
 
       :return: The current session privileges
-      :rtype: KAdminPrivileges
+      :rtype: int
 
 .. py:class:: Principal
 
@@ -331,9 +412,9 @@ kadmin
 
    .. py:attribute:: attributes
 
-      See :py:class:`PrincipalAttributes`
+      Principal attributes
 
-      :type: PrincipalAttributes
+      :type: int
 
    .. py:attribute:: kvno
 
@@ -431,9 +512,11 @@ kadmin
       :param password: the new password
       :type password: str
       :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
-         perhaps for krbtgt principals. Defaults to false
+         perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option is silently
+         ignored
       :type keepold: bool | None
-      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal. With Heimdal
+         client, this option is silently ignored
       :type keysalts: KeySalts | None
 
    .. py:method:: randkey(kadmin, keepold=None, keysalts=None)
@@ -445,9 +528,11 @@ kadmin
       :param kadmin: A :py:class:`KAdmin` instance
       :type kadmin: KAdmin
       :param keepold: Keeps the existing keys in the database. This flag is usually not necessary except
-         perhaps for krbtgt principals. Defaults to false
+         perhaps for krbtgt principals. Defaults to false. With Heimdal client, this option is silently
+         ignored
       :type keepold: bool | None
-      :param keysalts: Uses the specified keysalt list for setting the keys of the principal
+      :param keysalts: Uses the specified keysalt list for setting the keys of the principal. With Heimdal
+         client, this option is silently ignored
       :type keysalts: KeySalts | None
 
    .. py:method:: unlock(kadmin)
@@ -464,6 +549,8 @@ kadmin
 
       Retrieve string attributes on this principal
 
+      Only available for MIT variants
+
       :param kadmin: A :py:class:`KAdmin` instance
       :type kadmin: KAdmin
       :return: a dictionary containing the string attributes set on this principal
@@ -473,135 +560,14 @@ kadmin
 
       Set string attribute on this principal
 
+      Only available for MIT variants
+
       :param kadmin: A :py:class:`KAdmin` instance
       :type kadmin: KAdmin
       :param key: The string key
       :type key: str
       :param value: The string value. Set to None to remove the attribute
       :type value: str | None
-
-.. py:class:: PrincipalAttributes(bits)
-
-   Attributes set on a principal
-
-   See `man kadmin(1)`, under the `add_principal` section for an explanation
-
-   :param bits: Attributes bits
-   :type bits: int
-
-   .. py:attribute:: DisallowPostdated
-
-      Prohibits the principal from obtaining postdated tickets
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowForwardable
-
-      Prohibits the principal from obtaining forwardable tickets
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowTgtBased
-
-      Specifies that a Ticket-Granting Service (TGS) request for a service ticket for the principal is not permitted
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowRenewable
-
-      Prohibits the principal from obtaining renewable tickets
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowProxiable
-
-      Prohibits the principal from obtaining proxiable tickets
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowDupSkey
-
-      Disables user-to-user authentication for the principal by prohibiting this principal from obtaining a session key for another user
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowAllTix
-
-      Forbids the issuance of any tickets for the principal
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: RequiresPreAuth
-
-      Requires the principal to preauthenticate before being allowed to kinit
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: RequiresHwAuth
-
-      Requires the principal to preauthenticate using a hardware device before being allowed to kinit
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: RequiresPwChange
-
-      Force a password change
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: DisallowSvr
-
-      Prohibits the issuance of service tickets for the principal
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: PwChangeService
-
-      Marks the principal as a password change service principal
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: SupportDesMd5
-
-      An AS_REQ for a principal with this bit set and an encrytion type of ENCTYPE_DES_CBC_CRC causes the encryption type ENCTYPE_DES_CBC_MD5 to be used instead
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: NewPrinc
-
-      Allow kadmin administrators with `add` acls to modify the principal until this bit is cleared
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: OkAsDelegate
-
-      Sets the OK-AS-DELEGATE flag on tickets issued for use with the principal as the service, which clients may use as a hint that credentials can and should be delegated when authenticating to the service
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: OkToAuthAsDelegate
-
-      Sets the service to allow the use of S4U2Self
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: NoAuthDataRequired
-
-      Prevents PAC or AD-SIGNEDPATH data from being added to service tickets for the principal
-
-      :type: PrincipalAttributes
-
-   .. py:attribute:: LockdownKeys
-
-      Prevents keys for the principal from being extracted or set to a known value by the kadmin protocol
-
-      :type: PrincipalAttributes
-
-   .. py:method:: bits()
-
-      Get the underlying bits
-
-      :rtype: int
 
 .. py:class:: NewPrincipalKey
 
@@ -632,6 +598,8 @@ kadmin
       Old-style random key. Creates the principal with KRB5_KDB_DISALLOW_ALL_TIX and a generated dummy key, then calls randkey on the principal and finally removes KRB5_KDB_DISALLOW_ALL_TIX
 
 .. py:class:: Policy
+
+   Only available for MIT and Heimdal server-side libraries.
 
    .. py:attribute:: name
 
@@ -694,7 +662,7 @@ kadmin
       this duration has elapsed since the previous failure, the number of authentication failures
       is reset to 1. A value of `None` means forever
 
-      Only available in :py:class:`version<KAdminApiVersion>` 3 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 3 and above
 
       :type: datetime.timedelta | None
 
@@ -704,7 +672,7 @@ kadmin
       failures occur without the specified failure count interval elapsing. A duration of `None`
       means the principal remains locked out until it is administratively unlocked
 
-      Only available in :py:class:`version<KAdminApiVersion>` 3 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 3 and above
 
       :type: datetime.timedelta | None
 
@@ -712,7 +680,7 @@ kadmin
 
       Policy attributes
 
-      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: int
 
@@ -720,7 +688,7 @@ kadmin
 
       Maximum ticket life
 
-      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: datetime.timedelta | None
 
@@ -728,7 +696,7 @@ kadmin
 
       Maximum renewable ticket life
 
-      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: datetime.timedelta | None
 
@@ -736,7 +704,7 @@ kadmin
 
       Allowed keysalts
 
-      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: KeySalts | None
 
@@ -744,7 +712,7 @@ kadmin
 
       TL-data
 
-      Only available in :py:class:`version<KAdminApiVersion>` 4 and above
+      Only available in MIT and :py:class:`version<KAdminApiVersion>` 4 and above
 
       :type: TlData
 
@@ -779,7 +747,7 @@ kadmin
    :type realm: str | None
    :param kadmind_port: kadmind port to connect to
    :type kadmind_port: int | None
-   :param kpasswd_port: kpasswd port to connect to
+   :param kpasswd_port: kpasswd port to connect to. Only available on MIT variants.
    :type kpasswd_port: int | None
    :param admin_server: Admin server which kadmin should contact
    :type admin_server: str | None
@@ -787,7 +755,8 @@ kadmin
    :type dbname: str | None
    :param acl_file: Location of the access control list file
    :type acl_file: str | None
-   :param dict_file: Location of the dictionary file containing strings that are not allowed as passwords
+   :param dict_file: Location of the dictionary file containing strings that are not allowed
+      as passwords. Only available on MIT variants.
    :type dict_file: str | None
    :param stash_file: Location where the master key has been stored
    :type stash_file: str | None
@@ -815,99 +784,15 @@ kadmin
 
    Kerberos encryption type
 
-   :param enctype: Encryption type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
-   :type enctype: int | str
-
-   .. py:attribute:: Des3CbcRaw
-
-      Triple DES cbc mode raw (weak, deprecated)
-
-      :type: EncryptionType
-
-   .. py:attribute:: Des3CbcSha1
-
-      Triple DES cbc mode with HMAC/sha1 (deprecated)
-
-      :type: EncryptionType
-
-   .. py:attribute:: ArcfourHmac
-
-      ArcFour with HMAC/md5 (deprecated)
-
-      :type: EncryptionType
-
-   .. py:attribute:: ArcfourHmacExp
-
-      Exportable ArcFour with HMAC/md5 (weak, deprecated)
-
-      :type: EncryptionType
-
-   .. py:attribute:: Aes128CtsHmacSha196
-
-      AES-128 CTS mode with 96-bit SHA-1 HMAC
-
-      :type: EncryptionType
-
-   .. py:attribute:: Aes256CtsHmacSha196
-
-      AES-256 CTS mode with 96-bit SHA-1 HMAC
-
-      :type: EncryptionType
-
-   .. py:attribute:: Camellia128CtsCmac
-
-      Camellia-128 CTS mode with CMAC
-
-      :type: EncryptionType
-
-   .. py:attribute:: Camellia256CtsCmac
-
-      Camellia-256 CTS mode with CMAC
-
-      :type: EncryptionType
-
-   .. py:attribute:: Aes128CtsHmacSha256128
-
-      AES-128 CTS mode with 128-bit SHA-256 HMAC
-
-      :type: EncryptionType
-
-   .. py:attribute:: Aes256CtsHmacSha384192
-
-      AES-256 CTS mode with 192-bit SHA-384 HMAC
-
-      :type: EncryptionType
+   :param enctype: Encryption type.
+   :type enctype: int
 
 .. py:class:: SaltType(salttype)
 
    Kerberos salt type
 
-   :param salttype: Salt type to convert from. Prefer using static attributes. See `man kdc.conf(5)` for a list of accepted values
-   :type salttype: int | str | None
-
-   .. py:attribute:: Normal
-
-      Default for Kerberos Version 5
-
-      :type: SaltType
-
-   .. py:attribute:: NoRealm
-
-      Same as the default, without using realm information
-
-      :type: SaltType
-
-   .. py:attribute:: OnlyRealm
-
-      Uses only realm information as the salt
-
-      :type: SaltType
-
-   .. py:attribute:: Special
-
-      Generate a random salt
-
-      :type: SaltType
+   :param salttype: Salt type.
+   :type salttype: int | None
 
 .. py:class:: KeySalt(enctype, salttype)
 
@@ -970,41 +855,3 @@ kadmin
    .. py:attribute:: entries
 
       :type: list[TlDataEntry]
-
-.. py:class:: KAdminPrivileges(bits)
-
-   KAdmin privileges
-
-   :param bits: Attributes bits
-   :type bits: int
-
-   .. py:attribute:: Inquire
-
-      :type: KAdminPrivileges
-
-   .. py:attribute:: Add
-
-      :type: KAdminPrivileges
-
-   .. py:attribute:: Modify
-
-      :type: KAdminPrivileges
-
-   .. py:attribute:: Delete
-
-      :type: KAdminPrivileges
-
-   .. py:method:: bits()
-
-      Get the underlying bits
-
-      :rtype: int
-
-
-Exceptions
-----------
-
-.. automodule:: kadmin.exceptions
-   :members:
-   :undoc-members:
-   :imported-members:

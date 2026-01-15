@@ -29,15 +29,15 @@ jobs:
           - ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - run: uv sync --all-groups
-      - uses: mozilla-actions/sccache-action@v0.0.9
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: taiki-e/install-action@v2
+      - uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+      - uses: taiki-e/install-action@2e9d707ef49c9b094d45955b60c7e5c0dfedeb14 # v2.66.5
         with:
           tool: just
-      - run: uv run just ci-lint-${{ matrix.job }}
+      - run: just ci-lint-${{ matrix.job }}
   build:
     strategy:
       fail-fast: false
@@ -52,21 +52,21 @@ jobs:
           - "3.14t"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-groups
-      - uses: mozilla-actions/sccache-action@v0.0.9
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: taiki-e/install-action@v2
+      - uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+      - uses: taiki-e/install-action@2e9d707ef49c9b094d45955b60c7e5c0dfedeb14 # v2.66.5
         with:
           tool: just
-      - run: uv run just ci-build-python
-      - uses: actions/upload-artifact@v5
+      - run: just ci-build-python
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-${{ matrix.python-version }}-build
-          path: dist
+          path: target/wheels/
   test:
     needs: build
     strategy:
@@ -88,20 +88,20 @@ jobs:
     env:
       KRB5_TRACE: /dev/stderr
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-groups
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@2e9d707ef49c9b094d45955b60c7e5c0dfedeb14 # v2.66.5
         with:
           tool: just
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: python-${{ matrix.python-version }}-build
-          path: dist
+          path: target/wheels/
       - run: |
-          PATH="/usr/lib/heimdal-servers:$PATH" uv run just ci-test-python-${{ matrix.job }}
+          PATH="/usr/lib/heimdal-servers:$PATH" just ci-test-python-${{ matrix.job }}
   check-python:
     if: always()
     needs:
@@ -110,48 +110,52 @@ jobs:
       - test
     runs-on: ubuntu-latest
     steps:
-      - uses: re-actors/alls-green@release/v1
+      - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # release/v1
         with:
           jobs: ${{ toJSON(needs) }}
   build-sdist:
     needs: check-python
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - run: uv sync --all-groups
-      - uses: taiki-e/install-action@v2
+      - uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+      - uses: taiki-e/install-action@2e9d707ef49c9b094d45955b60c7e5c0dfedeb14 # v2.66.5
         with:
           tool: just
-      - run: uv run just ci-build-python-sdist
-      - uses: actions/upload-artifact@v5
+      - run: just ci-build-python-sdist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-cibw-sdist
-          path: dist/*.tar.gz
+          path: dist
   build-wheels-matrix:
     needs: check-python
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - run: uv sync --all-groups
       - id: set-matrix
         name: compute matrix
         run: |
           MATRIX="$(
             {
-              uv run cibuildwheel --print-build-identifiers --platform linux --archs x86_64,aarch64 \
+              uv run cibuildwheel --print-build-identifiers --platform linux --archs x86_64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-latest"}/' \
+              && uv run cibuildwheel --print-build-identifiers --platform linux --archs aarch64 \
+                | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-24.04-arm"}/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
-                | sed 's/.*/{"cibw-only": "&", "os": "macos-13" }/' \
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-15-intel" }/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
-                | sed 's/.*/{"cibw-only": "&", "os": "macos-14" }/'
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-latest" }/'
             } | jq --slurp --compact-output '{"include": .}'
           )"
           echo matrix="$MATRIX" >> "$GITHUB_OUTPUT"
@@ -163,19 +167,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: 0
-      - uses: docker/setup-qemu-action@v3
-        if: runner.os == 'Linux'
-        with:
-          platforms: all
-      - uses: pypa/cibuildwheel@v3.3.0
+      - uses: pypa/cibuildwheel@63fd63b352a9a8bdcc24791c9dbee952ee9a8abc # v3.3.0
         with:
           only: "${{ matrix.cibw-only }}"
         env:
           RUSTC_WRAPPER: ""
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-cibw-wheels-${{ matrix.cibw-only }}
           path: ./wheelhouse/*.whl
@@ -185,7 +185,7 @@ jobs:
       - build-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/upload-artifact/merge@v5
+      - uses: actions/upload-artifact/merge@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-dist
           pattern: python-cibw-*
@@ -200,9 +200,9 @@ jobs:
       id-token: write
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/kadmin/version/')
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           pattern: python-cibw-*
           path: dist
           merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: meta
-        uses: cargo-bins/release-meta@v1
+        uses: cargo-bins/release-meta@878b404d09251e067413b4974a2f23c668fd664e # v1
         with:
           event-data: ${{ toJSON(github.event) }}
 
@@ -30,7 +30,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           name: "${{ needs.release-info.outputs.package }} ${{ needs.release-info.outputs.version }}"
           tag_name: "${{ needs.release-info.outputs.package }}/version/${{ needs.release-info.outputs.version }}"
