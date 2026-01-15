@@ -153,9 +153,9 @@ jobs:
               && uv run cibuildwheel --print-build-identifiers --platform linux --archs aarch64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-24.04-arm"}/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
-                | sed 's/.*/{"cibw-only": "&", "os": "macos-13" }/' \
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-15-intel" }/' \
               && uv run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
-                | sed 's/.*/{"cibw-only": "&", "os": "macos-14" }/'
+                | sed 's/.*/{"cibw-only": "&", "os": "macos-latest" }/'
             } | jq --slurp --compact-output '{"include": .}'
           )"
           echo matrix="$MATRIX" >> "$GITHUB_OUTPUT"
