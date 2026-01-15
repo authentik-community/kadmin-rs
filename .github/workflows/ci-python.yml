@@ -43,7 +43,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.10"
           - "3.11"
           - "pypy3.11"
           - "3.12"
@@ -78,7 +77,6 @@ jobs:
           # Several issues in k5test preventing us from running kadmind with it currently
           # - h5l
         python-version:
-          - "3.10"
           - "3.11"
           - "pypy3.11"
           - "3.12"
