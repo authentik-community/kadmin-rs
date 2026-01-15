@@ -119,6 +119,14 @@ impl From<SaltType> for krb5_int32 {
     }
 }
 
+impl TryFrom<krb5_int16> for SaltType {
+    type Error = Error;
+
+    fn try_from(salttype: krb5_int16) -> Result<Self> {
+        Self::from_repr(salttype.into()).ok_or(Error::SaltTypeConversion)
+    }
+}
+
 impl TryFrom<krb5_int32> for SaltType {
     type Error = Error;
 
