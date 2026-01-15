@@ -1,6 +1,6 @@
 [package]
 name = "kadmin"
-version = "0.6.3"
+version = "0.7.0"
 authors = [
   "Marc 'risson' Schmitt <marc.schmitt@risson.space>",
   "authentik community <hello@goauthentik.io>",
