@@ -97,12 +97,13 @@ impl TryFrom<EncryptionType> for String {
 
 /// Kerberos salt type
 // In MIT krb5: src/lib/krb5/krb/str_conv.c
-#[derive(Copy, Clone, Debug, FromRepr, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, FromRepr, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(i32)]
 #[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum SaltType {
     /// Default for Kerberos Version 5
+    #[default]
     Normal = KRB5_KDB_SALTTYPE_NORMAL as krb5_int32,
     /// Same as the default, without using realm information
     NoRealm = KRB5_KDB_SALTTYPE_NOREALM as krb5_int32,
@@ -110,12 +111,6 @@ pub enum SaltType {
     OnlyRealm = KRB5_KDB_SALTTYPE_ONLYREALM as krb5_int32,
     /// Generate a random salt
     Special = KRB5_KDB_SALTTYPE_SPECIAL as krb5_int32,
-}
-
-impl Default for SaltType {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 impl From<SaltType> for krb5_int32 {

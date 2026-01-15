@@ -31,8 +31,8 @@
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
           sccache
 
-          poetry
-          python3Full
+          python314
+          uv
 
           clang
           glibc
@@ -54,6 +54,7 @@
         RUST_BACKTRACE = 1;
         RUSTC_WRAPPER = "sccache";
         LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+        UV_NO_BINARY_PACKAGE = "ruff";
       };
     });
 }

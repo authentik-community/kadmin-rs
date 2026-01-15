@@ -2,7 +2,7 @@
 name = "python-kadmin-rs"
 version = "0.6.3"
 description = "Python interface to the Kerberos administration interface (kadm5)"
-requires-python = ">=3.9,<3.15"
+requires-python = ">=3.10,<3.15"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -19,7 +19,6 @@ classifiers = [
   "Operating System :: MacOS",
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -41,6 +40,23 @@ Repository = "https://github.com/authentik-community/kadmin-rs.git"
 [build-system]
 requires = ["setuptools", "setuptools-rust", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+  "black",
+  "build",
+  "cibuildwheel",
+  "mypy",
+  "ruff",
+  "sphinx",
+  "sphinx-rtd-theme",
+]
+test = [
+  "k5test",
+]
+
+[tool.uv]
+package = false
 
 [tool.cibuildwheel]
 enable = ["cpython-freethreading", "pypy"]
@@ -86,19 +102,3 @@ features = ["local", "python"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-
-[tool.poetry]
-package-mode = false
-requires-poetry = ">=2.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "*"
-build = "*"
-cibuildwheel = "*"
-mypy = "*"
-ruff = "*"
-sphinx = "*"
-sphinx-rtd-theme = "*"
-
-[tool.poetry.group.test.dependencies]
-k5test = "*"

@@ -30,28 +30,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: pipx install poetry || true
-      - uses: actions/setup-python@v6
-        with:
-          python-version-file: "pyproject.toml"
-          cache: "poetry"
-      - run: poetry install --only=dev
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-groups
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: poetry run just ci-lint-${{ matrix.job }}
+      - run: uv run just ci-lint-${{ matrix.job }}
   build:
     strategy:
       fail-fast: false
       matrix:
         python-version:
-          - "3.9"
-          - "pypy3.9"
           - "3.10"
-          - "pypy3.10"
           - "3.11"
+          - "pypy3.11"
           - "3.12"
           - "3.13"
           - "3.13t"
@@ -60,19 +54,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: pipx install poetry || true
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "poetry"
-      - run: poetry install --only=dev
+      - run: uv sync --all-groups
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: poetry run just ci-build-python
-      - uses: actions/upload-artifact@v4
+      - run: uv run just ci-build-python
+      - uses: actions/upload-artifact@v5
         with:
           name: python-${{ matrix.python-version }}-build
           path: dist
@@ -86,11 +78,9 @@ jobs:
           # Several issues in k5test preventing us from running kadmind with it currently
           # - h5l
         python-version:
-          - "3.9"
-          - "pypy3.9"
           - "3.10"
-          - "pypy3.10"
           - "3.11"
+          - "pypy3.11"
           - "3.12"
           - "3.13"
           - "3.13t"
@@ -101,23 +91,19 @@ jobs:
       KRB5_TRACE: /dev/stderr
     steps:
       - uses: actions/checkout@v5
-      - shell: bash
-        run: |
-          pipx install poetry || true
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "poetry"
-      - run: poetry install --only=test
+      - run: uv sync --all-groups
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: python-${{ matrix.python-version }}-build
           path: dist
       - run: |
-          PATH="/usr/lib/heimdal-servers:$PATH" poetry run just ci-test-python-${{ matrix.job }}
+          PATH="/usr/lib/heimdal-servers:$PATH" uv run just ci-test-python-${{ matrix.job }}
   check-python:
     if: always()
     needs:
@@ -136,17 +122,13 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - run: pipx install poetry || true
-      - uses: actions/setup-python@v6
-        with:
-          python-version-file: pyproject.toml
-          cache: "poetry"
-      - run: poetry install --only=dev
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-groups
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - run: poetry run just ci-build-python-sdist
-      - uses: actions/upload-artifact@v4
+      - run: uv run just ci-build-python-sdist
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-sdist
           path: dist/*.tar.gz
@@ -159,22 +141,18 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - run: pipx install poetry || true
-      - uses: actions/setup-python@v6
-        with:
-          python-version-file: pyproject.toml
-          cache: "poetry"
-      - run: poetry install --only=dev
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-groups
       - id: set-matrix
         name: compute matrix
         run: |
           MATRIX="$(
             {
-              poetry run cibuildwheel --print-build-identifiers --platform linux --archs x86_64,aarch64 \
+              uv run cibuildwheel --print-build-identifiers --platform linux --archs x86_64,aarch64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "ubuntu-latest"}/' \
-              && poetry run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
+              && uv run cibuildwheel --print-build-identifiers --platform macos --archs x86_64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "macos-13" }/' \
-              && poetry run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
+              && uv run cibuildwheel --print-build-identifiers --platform macos --archs arm64 \
                 | sed 's/.*/{"cibw-only": "&", "os": "macos-14" }/'
             } | jq --slurp --compact-output '{"include": .}'
           )"
@@ -199,7 +177,7 @@ jobs:
           only: "${{ matrix.cibw-only }}"
         env:
           RUSTC_WRAPPER: ""
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-wheels-${{ matrix.cibw-only }}
           path: ./wheelhouse/*.whl
@@ -209,7 +187,7 @@ jobs:
       - build-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/upload-artifact/merge@v4
+      - uses: actions/upload-artifact/merge@v5
         with:
           name: python-dist
           pattern: python-cibw-*
@@ -224,7 +202,7 @@ jobs:
       id-token: write
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/kadmin/version/')
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           pattern: python-cibw-*
           path: dist
