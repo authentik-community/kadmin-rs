@@ -64,7 +64,7 @@ jobs:
         with:
           tool: just
       - run: uv run just ci-build-python
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-${{ matrix.python-version }}-build
           path: dist
@@ -128,7 +128,7 @@ jobs:
         with:
           tool: just
       - run: uv run just ci-build-python-sdist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-sdist
           path: dist/*.tar.gz
@@ -177,7 +177,7 @@ jobs:
           only: "${{ matrix.cibw-only }}"
         env:
           RUSTC_WRAPPER: ""
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-wheels-${{ matrix.cibw-only }}
           path: ./wheelhouse/*.whl
@@ -187,7 +187,7 @@ jobs:
       - build-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/upload-artifact/merge@v4
+      - uses: actions/upload-artifact/merge@v5
         with:
           name: python-dist
           pattern: python-cibw-*
