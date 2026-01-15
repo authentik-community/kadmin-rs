@@ -116,7 +116,7 @@ ci-test-sanity-heimdal: ci-test-deps-heimdal
   just test-sanity-heimdal
 
 _test-python:
-  uv run python -m unittest python/tests/test_*.py
+  uv run python -m unittest --verbose python/tests/test_*.py
 # Test python bindings
 test-python: install-python _test-python
 [private]
