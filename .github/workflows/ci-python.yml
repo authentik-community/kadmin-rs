@@ -29,8 +29,8 @@ jobs:
           - ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-groups
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -53,8 +53,8 @@ jobs:
           - "3.14t"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-groups
@@ -64,7 +64,7 @@ jobs:
         with:
           tool: just
       - run: uv run just ci-build-python
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-${{ matrix.python-version }}-build
           path: dist
@@ -90,15 +90,15 @@ jobs:
     env:
       KRB5_TRACE: /dev/stderr
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-groups
       - uses: taiki-e/install-action@v2
         with:
           tool: just
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: python-${{ matrix.python-version }}-build
           path: dist
@@ -119,16 +119,16 @@ jobs:
     needs: check-python
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-groups
       - uses: taiki-e/install-action@v2
         with:
           tool: just
       - run: uv run just ci-build-python-sdist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-sdist
           path: dist/*.tar.gz
@@ -138,10 +138,10 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-groups
       - id: set-matrix
         name: compute matrix
@@ -165,7 +165,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: docker/setup-qemu-action@v3
@@ -177,7 +177,7 @@ jobs:
           only: "${{ matrix.cibw-only }}"
         env:
           RUSTC_WRAPPER: ""
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: python-cibw-wheels-${{ matrix.cibw-only }}
           path: ./wheelhouse/*.whl
@@ -187,7 +187,7 @@ jobs:
       - build-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/upload-artifact/merge@v4
+      - uses: actions/upload-artifact/merge@v5
         with:
           name: python-dist
           pattern: python-cibw-*
@@ -202,7 +202,7 @@ jobs:
       id-token: write
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/kadmin/version/')
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           pattern: python-cibw-*
           path: dist
