@@ -1,5 +1,5 @@
 //! Test utils
-use rand::{Rng, distr::Alphanumeric};
+use rand::{RngExt, distr::Alphanumeric};
 
 #[allow(dead_code)]
 pub(crate) fn random_string(len: usize) -> String {
