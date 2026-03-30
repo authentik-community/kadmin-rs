@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: chainguard-dev/actions/setup-gitsign@c29bd2a0f4e71ad61a209c255c0164987df76aaa # main
+      - uses: chainguard-dev/actions/setup-gitsign@8bb24c24be6871bee44f19be55ea11e3b2aea3dd # main
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
       - uses: taiki-e/install-action@704f92c11daa75bff5b4e01fcb083350c16c47b9 # v2.69.13
         with:
