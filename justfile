@@ -82,10 +82,10 @@ build: build-rust build-python
 alias t := test-rust-mit
 # Test rust code, only MIT variants
 test-rust-mit:
-  RUSTFLAGS="-Awarnings" uv run cargo test --no-default-features --features mit_client,mit_server,log -- --nocapture
+  RUSTFLAGS="-Awarnings" uv run cargo nextest run --jobs 1 --no-default-features --features mit_client,mit_server,log --no-capture
 # Test rust code, only Heimdal variants
 test-rust-heimdal:
-  RUSTFLAGS="-Awarnings" uv run cargo test --no-default-features --features heimdal_client,heimdal_server,log -- --nocapture
+  RUSTFLAGS="-Awarnings" uv run cargo nextest run --jobs 1 --no-default-features --features heimdal_client,heimdal_server,log --no-capture
 [private]
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
