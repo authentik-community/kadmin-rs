@@ -1,2 +1,5 @@
+[alias]
+t = ["nextest", "run", "--jobs", "1"]
+
 [doc.extern-map.registries]
 crates-io = "https://docs.rs/"
