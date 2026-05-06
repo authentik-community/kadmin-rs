@@ -21,7 +21,7 @@ use crate::{
 ///     .unwrap();
 /// ```
 #[derive(Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct DbArgs {
     /// NULL-terminated list of strings of the form `arg[=value]`
     ///

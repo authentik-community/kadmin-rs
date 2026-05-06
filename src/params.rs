@@ -19,7 +19,7 @@ use crate::{
 /// let params = kadmin::Params::new().realm("EXAMPLE.ORG");
 /// ```
 #[derive(Clone, Debug, Default)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct Params {
     #[cfg(mit_client)]
     /// Mask for which values are set
