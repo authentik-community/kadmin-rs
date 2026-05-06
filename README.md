@@ -8,7 +8,7 @@ It also contains a Python API to those bindings.
 
 ![Crates.io Version](https://img.shields.io/crates/v/kadmin)
 ![docs.rs](https://img.shields.io/docsrs/kadmin)
-![Maintenance](https://img.shields.io/maintenance/maintained/2025)
+![Maintenance](https://img.shields.io/maintenance/maintained/2026)
 
 This is a safe, idiomatic Rust interface to libkadm5.
 
@@ -81,7 +81,7 @@ As far as I can tell, libkadm5 APIs are **not** thread safe. As such, the types 
 
 ![PyPI - Version](https://img.shields.io/pypi/v/python-kadmin-rs)
 ![Read the Docs](https://img.shields.io/readthedocs/kadmin-rs)
-![Maintenance](https://img.shields.io/maintenance/maintained/2025)
+![Maintenance](https://img.shields.io/maintenance/maintained/2026)
 
 These are Python bindings to the above Rust library, using the `kadmin::sync` interface to ensure thread safety.
 
@@ -104,6 +104,8 @@ import kadmin
 kadm = kadmin.KAdmin.with_local(kadmin.KAdm5Variant.MitClient)
 print(kadm.list_principals("*"))
 ```
+
+See the [API reference](https://kadmin-rs.readthedocs.io) for more information.
 
 ## License
 
