@@ -189,7 +189,7 @@ impl Drop for InnerKAdmin {
 ///
 /// This is a thread-safe wrapper over [`crate::kadmin::KAdmin`].
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct KAdmin {
     variant: KAdm5Variant,
     inner: Arc<InnerKAdmin>,

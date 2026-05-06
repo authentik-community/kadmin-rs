@@ -24,7 +24,7 @@ use crate::{
 /// Only available for MIT and Heimdal server-side libraries.
 #[derive(Clone, Debug, Default, Getters, CopyGetters)]
 #[getset(get_copy = "pub")]
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, get_all))]
 pub struct Policy {
     /// The policy name
     #[getset(skip)]

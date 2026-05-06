@@ -18,7 +18,7 @@ use crate::error::Result;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(u32)]
-#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, eq, eq_int))]
 pub enum KAdm5Variant {
     #[cfg(mit_client)]
     /// MIT krb5 client-side

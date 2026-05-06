@@ -609,7 +609,7 @@ impl Principal {
 
 // Copy of PrincipalBuilderKey due to pyo3 limitations
 // See https://pyo3.rs/v0.23.3/class.html?highlight=enum#complex-enums
-#[pyclass(name = "NewPrincipalKey")]
+#[pyclass(name = "NewPrincipalKey", from_py_object)]
 #[derive(Clone, Debug, PartialEq)]
 enum PyPrincipalBuilderKey {
     Password(String),

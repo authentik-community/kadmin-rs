@@ -13,7 +13,7 @@ use crate::{context::Context, sys::library_match};
 /// A single TL-data entry
 #[allow(clippy::exhaustive_structs)]
 #[derive(Clone, Default, Debug)]
-#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, get_all, set_all))]
 pub struct TlDataEntry {
     /// TL-data type
     pub data_type: i16,
@@ -24,7 +24,7 @@ pub struct TlDataEntry {
 /// TL-data entries
 #[derive(Clone, Default, Debug)]
 #[allow(clippy::exhaustive_structs)]
-#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, get_all, set_all))]
 pub struct TlData {
     /// TL-data entries
     pub entries: Vec<TlDataEntry>,

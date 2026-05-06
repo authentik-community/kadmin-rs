@@ -18,7 +18,7 @@ use crate::{
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(transparent)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct EncryptionType(i32);
 
 impl From<EncryptionType> for i32 {
@@ -103,7 +103,7 @@ impl EncryptionType {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_enums)]
 #[repr(transparent)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct SaltType(i32);
 
 impl From<SaltType> for i32 {
@@ -194,7 +194,7 @@ impl SaltType {
 /// Kerberos keysalt
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(clippy::exhaustive_structs)]
-#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, get_all, set_all))]
 pub struct KeySalt {
     /// Encryption type
     pub enctype: EncryptionType,
@@ -265,7 +265,7 @@ impl From<KeySalt> for sys::heimdal_server::krb5_key_salt_tuple {
 /// Kerberos keysalt list
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(clippy::exhaustive_structs)]
-#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+#[cfg_attr(feature = "python", pyclass(from_py_object, get_all, set_all))]
 pub struct KeySalts {
     /// Keysalt list
     pub keysalts: HashSet<KeySalt>,
