@@ -99,7 +99,6 @@ ci-test-deps-heimdal: ci-test-deps
 ci-test-rust-mit: ci-build-deps ci-test-deps-mit test-rust-mit
 [private]
 ci-test-rust-heimdal: ci-build-deps ci-test-deps-heimdal test-rust-heimdal
-  just test-rust-heimdal
 
 alias ts := test-sanity-mit
 # Test kadmin with valgrind for memory leaks, only MIT variants
@@ -109,11 +108,9 @@ test-sanity-mit:
 test-sanity-heimdal:
   CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust-heimdal
 [private]
-ci-test-sanity-mit: ci-test-deps-mit
-  just test-sanity-mit
+ci-test-sanity-mit: ci-build-deps ci-test-deps-mit test-sanity-mit
 [private]
-ci-test-sanity-heimdal: ci-test-deps-heimdal
-  just test-sanity-heimdal
+ci-test-sanity-heimdal: ci-build-deps ci-test-deps-heimdal test-sanity-heimdal
 
 _test-python:
   uv run python -m unittest --verbose python/tests/test_*.py
