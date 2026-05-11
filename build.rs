@@ -206,6 +206,7 @@ struct KAdm5Config {
     include_paths: HashSet<PathBuf>,
     library_paths: HashSet<PathBuf>,
     libraries: HashSet<String>,
+    sonames: HashSet<String>,
 }
 
 impl KAdm5Config {
@@ -232,11 +233,21 @@ impl KAdm5Config {
                 .collect::<Vec<String>>()
                 .join(" ")
         );
+        println!(
+            "cargo::rustc-env=KADMIN_BUILD_{}_SONAMES={}",
+            self.name().to_uppercase(),
+            self.sonames
+                .iter()
+                .cloned()
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
     }
 
     fn extend(&mut self, other: &Self) {
         self.library_paths.extend(other.library_paths.clone());
         self.libraries.extend(other.libraries.clone());
+        self.sonames.extend(other.sonames.clone());
     }
 }
 
@@ -253,8 +264,8 @@ fn main() {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found MIT Kerberos kadm5-client. Includes: {:?}. Links: {:?}. \
-             Libraries: {:?}",
-            config.include_paths, config.library_paths, config.libraries,
+             Libraries: {:?}. SONAMEs: {:?}",
+            config.include_paths, config.library_paths, config.libraries, config.sonames,
         );
         generate_bindings(&config, &out_path);
         found_any = true;
@@ -264,8 +275,8 @@ fn main() {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found MIT Kerberos kadm5-server. Includes: {:?}. Links: {:?}. \
-             Libraries: {:?}",
-            config.include_paths, config.library_paths, config.libraries,
+             Libraries: {:?}. SONAMEs: {:?}",
+            config.include_paths, config.library_paths, config.libraries, config.sonames,
         );
         generate_bindings(&config, &out_path);
         found_any = true;
@@ -276,8 +287,8 @@ fn main() {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found Heimdal Kerberos kadm5-client. Includes: {:?}. Links: {:?}. \
-             Libraries: {:?}",
-            config.include_paths, config.library_paths, config.libraries,
+             Libraries: {:?}. SONAMEs: {:?}",
+            config.include_paths, config.library_paths, config.libraries, config.sonames,
         );
         generate_bindings(&config, &out_path);
         found_any = true;
@@ -288,8 +299,8 @@ fn main() {
         println!("cargo:rustc-cfg={}", config.name());
         println!(
             "cargo::warning=Found Heimdal Kerberos kadm5-server. Includes: {:?}. Links: {:?}. \
-             Libraries: {:?}",
-            config.include_paths, config.library_paths, config.libraries,
+             Libraries: {:?}. SONAMEs: {:?}",
+            config.include_paths, config.library_paths, config.libraries, config.sonames,
         );
         generate_bindings(&config, &out_path);
         found_any = true;
@@ -335,6 +346,7 @@ fn try_overrides(variant: KAdm5Variant) -> Option<KAdm5Config> {
                 .collect(),
             library_paths: HashSet::new(),
             libraries: HashSet::new(),
+            sonames: HashSet::new(),
         });
     }
     None
@@ -406,16 +418,42 @@ fn probe_krb5_config(bin: &str, lib: Option<&str>, variant: KAdm5Variant) -> Opt
     for include_path in &include_paths {
         let header_path = include_path.join("kadm5/admin.h");
         if header_path.exists() && variant.verify_header_variant(&header_path) {
+            let sonames = discover_sonames(&library_paths, &libraries);
             return Some(KAdm5Config {
                 variant,
                 include_paths,
                 library_paths,
                 libraries,
+                sonames,
             });
         }
     }
 
     None
+}
+
+fn discover_sonames(
+    library_paths: &HashSet<PathBuf>,
+    libraries: &HashSet<String>,
+) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for lib in libraries {
+        for path in library_paths {
+            if let Some(soname) = discover_soname(path, lib) {
+                out.insert(soname);
+                break;
+            }
+        }
+    }
+    out
+}
+
+fn discover_soname(library_path: &Path, library: &str) -> Option<String> {
+    let unversioned = library_path.join(format!("lib{library}.so"));
+    let canonical = std::fs::canonicalize(&unversioned).ok()?;
+    let bytes = std::fs::read(&canonical).ok()?;
+    let elf = goblin::elf::Elf::parse(&bytes).ok()?;
+    elf.soname.map(str::to_owned)
 }
 
 fn try_pkg_config(variant: KAdm5Variant) -> Option<KAdm5Config> {
@@ -440,15 +478,21 @@ fn probe_from_pkg_config(lib: pkg_config::Library, variant: KAdm5Variant) -> Opt
     for include_path in &lib.include_paths {
         let header_path = include_path.join("kadm5/admin.h");
         if header_path.exists() && variant.verify_header_variant(&header_path) {
+            let library_paths = HashSet::from_iter(lib.link_paths.iter().cloned());
+            let libraries: HashSet<String> = lib
+                .libs
+                .iter()
+                .filter(|lib| lib.contains("kadm5"))
+                .cloned()
+                .collect();
+            let sonames = discover_sonames(&library_paths, &libraries);
+
             return Some(KAdm5Config {
                 variant,
                 include_paths: HashSet::from_iter(lib.include_paths.iter().cloned()),
-                library_paths: HashSet::from_iter(lib.link_paths.iter().cloned()),
-                libraries: lib
-                    .libs
-                    .into_iter()
-                    .filter(|lib| lib.contains("kadm5"))
-                    .collect(),
+                library_paths,
+                libraries,
+                sonames,
             });
         }
     }

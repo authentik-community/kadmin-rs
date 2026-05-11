@@ -90,16 +90,15 @@ test-rust-heimdal:
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
 [private]
-ci-test-deps-mit: ci-build-deps ci-test-deps
-  sudo apt-get install -y --no-install-recommends krb5-kdc krb5-user krb5-admin-server
+ci-test-deps-mit: ci-test-deps
+  sudo apt-get install -y --no-install-recommends libkadm5clnt-mit12 libkadm5srv-mit12 libkrb5-dev krb5-kdc krb5-user krb5-admin-server
 [private]
-ci-test-deps-heimdal: ci-build-deps ci-test-deps
-  sudo apt-get install -y --no-install-recommends heimdal-clients heimdal-kdc
+ci-test-deps-heimdal: ci-test-deps
+  sudo apt-get install -y --no-install-recommends libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal heimdal-dev heimdal-clients heimdal-servers heimdal-kdc
 [private]
-ci-test-rust-mit: ci-test-deps-mit test-rust-mit
+ci-test-rust-mit: ci-build-deps ci-test-deps-mit test-rust-mit
 [private]
-ci-test-rust-heimdal: ci-test-deps-heimdal test-rust-heimdal
-  just test-rust-heimdal
+ci-test-rust-heimdal: ci-build-deps ci-test-deps-heimdal test-rust-heimdal
 
 alias ts := test-sanity-mit
 # Test kadmin with valgrind for memory leaks, only MIT variants
@@ -109,23 +108,18 @@ test-sanity-mit:
 test-sanity-heimdal:
   CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --suppressions=tests/valgrind.supp -s --leak-check=full" just test-rust-heimdal
 [private]
-ci-test-sanity-mit: ci-test-deps-mit
-  just test-sanity-mit
+ci-test-sanity-mit: ci-build-deps ci-test-deps-mit test-sanity-mit
 [private]
-ci-test-sanity-heimdal: ci-test-deps-heimdal
-  just test-sanity-heimdal
+ci-test-sanity-heimdal: ci-build-deps ci-test-deps-heimdal test-sanity-heimdal
 
 _test-python:
   uv run python -m unittest --verbose python/tests/test_*.py
 # Test python bindings
 test-python: install-python _test-python
 [private]
-ci-test-deps-h5l: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkrb5-3 libkadm5clnt-mit12 libkadm5srv-mit12 heimdal-dev heimdal-servers heimdal-kdc
-[private]
 ci-test-python-mit: ci-test-deps-mit _install-python _test-python
 [private]
-ci-test-python-h5l: ci-test-deps-h5l _install-python _test-python
+ci-test-python-heimdal: ci-test-deps-heimdal _install-python _test-python
 
 # Test rust crates and python bindings
 test-all: test-rust-mit test-sanity-mit test-python

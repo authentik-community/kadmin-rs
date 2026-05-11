@@ -163,20 +163,32 @@ impl Library {
     fn find_library<T: WrapperApi>(
         library_paths: Vec<&'static str>,
         libraries: Vec<&'static str>,
+        sonames: Vec<&'static str>,
     ) -> Option<Container<T>> {
-        for path in library_paths {
-            for library in libraries.iter() {
-                let full_path = format!("{}/lib{}.so", path, library);
+        let try_load = |full_path: &str| -> Option<Container<T>> {
+            #[cfg(feature = "log")]
+            log::trace!("Trying to load library at path {full_path}");
+            let load = unsafe { Container::load(full_path) };
+            load.inspect(|_| {
                 #[cfg(feature = "log")]
-                log::trace!("Trying to load library at path {full_path}");
-                let load = unsafe { Container::load(&full_path) };
+                log::trace!("Successfully loaded library at {full_path}");
+            })
+            .inspect_err(|_err| {
                 #[cfg(feature = "log")]
-                if let Err(err) = &load {
-                    log::trace!("Loading library at path {full_path} resulted in an error: {err}");
-                }
-                if let Ok(cont) = load {
-                    #[cfg(feature = "log")]
-                    log::trace!("Successfully loaded library at {full_path}");
+                log::trace!("Loading library at path {full_path} resulted in an error: {_err}");
+            })
+            .ok()
+        };
+
+        for soname in &sonames {
+            if let Some(cont) = try_load(soname) {
+                return Some(cont);
+            }
+        }
+
+        for path in &library_paths {
+            for library in &libraries {
+                if let Some(cont) = try_load(&format!("{path}/lib{library}.so")) {
                     return Some(cont);
                 }
             }
@@ -191,9 +203,11 @@ impl Library {
         Ok(match variant {
             #[cfg(mit_client)]
             KAdm5Variant::MitClient => {
-                if let Some(cont) =
-                    Self::find_library(mit_client::library_paths(), mit_client::libraries())
-                {
+                if let Some(cont) = Self::find_library(
+                    mit_client::library_paths(),
+                    mit_client::libraries(),
+                    mit_client::sonames(),
+                ) {
                     Library::MitClient(cont)
                 } else {
                     Library::MitClient(unsafe { Container::load("libkadm5clnt_mit.so") }?)
@@ -201,9 +215,11 @@ impl Library {
             }
             #[cfg(mit_server)]
             KAdm5Variant::MitServer => {
-                if let Some(cont) =
-                    Self::find_library(mit_server::library_paths(), mit_server::libraries())
-                {
+                if let Some(cont) = Self::find_library(
+                    mit_server::library_paths(),
+                    mit_server::libraries(),
+                    mit_server::sonames(),
+                ) {
                     Library::MitServer(cont)
                 } else {
                     Library::MitServer(unsafe { Container::load("libkadm5srv_mit.so") }?)
@@ -211,9 +227,11 @@ impl Library {
             }
             #[cfg(heimdal_client)]
             KAdm5Variant::HeimdalClient => {
-                if let Some(cont) =
-                    Self::find_library(heimdal_client::library_paths(), heimdal_client::libraries())
-                {
+                if let Some(cont) = Self::find_library(
+                    heimdal_client::library_paths(),
+                    heimdal_client::libraries(),
+                    heimdal_client::sonames(),
+                ) {
                     Library::HeimdalClient(cont)
                 } else {
                     Library::HeimdalClient(unsafe { Container::load("libkadm5clnt.so") }?)
@@ -221,9 +239,11 @@ impl Library {
             }
             #[cfg(heimdal_server)]
             KAdm5Variant::HeimdalServer => {
-                if let Some(cont) =
-                    Self::find_library(heimdal_server::library_paths(), heimdal_server::libraries())
-                {
+                if let Some(cont) = Self::find_library(
+                    heimdal_server::library_paths(),
+                    heimdal_server::libraries(),
+                    heimdal_server::sonames(),
+                ) {
                     Library::HeimdalServer(cont)
                 } else {
                     Library::HeimdalServer(unsafe { Container::load("libkadm5srv.so") }?)
@@ -272,6 +292,12 @@ pub mod mit_client {
             .collect()
     }
 
+    pub fn sonames() -> Vec<&'static str> {
+        env!("KADMIN_BUILD_MIT_CLIENT_SONAMES")
+            .split_whitespace()
+            .collect()
+    }
+
     include!(concat!(env!("OUT_DIR"), "/bindings_mit_client.rs"));
 }
 
@@ -292,6 +318,12 @@ pub mod mit_server {
 
     pub fn libraries() -> Vec<&'static str> {
         env!("KADMIN_BUILD_MIT_SERVER_LIBRARIES")
+            .split_whitespace()
+            .collect()
+    }
+
+    pub fn sonames() -> Vec<&'static str> {
+        env!("KADMIN_BUILD_MIT_SERVER_SONAMES")
             .split_whitespace()
             .collect()
     }
@@ -327,6 +359,12 @@ pub mod heimdal_client {
             .collect()
     }
 
+    pub fn sonames() -> Vec<&'static str> {
+        env!("KADMIN_BUILD_HEIMDAL_CLIENT_SONAMES")
+            .split_whitespace()
+            .collect()
+    }
+
     include!(concat!(env!("OUT_DIR"), "/bindings_heimdal_client.rs"));
 }
 
@@ -354,6 +392,12 @@ pub mod heimdal_server {
 
     pub fn libraries() -> Vec<&'static str> {
         env!("KADMIN_BUILD_HEIMDAL_SERVER_LIBRARIES")
+            .split_whitespace()
+            .collect()
+    }
+
+    pub fn sonames() -> Vec<&'static str> {
+        env!("KADMIN_BUILD_HEIMDAL_SERVER_SONAMES")
             .split_whitespace()
             .collect()
     }
