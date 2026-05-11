@@ -169,18 +169,15 @@ impl Library {
             #[cfg(feature = "log")]
             log::trace!("Trying to load library at path {full_path}");
             let load = unsafe { Container::load(full_path) };
-            match load {
-                Ok(cont) => {
-                    #[cfg(feature = "log")]
-                    log::trace!("Successfully loaded library at {full_path}");
-                    Some(cont)
-                }
-                Err(_err) => {
-                    #[cfg(feature = "log")]
-                    log::trace!("Loading library at path {full_path} resulted in an error: {_err}");
-                    None
-                }
-            }
+            load.inspect(|_| {
+                #[cfg(feature = "log")]
+                log::trace!("Successfully loaded library at {full_path}");
+            })
+            .inspect_err(|_err| {
+                #[cfg(feature = "log")]
+                log::trace!("Loading library at path {full_path} resulted in an error: {_err}");
+            })
+            .ok()
         };
 
         for soname in &sonames {
