@@ -91,10 +91,10 @@ ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
 [private]
 ci-test-deps-mit: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkadm5clnt-mit12 libkadm5srv-mit12 krb5-config krb5-kdc krb5-user krb5-admin-server
+  sudo apt-get install -y --no-install-recommends libkadm5clnt-mit12 libkadm5srv-mit12 libkrb5-dev krb5-kdc krb5-user krb5-admin-server
 [private]
 ci-test-deps-heimdal: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal krb5-config heimdal-clients heimdal-servers heimdal-kdc
+  sudo apt-get install -y --no-install-recommends libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal heimdal-dev heimdal-clients heimdal-servers heimdal-kdc
 [private]
 ci-test-rust-mit: ci-build-deps ci-test-deps-mit test-rust-mit
 [private]
