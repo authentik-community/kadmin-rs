@@ -91,10 +91,10 @@ ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
 [private]
 ci-test-deps-mit: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkrb5-3 libkadm5clnt-mit12 libkadm5srv-mit12 krb5-kdc krb5-user krb5-admin-server
+  sudo apt-get install -y --no-install-recommends libkadm5clnt-mit12 libkadm5srv-mit12 krb5-kdc krb5-user krb5-admin-server
 [private]
 ci-test-deps-heimdal: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkrb5-26t64-heimdal libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal heimdal-clients heimdal-kdc
+  sudo apt-get install -y --no-install-recommends libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal heimdal-clients heimdal-servers heimdal-kdc
 [private]
 ci-test-rust-mit: ci-build-deps ci-test-deps-mit test-rust-mit
 [private]
@@ -120,12 +120,9 @@ _test-python:
 # Test python bindings
 test-python: install-python _test-python
 [private]
-ci-test-deps-h5l: ci-test-deps
-  sudo apt-get install -y --no-install-recommends libkrb5-3 libkadm5clnt-mit12 libkadm5srv-mit12 heimdal-dev heimdal-servers heimdal-kdc
-[private]
 ci-test-python-mit: ci-test-deps-mit _install-python _test-python
 [private]
-ci-test-python-h5l: ci-test-deps-h5l _install-python _test-python
+ci-test-python-heimdal: ci-test-deps-heimdal _install-python _test-python
 
 # Test rust crates and python bindings
 test-all: test-rust-mit test-sanity-mit test-python

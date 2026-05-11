@@ -75,7 +75,7 @@ jobs:
         job:
           - mit
           # Several issues in k5test preventing us from running kadmind with it currently
-          # - h5l
+          # - heimdal
         python-version:
           - "3.11"
           - "pypy3.11"
