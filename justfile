@@ -45,19 +45,12 @@ alias b := build-rust
 build-rust:
   cargo build
   cargo build --features log
-  uv run cargo build --features python
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features mit_client,mit_server
   RUSTFLAGS="-Awarnings" cargo build --no-default-features --features heimdal_client,heimdal_server
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_client,python
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_server,python
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_client,python
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_server,python
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features mit_client,mit_server,python
-  RUSTFLAGS="-Awarnings" uv run cargo build --no-default-features --features heimdal_client,heimdal_server,python
 [private]
 ci-build-deps:
   sudo apt-get remove -y --purge man-db
