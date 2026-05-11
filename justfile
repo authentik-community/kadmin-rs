@@ -90,15 +90,15 @@ test-rust-heimdal:
 ci-test-deps:
   sudo apt-get install -y --no-install-recommends valgrind
 [private]
-ci-test-deps-mit: ci-build-deps ci-test-deps
-  sudo apt-get install -y --no-install-recommends krb5-kdc krb5-user krb5-admin-server
+ci-test-deps-mit: ci-test-deps
+  sudo apt-get install -y --no-install-recommends libkrb5-3 libkadm5clnt-mit12 libkadm5srv-mit12 krb5-kdc krb5-user krb5-admin-server
 [private]
-ci-test-deps-heimdal: ci-build-deps ci-test-deps
-  sudo apt-get install -y --no-install-recommends heimdal-clients heimdal-kdc
+ci-test-deps-heimdal: ci-test-deps
+  sudo apt-get install -y --no-install-recommends libkrb5-26t64-heimdal libkadm5clnt7t64-heimdal libkadm5srv8t64-heimdal heimdal-clients heimdal-kdc
 [private]
-ci-test-rust-mit: ci-test-deps-mit test-rust-mit
+ci-test-rust-mit: ci-build-deps ci-test-deps-mit test-rust-mit
 [private]
-ci-test-rust-heimdal: ci-test-deps-heimdal test-rust-heimdal
+ci-test-rust-heimdal: ci-build-deps ci-test-deps-heimdal test-rust-heimdal
   just test-rust-heimdal
 
 alias ts := test-sanity-mit
