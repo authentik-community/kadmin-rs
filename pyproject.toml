@@ -32,9 +32,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/authentik-community/kadmin-rs"
-Documentation = "https://github.com/authentik-community/kadmin-rs"
-Repository = "https://github.com/authentik-community/kadmin-rs.git"
+Homepage = "https://github.com/authentik-labs/kadmin-rs"
+Documentation = "https://github.com/authentik-labs/kadmin-rs"
+Repository = "https://github.com/authentik-labs/kadmin-rs.git"
 
 [build-system]
 requires = ["maturin >=1.0,<2.0"]
