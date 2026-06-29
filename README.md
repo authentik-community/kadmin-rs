@@ -117,11 +117,11 @@ Just open a PR.
 
 ### Releasing
 
-1. Go to [Actions > Create release PR](https://github.com/authentik-community/kadmin-rs/actions/workflows/release-pr.yml)
+1. Go to [Actions > Create release PR](https://github.com/authentik-labs/kadmin-rs/actions/workflows/release-pr.yml)
 2. Click "Run workflow" and select what you need to release and input the new version.
 3. Wait for the PR to be opened and the CI to pass
 4. Merge the PR.
-5. Go to [Releases](https://github.com/authentik-community/kadmin-rs/releases)
+5. Go to [Releases](https://github.com/authentik-labs/kadmin-rs/releases)
 6. Edit the created release.
 7. Click "Generate release notes"
 8. Publish
